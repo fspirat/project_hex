@@ -2,7 +2,7 @@ package ru.fspirat.hexgen;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Tooltip;
@@ -23,7 +23,7 @@ public class HexGenClient implements ClientModInitializer {
     public void onInitializeClient() {
         HexConfig.load();
 
-        OPEN_KEY = KeyBindingHelper.registerKeyBinding(
+        OPEN_KEY = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.fstweak.open_hexgen", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_KEY.consumeClick()) {
