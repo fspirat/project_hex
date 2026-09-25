@@ -10,7 +10,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -137,7 +136,7 @@ public class ColorPickerScreen extends Screen {
     private void addSwatch(String hex, int x, int y) {
         Button b = Button.builder(Component.empty(), btn -> setColor(hex, true))
                 .bounds(x, y, CELL - 2, CELL - 2)
-                .tooltip(Tooltip.create(Component.literal("#" + hex)))
+                .tooltip(HexUi.tip("#" + hex))
                 .build();
         swatchButtons.add(b);
         swatchColors.add(hex);
@@ -146,7 +145,7 @@ public class ColorPickerScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
-        HexGenScreen.drawPanel(g, left, top, W, H);
+        HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
         Component t = Component.literal("Палитра цветов");
@@ -177,7 +176,7 @@ public class ColorPickerScreen extends Screen {
         for (int i = 0; i < swatchButtons.size(); i++) {
             Button b = swatchButtons.get(i);
             String hex = swatchColors.get(i);
-            HexGenScreen.drawSwatch(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
+            HexUi.drawSwatch(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(),
                     HexCore.rgb(hex), b.isHovered(), hex.equals(cur));
         }
     }

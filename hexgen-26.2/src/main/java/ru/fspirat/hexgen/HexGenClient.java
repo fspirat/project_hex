@@ -1,20 +1,35 @@
 package ru.fspirat.hexgen;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.minecraft.client.KeyMapping;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import ru.fspirat.hexgen.mixin.AbstractContainerScreenAccessor;
+import org.lwjgl.glfw.GLFW;
 import ru.fspirat.hexgen.mixin.ScreenInvoker;
 
 public class HexGenClient implements ClientModInitializer {
     private static final int SIZE = 20;
 
+    /** Клавиша открытия генератора из игры (по умолчанию H, меняется в «Управлении»). */
+    public static KeyMapping OPEN_KEY;
+
     @Override
     public void onInitializeClient() {
         HexConfig.load();
+
+        OPEN_KEY = KeyBindingHelper.registerKeyBinding(
+                new KeyMapping("key.fstweak.open_hexgen", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            while (OPEN_KEY.consumeClick()) {
+                if (client.player != null) client.gui.setScreen(new HexGenScreen(null));
+            }
+        });
 
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (!(screen instanceof InventoryScreen inventory)) return;
@@ -24,7 +39,7 @@ public class HexGenClient implements ClientModInitializer {
                     Component.literal("✦").withStyle(Style.EMPTY.withColor(0xB04DFF)),
                     b -> client.gui.setScreen(new HexGenScreen(inventory)),
                     HexConfig::save);
-            button.setTooltip(Tooltip.create(Component.literal("FSHEX GENERATOR\n")
+            button.setTooltip(!HexConfig.showHints ? null : Tooltip.create(Component.literal(HexUi.TITLE + "\n")
                     .append(Component.literal("Ctrl + перетащить (или Ctrl + клик) — переместить кнопку").withStyle(Style.EMPTY.withColor(0xA0A0A0)))));
             place(button, acc, screen.width, screen.height);
             ((ScreenInvoker) (Object) screen).hexgen$addRenderableWidget(button);

@@ -4,7 +4,6 @@ import java.util.function.Consumer;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -37,7 +36,7 @@ public class SymbolsScreen extends Screen {
             final String sym = HexCore.SYMBOLS[i];
             this.addRenderableWidget(Button.builder(Component.literal(sym), b -> insert.accept(sym))
                     .bounds(left + (i % COLS) * CELL, top + 40 + (i / COLS) * CELL, CELL - 2, CELL - 2)
-                    .tooltip(Tooltip.create(Component.literal("Вставить " + sym)))
+                    .tooltip(HexUi.tip("Вставить " + sym))
                     .build());
         }
 
@@ -47,7 +46,7 @@ public class SymbolsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
-        HexGenScreen.drawPanel(g, left, top, W, h);
+        HexUi.drawPanel(g, left, top, W, h);
         super.render(g, mouseX, mouseY, delta);
 
         Component t = Component.literal("Символы");

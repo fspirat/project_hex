@@ -166,27 +166,136 @@ public final class HexCore {
         return mask[0];
     }
 
+    /** Буква с итоговым цветом и форматом. */
+    public record StyledGlyph(String ch, int rgb, int bits) {}
+
     /**
-     * Команда с учётом маски: если формат одинаковый, получается короткий градиент,
-     * иначе каждый символ пишется своим цветом {#RRGGBB} со своими кодами.
+     * Буквы с цветами и форматом: цвет берётся из своего цвета символа (colors[i] >= 0),
+     * иначе из общего градиента.
      */
-    public static String gradientCommand(String prefix, String text, List<String> stops, int[] mask, int fallback) {
-        int uniform = uniformBits(mask, fallback);
-        if (uniform >= 0) return gradientCommand(prefix, text, stops, uniform);
-        StringBuilder sb = new StringBuilder(prefix);
+    public static List<StyledGlyph> styled(String text, List<String> stops, int[] mask, int[] colors, int fallbackBits) {
+        List<StyledGlyph> out = new ArrayList<>();
         List<Glyph> glyphs = gradientGlyphs(text, stops);
-        int prev = -1;
         for (int i = 0; i < glyphs.size(); i++) {
             Glyph g = glyphs.get(i);
-            int bits = i < mask.length ? mask[i] : fallback;
-            if (g.ch().equals(" ") && bits == prev) {
+            int rgb = colors != null && i < colors.length && colors[i] >= 0 ? colors[i] : g.rgb();
+            int bits = mask != null && i < mask.length ? mask[i] : fallbackBits;
+            out.add(new StyledGlyph(g.ch(), rgb, bits));
+        }
+        return out;
+    }
+
+    public static boolean hasOverrides(int[] colors) {
+        if (colors == null) return false;
+        for (int c : colors) if (c >= 0) return true;
+        return false;
+    }
+
+    /**
+     * Команда с учётом маски и своих цветов: если формат одинаковый и своих цветов нет,
+     * получается короткий градиент, иначе каждый символ пишется своим цветом {#RRGGBB} со своими кодами.
+     */
+    public static String gradientCommand(String prefix, String text, List<String> stops, int[] mask, int[] colors, int fallback) {
+        int uniform = uniformBits(mask, fallback);
+        if (uniform >= 0 && !hasOverrides(colors)) return gradientCommand(prefix, text, stops, uniform);
+        StringBuilder sb = new StringBuilder(prefix);
+        int prevBits = -1, prevRgb = -1;
+        for (StyledGlyph g : styled(text, stops, mask, colors, fallback)) {
+            // Пробел без подчёркивания можно не красить заново.
+            if (g.ch().equals(" ") && g.bits() == prevBits && (g.bits() & (UNDERLINE | STRIKE)) == 0) {
                 sb.append(' ');
                 continue;
             }
-            sb.append("{#").append(hex(g.rgb())).append("}").append(formatCodes(bits)).append(g.ch());
-            prev = bits;
+            if (g.rgb() == prevRgb && g.bits() == prevBits) {
+                sb.append(g.ch());
+                continue;
+            }
+            sb.append("{#").append(hex(g.rgb())).append("}").append(formatCodes(g.bits())).append(g.ch());
+            prevBits = g.bits();
+            prevRgb = g.rgb();
         }
         return sb.toString();
+    }
+
+    /** Результат разбора готовой команды (импорт и история). */
+    public record Parsed(int command, String text, List<String> stops, int[] mask, int[] colors, String nickHex) {}
+
+    private static final java.util.regex.Pattern TOKEN =
+            java.util.regex.Pattern.compile("\\{#([0-9A-Fa-f]{6})(>|<>|<)?\\}|&([0-9a-fk-orA-FK-OR])");
+
+    /** Разбирает команду /itemname, /itemlore, /sponsor prefix или просто текст с тегами. Null — если это не похоже на градиент. */
+    public static Parsed parse(String raw) {
+        if (raw == null) return null;
+        String s = raw.strip();
+        if (s.isEmpty()) return null;
+        int command = 2;
+        for (int i = 0; i < COMMANDS.length; i++) {
+            String c = COMMANDS[i];
+            if (!c.isEmpty() && !c.equals("sponsor") && s.startsWith(c)) {
+                command = i;
+                s = s.substring(c.length());
+                break;
+            }
+        }
+        if (s.startsWith("/sponsor prefix ")) {
+            List<String> tags = new ArrayList<>();
+            java.util.regex.Matcher m = TOKEN.matcher(s);
+            while (m.find()) if (m.group(1) != null) tags.add(m.group(1).toUpperCase(Locale.ROOT));
+            if (tags.size() < 2) return null;
+            List<String> stops = new ArrayList<>(tags.subList(0, Math.min(7, tags.size() - 1)));
+            return new Parsed(3, "", stops, new int[0], new int[0], tags.get(tags.size() - 1));
+        }
+
+        StringBuilder text = new StringBuilder();
+        List<Integer> mask = new ArrayList<>(), colors = new ArrayList<>();
+        List<String> stops = new ArrayList<>();
+        boolean gradient = false;
+        int solid = -1, bits = 0, tags = 0;
+        java.util.regex.Matcher m = TOKEN.matcher(s);
+        int pos = 0;
+        while (true) {
+            boolean found = m.find();
+            int end = found ? m.start() : s.length();
+            for (int cp : s.substring(pos, end).codePoints().toArray()) {
+                text.appendCodePoint(cp);
+                mask.add(bits);
+                colors.add(gradient ? -1 : solid);
+            }
+            if (!found) break;
+            pos = m.end();
+            if (m.group(1) != null) {
+                tags++;
+                String hex = m.group(1).toUpperCase(Locale.ROOT);
+                String kind = m.group(2);
+                bits = 0;
+                if (kind == null) {
+                    gradient = false;
+                    solid = rgb(hex);
+                } else {
+                    stops.add(hex);
+                    gradient = !kind.equals("<");
+                    solid = -1;
+                }
+            } else {
+                char c = Character.toLowerCase(m.group(3).charAt(0));
+                int idx = "lonm".indexOf(c);
+                if (idx >= 0) bits |= 1 << idx;
+                else if (c == 'r') { bits = 0; solid = -1; }
+            }
+        }
+        if (tags == 0 || text.length() == 0) return null;
+
+        int[] cm = colors.stream().mapToInt(Integer::intValue).toArray();
+        if (stops.size() < 2) {
+            // Градиента нет — берём крайние цвета как основу, а сами цвета оставляем посимвольно.
+            int first = -1, last = -1;
+            for (int c : cm) if (c >= 0) { if (first < 0) first = c; last = c; }
+            stops.clear();
+            stops.add(hex(first < 0 ? 0xFFFFFF : first));
+            stops.add(hex(last < 0 ? 0xFFFFFF : last));
+        }
+        while (stops.size() > 6) stops.remove(stops.size() - 2);
+        return new Parsed(command, text.toString(), stops, mask.stream().mapToInt(Integer::intValue).toArray(), cm, null);
     }
 
     /** Формат {#AAAAAA>}текст{#BBBBBB<>}текст{#CCCCCC<} для /itemname, /itemlore и «без команды». */
