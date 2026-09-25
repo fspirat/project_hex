@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "hexgen",
+  "version": "${version}",
+  "name": "HEX Generator (fspirat.ru)",
+  "description": "Кнопка над инвентарём, открывающая HEX-генератор градиентов прямо в игре.",
+  "authors": [
+    "fspirat"
+  ],
+  "contact": {
+    "homepage": "https://fspirat.ru/hex_generator/"
+  },
+  "license": "MIT",
+  "icon": "assets/hexgen/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ru.fspirat.hexgen.HexGenClient"
+    ]
+  },
+  "mixins": [
+    "hexgen.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
