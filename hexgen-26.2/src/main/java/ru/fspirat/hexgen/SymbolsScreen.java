@@ -20,7 +20,7 @@ public class SymbolsScreen extends Screen {
     private int h;
 
     public SymbolsScreen(Screen parent, Consumer<String> insert) {
-        super(Component.literal("Символы"));
+        super(Component.literal(HexUi.tr("symbols.title")));
         this.parent = parent;
         this.insert = insert;
     }
@@ -36,11 +36,11 @@ public class SymbolsScreen extends Screen {
             final String sym = HexCore.SYMBOLS[i];
             this.addRenderableWidget(Button.builder(Component.literal(sym), b -> insert.accept(sym))
                     .bounds(left + (i % COLS) * CELL, top + 40 + (i / COLS) * CELL, CELL - 2, CELL - 2)
-                    .tooltip(HexUi.tip("Вставить " + sym))
+                    .tooltip(HexUi.tip(HexUi.tr("symbols.insert", sym)))
                     .build());
         }
 
-        this.addRenderableWidget(Button.builder(Component.literal("Готово"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("done")), b -> this.onClose())
                 .bounds(left + W / 2 - 60, top + h - 20, 120, 20).build());
     }
 
@@ -49,7 +49,7 @@ public class SymbolsScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, h);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
-        Component t = Component.literal("Символы");
+        Component t = HexUi.gradientTitle(HexUi.tr("symbols.title"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 4, 0xFFFFFFFF, true);
 
         // Текущий текст, чтобы было видно, что вставилось.

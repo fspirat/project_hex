@@ -25,7 +25,7 @@ public class PartColorScreen extends Screen {
     private Button toButton;
 
     public PartColorScreen(Screen parent, String from, String to, BiConsumer<Integer, Integer> apply) {
-        super(Component.literal("Цвет части"));
+        super(Component.literal(HexUi.tr("part_color")));
         this.parent = parent;
         this.from = from;
         this.to = to;
@@ -40,32 +40,32 @@ public class PartColorScreen extends Screen {
 
         fromButton = Button.builder(Component.empty(),
                 b -> this.minecraft.gui.setScreen(new ColorPickerScreen(this, from, v -> from = v)))
-                .bounds(left, top + 28, gradient ? half : W, 22).tooltip(HexUi.tip("Открыть палитру")).build();
+                .bounds(left, top + 28, gradient ? half : W, 22).tooltip(HexUi.tip(HexUi.tr("open_palette"))).build();
         this.addRenderableWidget(fromButton);
 
         toButton = Button.builder(Component.empty(),
                 b -> this.minecraft.gui.setScreen(new ColorPickerScreen(this, to, v -> to = v)))
-                .bounds(left + half + 6, top + 28, half, 22).tooltip(HexUi.tip("Открыть палитру")).build();
+                .bounds(left + half + 6, top + 28, half, 22).tooltip(HexUi.tip(HexUi.tr("open_palette"))).build();
         toButton.visible = gradient;
         this.addRenderableWidget(toButton);
 
-        this.addRenderableWidget(Button.builder(Component.literal(gradient ? "Режим: градиент" : "Режим: один цвет"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(gradient ? HexUi.tr("part.mode_gradient") : HexUi.tr("part.mode_solid")), b -> {
             gradient = !gradient;
             this.clearWidgets();
             this.init();
         }).bounds(left, top + 56, W, 20).build());
 
         int bw = (W - 8) / 3;
-        this.addRenderableWidget(Button.builder(Component.literal("Применить"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("part.apply")), b -> {
             apply.accept(HexCore.rgb(from), gradient ? HexCore.rgb(to) : null);
             this.onClose();
         }).bounds(left, top + H - 20, bw, 20).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Убрать"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("part.remove")), b -> {
             apply.accept(null, null);
             this.onClose();
         }).bounds(left + bw + 4, top + H - 20, bw, 20)
-                .tooltip(HexUi.tip("Вернуть выделенной части общий градиент")).build());
-        this.addRenderableWidget(Button.builder(Component.literal("Отмена"), b -> this.onClose())
+                .tooltip(HexUi.tip(HexUi.tr("part.remove.hint"))).build());
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("cancel")), b -> this.onClose())
                 .bounds(left + (bw + 4) * 2, top + H - 20, bw, 20).build());
     }
 
@@ -74,10 +74,10 @@ public class PartColorScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle("Цвет выделенной части");
+        Component t = HexUi.gradientTitle(HexUi.tr("part.title"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
-        g.text(this.font, Component.literal(gradient ? "Начало" : "Цвет"), left, top + 17, 0xFFA0A0A0, false);
-        if (gradient) g.text(this.font, Component.literal("Конец"), toButton.getX(), top + 17, 0xFFA0A0A0, false);
+        g.text(this.font, Component.literal(gradient ? HexUi.tr("part.start") : HexUi.tr("part.color")), left, top + 17, 0xFFA0A0A0, false);
+        if (gradient) g.text(this.font, Component.literal(HexUi.tr("part.end")), toButton.getX(), top + 17, 0xFFA0A0A0, false);
 
         HexUi.drawSwatch(g, fromButton.getX(), fromButton.getY(), fromButton.getWidth(), fromButton.getHeight(),
                 HexCore.rgb(from), fromButton.isHovered(), false);

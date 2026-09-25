@@ -24,7 +24,7 @@ public class HistoryScreen extends Screen {
     private int h;
 
     public HistoryScreen(Screen parent, Predicate<String> load) {
-        super(Component.literal("История"));
+        super(Component.literal(HexUi.TITLE));
         this.parent = parent;
         this.load = load;
     }
@@ -47,7 +47,7 @@ public class HistoryScreen extends Screen {
             this.addRenderableWidget(b);
         }
 
-        Button clear = Button.builder(Component.literal("Очистить"), b -> {
+        Button clear = Button.builder(Component.literal(HexUi.tr("history.clear")), b -> {
             HexConfig.HISTORY.clear();
             HexConfig.save();
             this.clearWidgets();
@@ -56,7 +56,7 @@ public class HistoryScreen extends Screen {
         clear.active = !hist.isEmpty();
         this.addRenderableWidget(clear);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Назад"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())
                 .bounds(left + W - 150, top + h - 20, 150, 20).build());
     }
 
@@ -99,11 +99,11 @@ public class HistoryScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, h);
         super.render(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle("История");
+        Component t = HexUi.gradientTitle(HexUi.tr("history"));
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
 
         if (HexConfig.HISTORY.isEmpty()) {
-            g.drawString(this.font, Component.literal("Пока пусто — здесь появятся скопированные и выполненные команды"),
+            g.drawString(this.font, Component.literal(HexUi.tr("history.empty")),
                     left, top + 22, 0xFF707070, false);
         }
         for (int i = 0; i < rows.size() && i < HexConfig.HISTORY.size(); i++) {

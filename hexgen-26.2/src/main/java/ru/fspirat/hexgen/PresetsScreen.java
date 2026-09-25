@@ -21,10 +21,9 @@ public class PresetsScreen extends Screen {
     private final Consumer<String[]> apply;
     private final List<Button> buttons = new ArrayList<>();
     private final List<HexCore.Preset> presets = new ArrayList<>();
-    private static final String[] MODES = {"Применить", "Переименовать", "Переместить", "Удалить"};
+    private static final String[] MODES = {"presets.mode.apply", "presets.mode.rename", "presets.mode.move", "presets.mode.delete"};
     private static final String[] MODE_HINTS = {
-        "Свои", "Свои — нажмите, чтобы переименовать", "Свои — выберите пресет, затем место, куда его поставить",
-        "Свои — нажмите, чтобы удалить"
+        "presets.own", "presets.own.rename", "presets.own.move", "presets.own.delete"
     };
     /** Что делает нажатие на свой пресет: 0 применить, 1 переименовать, 2 переместить, 3 удалить. */
     private int mode = 0;
@@ -34,7 +33,7 @@ public class PresetsScreen extends Screen {
     private int top;
 
     public PresetsScreen(Screen parent, Consumer<String[]> apply) {
-        super(Component.literal("Пресеты"));
+        super(Component.literal(HexUi.tr("presets")));
         this.parent = parent;
         this.apply = apply;
     }
@@ -56,21 +55,21 @@ public class PresetsScreen extends Screen {
         }
 
         if (own.isEmpty()) mode = 0;
-        Button modeButton = Button.builder(Component.literal("Свои: " + MODES[mode]), b -> {
+        Button modeButton = Button.builder(Component.literal(HexUi.tr("presets.mode_button", HexUi.tr(MODES[mode]))), b -> {
             mode = (mode + 1) % MODES.length;
             moving = -1;
             rebuild();
         }).bounds(left, top + H - 20, 150, 20)
-                .tooltip(HexUi.tip("Что делает нажатие на свой пресет — нажмите, чтобы сменить")).build();
+                .tooltip(HexUi.tip(HexUi.tr("presets.mode.hint"))).build();
         modeButton.active = !own.isEmpty();
         this.addRenderableWidget(modeButton);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Назад"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())
                 .bounds(left + W - 150, top + H - 20, 150, 20).build());
     }
 
     private void add(HexCore.Preset p, int x, int y, boolean own) {
-        Button b = Button.builder(Component.literal(p.name()), btn -> {
+        Button b = Button.builder(Component.literal(HexUi.presetName(p)), btn -> {
             if (own) {
                 int idx = HexConfig.USER_PRESETS.indexOf(p);
                 switch (mode) {
@@ -114,13 +113,13 @@ public class PresetsScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle("Пресеты");
+        Component t = HexUi.gradientTitle(HexUi.tr("presets"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
-        g.text(this.font, Component.literal("Готовые"), left, top + 14, 0xFFA0A0A0, false);
-        String hint = mode == 2 && moving >= 0 ? "Свои — теперь нажмите на место, куда поставить" : MODE_HINTS[mode];
+        g.text(this.font, Component.literal(HexUi.tr("presets.builtin")), left, top + 14, 0xFFA0A0A0, false);
+        String hint = mode == 2 && moving >= 0 ? HexUi.tr("presets.own.move_target") : HexUi.tr(MODE_HINTS[mode]);
         g.text(this.font, Component.literal(hint), left, top + 118, mode == 3 ? 0xFFFF5555 : mode == 0 ? 0xFFA0A0A0 : 0xFFFFD24D, false);
         if (HexConfig.USER_PRESETS.isEmpty()) {
-            g.text(this.font, Component.literal("Пока пусто — нажмите «★ Сохранить» в генераторе"),
+            g.text(this.font, Component.literal(HexUi.tr("presets.empty")),
                     left, top + 134, 0xFF707070, false);
         }
 

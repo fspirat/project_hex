@@ -51,9 +51,22 @@ public class HexGenScreen extends Screen {
     private int statusColor = 0xFF55FF55;
     private int statusTicks = 0;
 
+    private static boolean sampleSet = false;
+
     public HexGenScreen(Screen parent) {
         super(Component.literal(HexUi.TITLE));
         this.parent = parent;
+        if (!sampleSet) {
+            sampleSet = true;
+            if (HexState.S.text.isEmpty()) {
+                HexState.S.setText(HexUi.tr("sample_text"));
+                cursor = highlight = HexState.S.text.length();
+            }
+        }
+    }
+
+    private static String capitalize(String s) {
+        return s.isEmpty() ? s : s.substring(0, 1).toUpperCase() + s.substring(1);
     }
 
     private static HexState s() {
@@ -126,7 +139,7 @@ public class HexGenScreen extends Screen {
 
     private void open(Screen screen) {
         saveCursor();
-        this.minecraft.gui.setScreen(screen);
+        this.minecraft.setScreen(screen);
     }
 
     @Override
@@ -141,15 +154,15 @@ public class HexGenScreen extends Screen {
 
         // --- Заголовок: отмена/повтор и настройки ---
         this.addRenderableWidget(Button.builder(Component.literal("↶"), b -> undo())
-                .bounds(left, top - 2, 16, 13).tooltip(HexUi.tip("Отменить (Ctrl+Z)")).build());
+                .bounds(left, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("undo"))).build());
         this.addRenderableWidget(Button.builder(Component.literal("↷"), b -> redo())
-                .bounds(left + 18, top - 2, 16, 13).tooltip(HexUi.tip("Повторить (Ctrl+Y)")).build());
+                .bounds(left + 18, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("redo"))).build());
         this.addRenderableWidget(Button.builder(Component.literal("⚙"), b -> open(new SettingsScreen(this)))
-                .bounds(left + W - 16, top - 2, 16, 13).tooltip(HexUi.tip("Настройки")).build());
+                .bounds(left + W - 16, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("settings"))).build());
 
         // --- Строка 1: текст (или ник) + команда ---
         if (!sponsor()) {
-            textBox = new SelectableEditBox(this.font, left, y1, 214, 18, Component.literal("Текст"));
+            textBox = new SelectableEditBox(this.font, left, y1, 214, 18, Component.literal(HexUi.tr("text")));
             textBox.setMaxLength(TEXT_MAX);
             textBox.setValue(s().text);
             textBox.setResponder(v -> {
@@ -161,55 +174,55 @@ public class HexGenScreen extends Screen {
             int len = s().text.length();
             textBox.setCursorPosition(Math.max(0, Math.min(cursor, len)));
             textBox.setHighlightPos(Math.max(0, Math.min(highlight, len)));
-            textBox.setTooltip(HexUi.tip("Выделите часть текста мышью, чтобы задать ей формат или свой цвет"));
+            textBox.setTooltip(HexUi.tip(HexUi.tr("text.hint")));
             this.addRenderableWidget(textBox);
             nickColorBox = null;
         } else {
             textBox = null;
-            EditBox nick = new EditBox(this.font, left, y1, 150, 18, Component.literal("Ник"));
+            EditBox nick = new EditBox(this.font, left, y1, 150, 18, Component.literal(HexUi.tr("nick")));
             nick.setMaxLength(16);
             nick.setValue(s().nickName);
             nick.setResponder(v -> s().nickName = v);
-            nick.setTooltip(HexUi.tip("Ник для предпросмотра (в команду не попадает)"));
+            nick.setTooltip(HexUi.tip(HexUi.tr("nick.hint")));
             this.addRenderableWidget(nick);
 
-            nickColorBox = new EditBox(this.font, left + 156, y1, 58, 18, Component.literal("Цвет ника"));
+            nickColorBox = new EditBox(this.font, left + 156, y1, 58, 18, Component.literal(HexUi.tr("nick_color")));
             nickColorBox.setMaxLength(7);
             nickColorBox.setValue(s().nickHex);
             nickColorBox.setResponder(v -> s().nickHex = HexCore.clean(v));
-            nickColorBox.setTooltip(HexUi.tip("Цвет ника (= конечный цвет, можно поменять)"));
+            nickColorBox.setTooltip(HexUi.tip(HexUi.tr("nick_color.hint")));
             this.addRenderableWidget(nickColorBox);
             addSwatchButton(left + 156, y1 + 20, 58, () -> s().nickHex, v -> s().nickHex = v);
         }
-        this.addRenderableWidget(Button.builder(Component.literal(HexCore.COMMAND_LABELS[s().command]), b -> change(() -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.commandLabel(s().command)), b -> change(() -> {
             s().command = (s().command + 1) % HexCore.COMMANDS.length;
             normalizeStops();
             if (sponsor()) syncNick(true);
-        })).bounds(left + 220, y1 - 1, 120, 20).tooltip(HexUi.tip("Команда — нажмите, чтобы сменить")).build());
+        })).bounds(left + 220, y1 - 1, 120, 20).tooltip(HexUi.tip(HexUi.tr("command.hint"))).build());
 
         // --- Строка 2: шрифт, форматирование, символы, цвет части ---
         if (!sponsor()) {
-            this.addRenderableWidget(Button.builder(Component.literal(s().smallCaps ? "ꜱᴍᴀʟʟ ᴄᴀᴘꜱ" : "Обычный шрифт"),
+            this.addRenderableWidget(Button.builder(Component.literal(s().smallCaps ? "ꜱᴍᴀʟʟ ᴄᴀᴘꜱ" : HexUi.tr("font.normal")),
                     b -> change(() -> s().smallCaps = !s().smallCaps)).bounds(left, y2, 96, 20).build());
 
-            String[] tips = {"&l Жирный", "&o Курсив", "&n Подчёркнутый", "&m Зачёркнутый"};
+            String[] tips = {HexUi.tr("format.bold"), HexUi.tr("format.italic"), HexUi.tr("format.underline"), HexUi.tr("format.strike")};
             for (int i = 0; i < 4; i++) {
                 final int bit = 1 << i;
                 formatButtons[i] = Button.builder(Component.empty(), b -> toggleFormat(bit))
                         .bounds(left + 100 + i * 22, y2, 20, 20)
-                        .tooltip(HexUi.tip(tips[i] + "\nБез выделения — весь текст, с выделением — только выделенная часть"))
+                        .tooltip(HexUi.tip(tips[i] + "\n" + HexUi.tr("format.hint")))
                         .build();
                 this.addRenderableWidget(formatButtons[i]);
             }
             refreshFormatButtons();
 
-            this.addRenderableWidget(Button.builder(Component.literal("✦ Символы"),
+            this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("symbols")),
                     b -> open(new SymbolsScreen(this, this::insertSymbol)))
-                    .bounds(left + 190, y2, 72, 20).tooltip(HexUi.tip("Вставить символ в позицию курсора")).build());
+                    .bounds(left + 190, y2, 72, 20).tooltip(HexUi.tip(HexUi.tr("symbols.hint"))).build());
 
-            this.addRenderableWidget(Button.builder(Component.literal("Цвет части"), b -> openPartColor())
+            this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("part_color")), b -> openPartColor())
                     .bounds(left + 266, y2, 74, 20)
-                    .tooltip(HexUi.tip("Свой цвет или градиент для выделенной части текста")).build());
+                    .tooltip(HexUi.tip(HexUi.tr("part_color.hint"))).build());
         }
 
         // --- Строка 3: цвета (поле HEX + полоска-кнопка палитры под ним) ---
@@ -217,7 +230,7 @@ public class HexGenScreen extends Screen {
         int stride = colorStride(), boxW = stride - 4;
         for (int i = 0; i < stops.size(); i++) {
             final int idx = i;
-            EditBox hex = new EditBox(this.font, left + i * stride, y3, boxW, 16, Component.literal("Цвет " + (i + 1)));
+            EditBox hex = new EditBox(this.font, left + i * stride, y3, boxW, 16, Component.literal(HexUi.tr("color_n", (i + 1))));
             hex.setMaxLength(7);
             hex.setValue(stops.get(i));
             hex.setResponder(v -> {
@@ -236,7 +249,7 @@ public class HexGenScreen extends Screen {
         }
 
         // --- Строка 4: кнопки цветов ---
-        Button add = Button.builder(Component.literal("+ Цвет"), b -> change(() -> {
+        Button add = Button.builder(Component.literal(HexUi.tr("add_color")), b -> change(() -> {
             List<String> st = s().stops;
             if (st.size() >= maxStops()) return;
             if (st.size() == 1) st.add(st.get(0));
@@ -249,7 +262,7 @@ public class HexGenScreen extends Screen {
         add.active = stops.size() < maxStops();
         this.addRenderableWidget(add);
 
-        Button remove = Button.builder(Component.literal("− Цвет"), b -> change(() -> {
+        Button remove = Button.builder(Component.literal(HexUi.tr("remove_color")), b -> change(() -> {
             List<String> st = s().stops;
             if (st.size() <= minStops()) return;
             st.remove(Math.max(0, st.size() - 2));
@@ -261,62 +274,62 @@ public class HexGenScreen extends Screen {
         this.addRenderableWidget(Button.builder(Component.literal("⇄"), b -> change(() -> {
             Collections.reverse(s().stops);
             if (sponsor()) syncNick(false);
-        })).bounds(left + 106, y4, 20, 20).tooltip(HexUi.tip("Поменять порядок")).build());
+        })).bounds(left + 106, y4, 20, 20).tooltip(HexUi.tip(HexUi.tr("reverse"))).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Случайный"), b -> change(() -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("random")), b -> change(() -> {
             s().stops.clear();
             s().stops.addAll(HexCore.randomGradient());
             normalizeStops();
             if (sponsor()) syncNick(false);
         })).bounds(left + 129, y4, 66, 20).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Пресеты"),
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("presets")),
                 b -> open(new PresetsScreen(this, this::applyPreset)))
-                .bounds(left + 198, y4, 70, 20).tooltip(HexUi.tip("Готовые и свои градиенты")).build());
+                .bounds(left + 198, y4, 70, 20).tooltip(HexUi.tip(HexUi.tr("presets.hint"))).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("★ Сохранить"), b -> {
-            if (!stopsValid()) { flash("Сначала исправьте цвета", 0xFFFF5555); return; }
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("save_preset")), b -> {
+            if (!stopsValid()) { flash(HexUi.tr("fix_colors"), 0xFFFF5555); return; }
             String[] colors = s().stops.toArray(new String[0]);
-            open(new NamePresetScreen(this, colors, name -> flash("Сохранено в пресеты как «" + name + "»")));
-        }).bounds(left + 271, y4, 69, 20).tooltip(HexUi.tip("Сохранить текущие цвета как свой пресет")).build());
+            open(new NamePresetScreen(this, colors, name -> flash(HexUi.tr("saved_as", name))));
+        }).bounds(left + 271, y4, 69, 20).tooltip(HexUi.tip(HexUi.tr("save_preset.hint"))).build());
 
         // --- Нижние кнопки ---
         int bw = 64, step = 69;
-        this.addRenderableWidget(Button.builder(Component.literal("Скопировать"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("copy")), b -> {
             String out = output();
-            if (out.isEmpty()) { flash("Сначала исправьте цвета", 0xFFFF5555); return; }
+            if (out.isEmpty()) { flash(HexUi.tr("fix_colors"), 0xFFFF5555); return; }
             this.minecraft.keyboardHandler.setClipboard(out);
             HexConfig.addHistory(out);
             int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
-            if (len > limit) flash("Скопировано, но " + overLimitMessage(len, limit).toLowerCase(), 0xFFFFD24D);
-            else flash("Скопировано в буфер обмена");
+            if (len > limit) flash(HexUi.tr("copied_over", overLimitMessage(len, limit)), 0xFFFFD24D);
+            else flash(HexUi.tr("copied"));
         }).bounds(left, y6, bw, 20).build());
 
-        Button run = Button.builder(Component.literal("Выполнить"), b -> {
+        Button run = Button.builder(Component.literal(HexUi.tr("run")), b -> {
             String out = output();
-            if (out.isEmpty() || !out.startsWith("/")) { flash("Выберите команду", 0xFFFF5555); return; }
+            if (out.isEmpty() || !out.startsWith("/")) { flash(HexUi.tr("pick_command"), 0xFFFF5555); return; }
             int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
-            if (len > limit) { flash(overLimitMessage(len, limit), 0xFFFF5555); return; }
+            if (len > limit) { flash(capitalize(overLimitMessage(len, limit)), 0xFFFF5555); return; }
             if (this.minecraft.player != null) {
                 this.minecraft.player.connection.sendCommand(out.substring(1));
                 HexConfig.addHistory(out);
-                flash("Команда отправлена");
+                flash(HexUi.tr("sent"));
             }
-        }).bounds(left + step, y6, bw, 20).tooltip(HexUi.tip("Сразу выполнить команду на сервере")).build();
+        }).bounds(left + step, y6, bw, 20).tooltip(HexUi.tip(HexUi.tr("run.hint"))).build();
         run.active = !HexCore.COMMANDS[s().command].isEmpty();
         this.addRenderableWidget(run);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Импорт"), b -> {
-            if (applyCommand(this.minecraft.keyboardHandler.getClipboard())) flash("Команда из буфера загружена");
-            else flash("В буфере нет команды с HEX-цветами", 0xFFFF5555);
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("import")), b -> {
+            if (applyCommand(this.minecraft.keyboardHandler.getClipboard())) flash(HexUi.tr("imported"));
+            else flash(HexUi.tr("import_failed"), 0xFFFF5555);
         }).bounds(left + step * 2, y6, bw, 20)
-                .tooltip(HexUi.tip("Загрузить готовую команду из буфера обмена, чтобы её поправить")).build());
+                .tooltip(HexUi.tip(HexUi.tr("import.hint"))).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("История"),
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("history")),
                 b -> open(new HistoryScreen(this, this::applyCommand)))
-                .bounds(left + step * 3, y6, bw, 20).tooltip(HexUi.tip("Последние скопированные и выполненные команды")).build());
+                .bounds(left + step * 3, y6, bw, 20).tooltip(HexUi.tip(HexUi.tr("history.hint"))).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Назад"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())
                 .bounds(left + step * 4, y6, bw, 20).build());
     }
 
@@ -324,12 +337,12 @@ public class HexGenScreen extends Screen {
 
     private void undo() {
         if (HexState.undo()) { cursor = highlight = s().text.length(); textBox = null; rebuild(); }
-        else flash("Нечего отменять", 0xFFA0A0A0);
+        else flash(HexUi.tr("nothing_undo"), 0xFFA0A0A0);
     }
 
     private void redo() {
         if (HexState.redo()) { cursor = highlight = s().text.length(); textBox = null; rebuild(); }
-        else flash("Нечего повторять", 0xFFA0A0A0);
+        else flash(HexUi.tr("nothing_redo"), 0xFFA0A0A0);
     }
 
     @Override
@@ -376,7 +389,7 @@ public class HexGenScreen extends Screen {
 
     private String overLimitMessage(int len, int limit) {
         boolean perChar = HexCore.uniformBits(s().mask, s().defaultBits) < 0 || HexCore.hasOverrides(s().colors);
-        return "Длиннее лимита: " + len + " / " + limit + (perChar ? " — свой цвет/формат части сильно удлиняет команду" : "");
+        return HexUi.tr("over_limit", len, limit) + (perChar ? HexUi.tr("over_limit.per_char") : "");
     }
 
     /** Выделение в поле текста в символах (code points): {начало, конец} или null. */
@@ -433,7 +446,7 @@ public class HexGenScreen extends Screen {
     private void openPartColor() {
         int[] sel = selection();
         if (sel == null || sel[1] <= sel[0]) {
-            flash("Сначала выделите часть текста мышью", 0xFFFFD24D);
+            flash(HexUi.tr("select_first"), 0xFFFFD24D);
             return;
         }
         int a = sel[0], b = Math.min(sel[1], s().colors.length);
@@ -478,7 +491,7 @@ public class HexGenScreen extends Screen {
     private void addSwatchButton(int x, int y, int w, Supplier<String> get, Consumer<String> set) {
         Button b = Button.builder(Component.empty(), btn -> open(new ColorPickerScreen(this, get.get(), set)))
                 .bounds(x, y, w, 8)
-                .tooltip(HexUi.tip("Открыть палитру"))
+                .tooltip(HexUi.tip(HexUi.tr("open_palette")))
                 .build();
         swatchButtons.add(b);
         this.addRenderableWidget(b);
@@ -501,7 +514,7 @@ public class HexGenScreen extends Screen {
 
     /** Предпросмотр, отрисованный настоящим шрифтом Minecraft. */
     private MutableComponent preview() {
-        if (!stopsValid()) return Component.literal("Неверный HEX-цвет").withStyle(Style.EMPTY.withColor(0xFF5555));
+        if (!stopsValid()) return Component.literal(HexUi.tr("invalid_hex")).withStyle(Style.EMPTY.withColor(0xFF5555));
         HexState st = s();
         if (sponsor()) {
             MutableComponent root = Component.empty();
@@ -565,7 +578,7 @@ public class HexGenScreen extends Screen {
         int area = px + pw - textLeft, tw = this.font.width(pv);
         g.text(this.font, pv, textLeft + Math.max(4, (area - tw) / 2), py + 7, 0xFFFFFFFF, true);
 
-        String colorsLabel = (sponsor() ? "Цвета префикса (1–7)" : "Цвета (2–6)") + " — нажмите на полоску, чтобы открыть палитру";
+        String colorsLabel = (sponsor() ? HexUi.tr("colors_sponsor") : HexUi.tr("colors")) + HexUi.tr("colors.hint");
         g.text(this.font, Component.literal(fit(colorsLabel, W)), left, top + Y_COLORS_LABEL, 0xFFA0A0A0, false);
 
         // Полоски-кнопки палитры: цвет поля (или тёмно-красный, если HEX неверный).
@@ -584,15 +597,15 @@ public class HexGenScreen extends Screen {
         // Результат и счётчик длины.
         int ry = top + Y_RESULT;
         String out = output();
-        g.text(this.font, Component.literal("Результат:"), left, ry, 0xFFA0A0A0, false);
+        g.text(this.font, Component.literal(HexUi.tr("result")), left, ry, 0xFFA0A0A0, false);
         if (!out.isEmpty()) {
             int limit = HexCore.LIMITS[st.command], len = HexCore.measuredLength(out, st.command);
             int cc = len > limit ? 0xFFFF5555 : len > limit * 0.85 ? 0xFFFFD24D : 0xFF55FF55;
-            String counter = (st.command <= 1 ? "длина текста " : "") + len + " / " + limit;
+            String counter = st.command <= 1 ? HexUi.tr("text_length", len, limit) : len + " / " + limit;
             g.text(this.font, Component.literal(counter), left + W - this.font.width(counter), ry, cc, false);
         }
         g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
-        String shown = out.isEmpty() ? "Каждый цвет — 6 символов HEX, например FF8F5A" : out;
+        String shown = out.isEmpty() ? HexUi.tr("hex_help") : out;
         g.text(this.font, Component.literal(fit(shown, W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
 
         if (!status.isEmpty()) {
@@ -604,7 +617,7 @@ public class HexGenScreen extends Screen {
     @Override
     public void onClose() {
         saveCursor();
-        this.minecraft.gui.setScreen(this.parent);
+        this.minecraft.setScreen(this.parent);
     }
 
     @Override

@@ -17,7 +17,7 @@ public class SettingsScreen extends Screen {
     private String confirming = null;
 
     public SettingsScreen(Screen parent) {
-        super(Component.literal("Настройки"));
+        super(Component.literal(HexUi.tr("settings")));
         this.parent = parent;
     }
 
@@ -32,34 +32,34 @@ public class SettingsScreen extends Screen {
         top = Math.max(8, (this.height - H) / 2);
         int y = top + 16;
 
-        this.addRenderableWidget(Button.builder(Component.literal("Подсказки: " + (HexConfig.showHints ? "вкл" : "выкл")), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("settings.hints", HexUi.onOff(HexConfig.showHints))), b -> {
             HexConfig.showHints = !HexConfig.showHints;
             HexConfig.save();
             rebuild();
         }).bounds(left, y, W, 20).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Анимация градиента: " + (HexConfig.animatePreview ? "вкл" : "выкл")), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("settings.animation", HexUi.onOff(HexConfig.animatePreview))), b -> {
             HexConfig.animatePreview = !HexConfig.animatePreview;
             HexConfig.save();
             rebuild();
-        }).bounds(left, y + 24, W, 20).tooltip(HexUi.tip("Градиент переливается в предпросмотре и заголовках (в команду не попадает)")).build());
+        }).bounds(left, y + 24, W, 20).tooltip(HexUi.tip(HexUi.tr("settings.animation.hint"))).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Тема окна: " + HexConfig.THEMES[HexConfig.theme]), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("settings.theme", HexUi.tr(HexConfig.THEMES[HexConfig.theme]))), b -> {
             HexConfig.theme = (HexConfig.theme + 1) % HexConfig.THEMES.length;
             HexConfig.save();
             rebuild();
-        }).bounds(left, y + 48, W, 20).tooltip(HexUi.tip("«По градиенту» — рамка окна в цветах текущего градиента")).build());
+        }).bounds(left, y + 48, W, 20).tooltip(HexUi.tip(HexUi.tr("settings.theme.hint"))).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Вернуть кнопку в инвентаре на место"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("settings.reset_button")), b -> {
             HexConfig.buttonOffsetX = HexConfig.DEFAULT_OFFSET_X;
             HexConfig.buttonOffsetY = HexConfig.DEFAULT_OFFSET_Y;
             HexConfig.save();
-            b.setMessage(Component.literal("Готово ✔"));
+            b.setMessage(Component.literal(HexUi.tr("settings.reset_done")));
         }).bounds(left, y + 72, W, 20).build());
 
         Button hist = Button.builder(Component.literal("history".equals(confirming)
-                ? "Точно очистить? Нажмите ещё раз"
-                : "Очистить историю (" + HexConfig.HISTORY.size() + ")"), b -> {
+                ? HexUi.tr("settings.clear_history.confirm")
+                : HexUi.tr("settings.clear_history", HexConfig.HISTORY.size())), b -> {
             if ("history".equals(confirming)) {
                 HexConfig.HISTORY.clear();
                 HexConfig.save();
@@ -73,8 +73,8 @@ public class SettingsScreen extends Screen {
         this.addRenderableWidget(hist);
 
         Button presets = Button.builder(Component.literal("presets".equals(confirming)
-                ? "Точно удалить все? Нажмите ещё раз"
-                : "Удалить свои пресеты (" + HexConfig.USER_PRESETS.size() + ")"), b -> {
+                ? HexUi.tr("settings.delete_presets.confirm")
+                : HexUi.tr("settings.delete_presets", HexConfig.USER_PRESETS.size())), b -> {
             if ("presets".equals(confirming)) {
                 HexConfig.USER_PRESETS.clear();
                 HexConfig.save();
@@ -87,7 +87,7 @@ public class SettingsScreen extends Screen {
         presets.active = !HexConfig.USER_PRESETS.isEmpty();
         this.addRenderableWidget(presets);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Готово"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("done")), b -> this.onClose())
                 .bounds(left + W / 2 - 60, top + H - 20, 120, 20).build());
     }
 
@@ -96,17 +96,17 @@ public class SettingsScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle("Настройки");
+        Component t = HexUi.gradientTitle(HexUi.tr("settings"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
 
         Component key = HexGenClient.OPEN_KEY.getTranslatedKeyMessage();
-        g.text(this.font, Component.literal("Открыть генератор из игры: ").append(key), left, top + 164, 0xFFA0A0A0, false);
-        g.text(this.font, Component.literal("Сменить: Настройки → Управление → «Разное»"), left, top + 176, 0xFF707070, false);
+        g.text(this.font, Component.literal(HexUi.tr("settings.hotkey")).append(key), left, top + 164, 0xFFA0A0A0, false);
+        g.text(this.font, Component.literal(HexUi.tr("settings.hotkey.change")), left, top + 176, 0xFF707070, false);
     }
 
     @Override
     public void onClose() {
-        this.minecraft.gui.setScreen(this.parent);
+        this.minecraft.setScreen(this.parent);
     }
 
     @Override

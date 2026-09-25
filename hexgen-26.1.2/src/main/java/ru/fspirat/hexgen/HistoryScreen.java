@@ -24,7 +24,7 @@ public class HistoryScreen extends Screen {
     private int h;
 
     public HistoryScreen(Screen parent, Predicate<String> load) {
-        super(Component.literal("История"));
+        super(Component.literal(HexUi.TITLE));
         this.parent = parent;
         this.load = load;
     }
@@ -40,14 +40,14 @@ public class HistoryScreen extends Screen {
         for (int i = 0; i < hist.size(); i++) {
             String cmd = hist.get(i);
             Button b = Button.builder(Component.empty(), btn -> {
-                this.minecraft.gui.setScreen(this.parent);
+                this.minecraft.setScreen(this.parent);
                 load.test(cmd);
             }).bounds(left, top + 16 + i * ROW, W, ROW - 2).tooltip(HexUi.tip(cmd)).build();
             rows.add(b);
             this.addRenderableWidget(b);
         }
 
-        Button clear = Button.builder(Component.literal("Очистить"), b -> {
+        Button clear = Button.builder(Component.literal(HexUi.tr("history.clear")), b -> {
             HexConfig.HISTORY.clear();
             HexConfig.save();
             this.clearWidgets();
@@ -56,7 +56,7 @@ public class HistoryScreen extends Screen {
         clear.active = !hist.isEmpty();
         this.addRenderableWidget(clear);
 
-        this.addRenderableWidget(Button.builder(Component.literal("Назад"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())
                 .bounds(left + W - 150, top + h - 20, 150, 20).build());
     }
 
@@ -99,11 +99,11 @@ public class HistoryScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, h);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle("История");
+        Component t = HexUi.gradientTitle(HexUi.tr("history"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
 
         if (HexConfig.HISTORY.isEmpty()) {
-            g.text(this.font, Component.literal("Пока пусто — здесь появятся скопированные и выполненные команды"),
+            g.text(this.font, Component.literal(HexUi.tr("history.empty")),
                     left, top + 22, 0xFF707070, false);
         }
         for (int i = 0; i < rows.size() && i < HexConfig.HISTORY.size(); i++) {
@@ -114,7 +114,7 @@ public class HistoryScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.gui.setScreen(this.parent);
+        this.minecraft.setScreen(this.parent);
     }
 
     @Override

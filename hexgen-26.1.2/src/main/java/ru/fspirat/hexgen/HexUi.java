@@ -4,6 +4,7 @@ import java.util.List;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
@@ -14,6 +15,25 @@ public final class HexUi {
 
     public static final String TITLE = "HEX GENERATOR";
     public static final List<String> TITLE_STOPS = List.of("B04DFF", "FF8FE0");
+
+    /** Перевод строки мода на язык игры (assets/hexgen/lang): ключ без префикса «fstweak.». */
+    public static String tr(String key, Object... args) {
+        return I18n.get("fstweak." + key, args);
+    }
+
+    public static String onOff(boolean on) {
+        return tr(on ? "on" : "off");
+    }
+
+    /** Имя пресета: у готовых это ключ перевода, у своих — то, что ввёл игрок. */
+    public static String presetName(HexCore.Preset p) {
+        return p.name().startsWith("preset.") ? tr(p.name()) : p.name();
+    }
+
+    public static String commandLabel(int command) {
+        String label = HexCore.COMMAND_LABELS[command];
+        return label != null ? label : tr("command.none");
+    }
 
     /** Подсказка для кнопки или null, если подсказки выключены в настройках. */
     public static Tooltip tip(String text) {

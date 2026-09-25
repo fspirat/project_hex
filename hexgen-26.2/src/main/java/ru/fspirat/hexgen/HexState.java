@@ -9,7 +9,8 @@ import java.util.List;
 public final class HexState {
     public static HexState S = new HexState();
 
-    public String text = "Пример текста";
+    /** Пусто до первого открытия окна — тогда подставляется пример на языке игры. */
+    public String text = "";
     public int command = 0;
     public boolean smallCaps = false;
     public List<String> stops = new ArrayList<>(List.of("B04DFF", "FF8FE0"));

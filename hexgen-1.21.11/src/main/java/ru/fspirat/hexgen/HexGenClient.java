@@ -40,7 +40,7 @@ public class HexGenClient implements ClientModInitializer {
                     b -> client.setScreen(new HexGenScreen(inventory)),
                     HexConfig::save);
             button.setTooltip(!HexConfig.showHints ? null : Tooltip.create(Component.literal(HexUi.TITLE + "\n")
-                    .append(Component.literal("Ctrl + перетащить (или Ctrl + клик) — переместить кнопку").withStyle(Style.EMPTY.withColor(0xA0A0A0)))));
+                    .append(Component.literal(HexUi.tr("button.move_hint")).withStyle(Style.EMPTY.withColor(0xA0A0A0)))));
             place(button, acc, screen.width, screen.height);
             ((ScreenInvoker) (Object) screen).hexgen$addRenderableWidget(button);
 

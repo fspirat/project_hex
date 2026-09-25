@@ -29,7 +29,8 @@ public final class HexConfig {
     public static boolean animatePreview = true;
     /** Тема окна: индекс в THEMES. */
     public static int theme = 0;
-    public static final String[] THEMES = {"Фиолетовая", "Тёмная", "По градиенту"};
+    /** Ключи перевода тем. */
+    public static final String[] THEMES = {"theme.purple", "theme.dark", "theme.gradient"};
     public static final List<HexCore.Preset> USER_PRESETS = new ArrayList<>();
     /** Последние скопированные/выполненные команды, новые сверху. */
     public static final List<String> HISTORY = new ArrayList<>();
@@ -116,7 +117,7 @@ public final class HexConfig {
     public static String nextPresetName() {
         int n = 1;
         while (true) {
-            String name = "Мой " + n;
+            String name = HexUi.tr("preset.my", n);
             boolean used = false;
             for (HexCore.Preset p : USER_PRESETS) used |= p.name().equals(name);
             if (!used) return name;

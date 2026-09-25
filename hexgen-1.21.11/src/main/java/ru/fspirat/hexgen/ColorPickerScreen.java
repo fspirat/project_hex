@@ -41,7 +41,7 @@ public class ColorPickerScreen extends Screen {
     private final List<String> swatchColors = new ArrayList<>();
 
     public ColorPickerScreen(Screen parent, String current, Consumer<String> onPick) {
-        super(Component.literal("Палитра цветов"));
+        super(Component.literal(HexUi.TITLE));
         this.parent = parent;
         this.original = HexCore.valid(current) ? current : "FFFFFF";
         this.onPick = onPick;
@@ -88,13 +88,13 @@ public class ColorPickerScreen extends Screen {
 
         int sx = left, sw = 196;
         hueSlider = new Slider(sx, top + 20, sw, hue / 360.0,
-                v -> "Оттенок: " + Math.round(v * 360) + "°",
+                v -> HexUi.tr("picker.hue", Math.round(v * 360)),
                 v -> { hue = v * 360; fromSliders(); });
         satSlider = new Slider(sx, top + 48, sw, sat,
-                v -> "Насыщенность: " + Math.round(v * 100) + "%",
+                v -> HexUi.tr("picker.saturation", Math.round(v * 100)),
                 v -> { sat = v; fromSliders(); });
         valSlider = new Slider(sx, top + 76, sw, val,
-                v -> "Яркость: " + Math.round(v * 100) + "%",
+                v -> HexUi.tr("picker.brightness", Math.round(v * 100)),
                 v -> { val = v; fromSliders(); });
         this.addRenderableWidget(hueSlider);
         this.addRenderableWidget(satSlider);
@@ -120,7 +120,7 @@ public class ColorPickerScreen extends Screen {
             addSwatch(RECENT.get(i), left + i * CELL, top + 168);
         }
 
-        this.addRenderableWidget(Button.builder(Component.literal("Готово"), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("done")), b -> {
             String hex = HexCore.hex(currentRgb());
             RECENT.remove(hex);
             RECENT.add(0, hex);
@@ -129,7 +129,7 @@ public class ColorPickerScreen extends Screen {
             this.onClose();
         }).bounds(left, top + H - 20, W / 2 - 2, 20).build());
 
-        this.addRenderableWidget(Button.builder(Component.literal("Отмена"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("cancel")), b -> this.onClose())
                 .bounds(left + W / 2 + 2, top + H - 20, W / 2 - 2, 20).build());
     }
 
@@ -148,7 +148,7 @@ public class ColorPickerScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, H);
         super.render(g, mouseX, mouseY, delta);
 
-        Component t = Component.literal("Палитра цветов");
+        Component t = HexUi.gradientTitle(HexUi.tr("picker.title"));
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 4, 0xFFFFFFFF, true);
 
         // Полоски под ползунками показывают, как изменится цвет.
@@ -165,11 +165,11 @@ public class ColorPickerScreen extends Screen {
         g.fill(px - 1, top + 19, px + pw + 1, top + 73, 0xFF000000);
         g.fill(px, top + 20, px + pw, top + 46, 0xFF000000 | currentRgb());
         g.fill(px, top + 46, px + pw, top + 72, 0xFF000000 | HexCore.rgb(original));
-        g.drawString(this.font, Component.literal("новый"), px + 3, top + 23, labelColor(currentRgb()), false);
-        g.drawString(this.font, Component.literal("было"), px + 3, top + 49, labelColor(HexCore.rgb(original)), false);
+        g.drawString(this.font, Component.literal(HexUi.tr("picker.new")), px + 3, top + 23, labelColor(currentRgb()), false);
+        g.drawString(this.font, Component.literal(HexUi.tr("picker.old")), px + 3, top + 49, labelColor(HexCore.rgb(original)), false);
 
-        g.drawString(this.font, Component.literal("Быстрая палитра"), left, top + 106, 0xFFA0A0A0, false);
-        g.drawString(this.font, Component.literal(RECENT.isEmpty() ? "Недавние: пока пусто" : "Недавние"),
+        g.drawString(this.font, Component.literal(HexUi.tr("picker.quick")), left, top + 106, 0xFFA0A0A0, false);
+        g.drawString(this.font, Component.literal(RECENT.isEmpty() ? HexUi.tr("picker.recent_empty") : HexUi.tr("picker.recent")),
                 left, top + 158, 0xFFA0A0A0, false);
 
         String cur = HexCore.hex(currentRgb());

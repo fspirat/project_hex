@@ -33,7 +33,7 @@ public class NamePresetScreen extends Screen {
     }
 
     public NamePresetScreen(Screen parent, String[] colors, String initialName, String renaming, Consumer<String> saved) {
-        super(Component.literal("Имя пресета"));
+        super(Component.literal(HexUi.tr("name.title")));
         this.parent = parent;
         this.colors = colors;
         this.saved = saved;
@@ -51,7 +51,7 @@ public class NamePresetScreen extends Screen {
         left = (this.width - W) / 2;
         top = Math.max(8, (this.height - H) / 2);
 
-        nameBox = new SelectableEditBox(this.font, left, top + 30, W, 18, Component.literal("Имя"));
+        nameBox = new SelectableEditBox(this.font, left, top + 30, W, 18, Component.literal(HexUi.tr("name.field")));
         nameBox.setMaxLength(MAX_NAME);
         nameBox.setValue(name);
         nameBox.setResponder(v -> {
@@ -64,10 +64,10 @@ public class NamePresetScreen extends Screen {
         nameBox.setHighlightPos(0);
 
         int bw = (W - 4) / 2;
-        saveButton = Button.builder(Component.literal("Сохранить"), b -> save())
+        saveButton = Button.builder(Component.literal(HexUi.tr("name.save")), b -> save())
                 .bounds(left, top + H - 20, bw, 20).build();
         this.addRenderableWidget(saveButton);
-        this.addRenderableWidget(Button.builder(Component.literal("Отмена"), b -> this.onClose())
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("cancel")), b -> this.onClose())
                 .bounds(left + bw + 4, top + H - 20, bw, 20).build());
         updateSaveButton();
     }
@@ -77,11 +77,11 @@ public class NamePresetScreen extends Screen {
         String n = name.strip();
         if (renaming != null) {
             saveButton.active = !n.isEmpty() && !taken(n);
-            saveButton.setMessage(Component.literal("Переименовать"));
+            saveButton.setMessage(Component.literal(HexUi.tr("name.rename")));
             return;
         }
         saveButton.active = !n.isEmpty();
-        saveButton.setMessage(Component.literal(HexConfig.hasPreset(n) ? "Заменить" : "Сохранить"));
+        saveButton.setMessage(Component.literal(HexConfig.hasPreset(n) ? HexUi.tr("name.replace") : HexUi.tr("name.save")));
     }
 
     private void save() {
@@ -111,18 +111,18 @@ public class NamePresetScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, H);
         super.render(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle(renaming != null ? "Переименовать пресет" : "Сохранить пресет");
+        Component t = HexUi.gradientTitle(renaming != null ? HexUi.tr("name.title_rename") : HexUi.tr("name.title_save"));
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
-        g.drawString(this.font, Component.literal("Название:"), left, top + 19, 0xFFA0A0A0, false);
+        g.drawString(this.font, Component.literal(HexUi.tr("name.label")), left, top + 19, 0xFFA0A0A0, false);
         HexUi.drawGradient(g, left, top + 54, W, 6, List.of(colors));
         if (renaming != null) {
             if (taken(name.strip())) {
-                g.drawString(this.font, Component.literal("Это имя уже занято"), left, top + 64, 0xFFFF5555, false);
+                g.drawString(this.font, Component.literal(HexUi.tr("name.taken")), left, top + 64, 0xFFFF5555, false);
             }
         } else if (HexConfig.hasPreset(name.strip())) {
-            g.drawString(this.font, Component.literal("Пресет с таким именем будет заменён"), left, top + 64, 0xFFFFD24D, false);
+            g.drawString(this.font, Component.literal(HexUi.tr("name.will_replace")), left, top + 64, 0xFFFFD24D, false);
         } else if (HexConfig.USER_PRESETS.size() >= HexConfig.MAX_PRESETS) {
-            g.drawString(this.font, Component.literal("Лимит " + HexConfig.MAX_PRESETS + " — самый старый пресет удалится"),
+            g.drawString(this.font, Component.literal(HexUi.tr("name.limit", HexConfig.MAX_PRESETS)),
                     left, top + 64, 0xFFFFD24D, false);
         }
     }

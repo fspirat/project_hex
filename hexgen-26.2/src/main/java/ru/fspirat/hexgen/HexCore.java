@@ -12,7 +12,8 @@ public final class HexCore {
     private HexCore() {}
 
     public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor"};
-    public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", "Без команды", "/sponsor prefix"};
+    /** Подписи команд; null — перевести ключ command.none. */
+    public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", null, "/sponsor prefix"};
     /** Лимит длины для каждой команды: для /itemname и /itemlore считается только текст после команды. */
     public static final int[] LIMITS = {64, 65, 256, 256};
 
@@ -61,22 +62,22 @@ public final class HexCore {
     public record Preset(String name, String[] colors) {}
 
     public static final List<Preset> PRESETS = List.of(
-        new Preset("Особая", new String[]{"B04DFF", "FF8FE0"}),
-        new Preset("Закат", new String[]{"FAE8F3", "FF8F5A"}),
-        new Preset("Пламя", new String[]{"FFE259", "FF7A00", "D10000"}),
-        new Preset("Океан", new String[]{"00F0FF", "0066FF"}),
-        new Preset("Изумруд", new String[]{"C6FF8A", "1FAA59"}),
-        new Preset("Лёд", new String[]{"FFFFFF", "9BE7FF", "4A9BFF"}),
-        new Preset("Эндер", new String[]{"1B0033", "8A2BE2", "E0B0FF"}),
-        new Preset("Золото", new String[]{"FFF6B7", "FFC300", "B8860B"}),
-        new Preset("Радуга", new String[]{"FF4D4D", "FFD24D", "4DFF88", "4DB8FF", "B84DFF"}),
-        new Preset("Легендарная", new String[]{"FFB000", "FF6A00"}),
-        new Preset("Мифическая", new String[]{"FF3CAC", "784BA0", "2B86C5"}),
-        new Preset("Сакура", new String[]{"FFD1E8", "FF7EB9"}),
-        new Preset("Северное сияние", new String[]{"43E97B", "38F9D7", "7F7FFF"}),
-        new Preset("Незер", new String[]{"FF4E00", "7A0000"}),
-        new Preset("Неон", new String[]{"00FFF0", "FF00E5"}),
-        new Preset("Киберпанк", new String[]{"FCEE09", "FF2A6D", "05D9E8"})
+        new Preset("preset.special", new String[]{"B04DFF", "FF8FE0"}),
+        new Preset("preset.sunset", new String[]{"FAE8F3", "FF8F5A"}),
+        new Preset("preset.flame", new String[]{"FFE259", "FF7A00", "D10000"}),
+        new Preset("preset.ocean", new String[]{"00F0FF", "0066FF"}),
+        new Preset("preset.emerald", new String[]{"C6FF8A", "1FAA59"}),
+        new Preset("preset.ice", new String[]{"FFFFFF", "9BE7FF", "4A9BFF"}),
+        new Preset("preset.ender", new String[]{"1B0033", "8A2BE2", "E0B0FF"}),
+        new Preset("preset.gold", new String[]{"FFF6B7", "FFC300", "B8860B"}),
+        new Preset("preset.rainbow", new String[]{"FF4D4D", "FFD24D", "4DFF88", "4DB8FF", "B84DFF"}),
+        new Preset("preset.legendary", new String[]{"FFB000", "FF6A00"}),
+        new Preset("preset.mythic", new String[]{"FF3CAC", "784BA0", "2B86C5"}),
+        new Preset("preset.sakura", new String[]{"FFD1E8", "FF7EB9"}),
+        new Preset("preset.aurora", new String[]{"43E97B", "38F9D7", "7F7FFF"}),
+        new Preset("preset.nether", new String[]{"FF4E00", "7A0000"}),
+        new Preset("preset.neon", new String[]{"00FFF0", "FF00E5"}),
+        new Preset("preset.cyberpunk", new String[]{"FCEE09", "FF2A6D", "05D9E8"})
     );
 
     private static final Map<Integer, String> SMALL = new HashMap<>();
