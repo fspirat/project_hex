@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -622,14 +622,14 @@ public class HexGenScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         HexUi.drawPanel(g, left, top, W, H);
-        super.render(g, mouseX, mouseY, delta);
+        super.extractRenderState(g, mouseX, mouseY, delta);
 
         MutableComponent title = HexUi.gradientTitle(HexUi.TITLE);
-        g.drawString(this.font, title, (this.width - this.font.width(title)) / 2, top + 1, 0xFFFFFFFF, true);
+        g.text(this.font, title, (this.width - this.font.width(title)) / 2, top + 1, 0xFFFFFFFF, true);
         // Версия мода — в правом верхнем углу, слева от ⚙.
-        g.drawString(this.font, Component.literal(HexUi.VERSION_LABEL),
+        g.text(this.font, Component.literal(HexUi.VERSION_LABEL),
                 left + W - 20 - this.font.width(HexUi.VERSION_LABEL), top + 1, 0xFF606060, false);
 
         // Предпросмотр в стиле подсказки предмета; для /itemname и /itemlore — с иконкой предмета.
@@ -640,15 +640,15 @@ public class HexGenScreen extends Screen {
         if (item) {
             // Кнопка лежит под рамкой предпросмотра — подсвечиваем иконку при наведении сами.
             if (itemButton != null && itemButton.isHovered()) g.fill(px + 3, py + 2, px + 21, py + 20, 0x50FFFFFF);
-            g.renderItem(previewItem(), px + 4, py + 3);
+            g.item(previewItem(), px + 4, py + 3);
             textLeft = px + 22;
         }
         MutableComponent pv = preview();
         int area = px + pw - textLeft, tw = this.font.width(pv);
-        g.drawString(this.font, pv, textLeft + Math.max(4, (area - tw) / 2), py + 7, 0xFFFFFFFF, true);
+        g.text(this.font, pv, textLeft + Math.max(4, (area - tw) / 2), py + 7, 0xFFFFFFFF, true);
 
         String colorsLabel = (sponsor() ? HexUi.tr("colors_sponsor") : HexUi.tr("colors")) + HexUi.tr("colors.hint");
-        g.drawString(this.font, Component.literal(fit(colorsLabel, W)), left, top + Y_COLORS_LABEL, 0xFFA0A0A0, false);
+        g.text(this.font, Component.literal(fit(colorsLabel, W)), left, top + Y_COLORS_LABEL, 0xFFA0A0A0, false);
 
         // Полоски-кнопки палитры: цвет поля (или тёмно-красный, если HEX неверный).
         HexState st = s();
@@ -666,20 +666,20 @@ public class HexGenScreen extends Screen {
         // Результат и счётчик длины.
         int ry = top + Y_RESULT;
         String out = output();
-        g.drawString(this.font, Component.literal(HexUi.tr("result")), left, ry, 0xFFA0A0A0, false);
+        g.text(this.font, Component.literal(HexUi.tr("result")), left, ry, 0xFFA0A0A0, false);
         if (!out.isEmpty()) {
             int limit = HexCore.LIMITS[st.command], len = HexCore.measuredLength(out, st.command);
             int cc = len > limit ? 0xFFFF5555 : len > limit * 0.85 ? 0xFFFFD24D : 0xFF55FF55;
             String counter = st.command <= 1 ? HexUi.tr("text_length", len, limit) : len + " / " + limit;
-            g.drawString(this.font, Component.literal(counter), left + W - this.font.width(counter), ry, cc, false);
+            g.text(this.font, Component.literal(counter), left + W - this.font.width(counter), ry, cc, false);
         }
         g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
         String shown = out.isEmpty() ? HexUi.tr("hex_help") : out;
-        g.drawString(this.font, Component.literal(fit(HexUi.visible(shown), W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
+        g.text(this.font, Component.literal(fit(HexUi.visible(shown), W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
 
         if (!status.isEmpty()) {
             Component sc = Component.literal(status);
-            g.drawString(this.font, sc, (this.width - this.font.width(sc)) / 2, top + Y_BOTTOM + 23, statusColor, true);
+            g.text(this.font, sc, (this.width - this.font.width(sc)) / 2, top + Y_BOTTOM + 23, statusColor, true);
         }
     }
 

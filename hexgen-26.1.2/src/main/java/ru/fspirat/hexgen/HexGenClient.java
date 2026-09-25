@@ -28,7 +28,7 @@ public class HexGenClient implements ClientModInitializer {
                 new KeyMapping("key.fstweak.open_hexgen", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_KEY.consumeClick()) {
-                if (client.player != null) client.gui.setScreen(new HexGenScreen(null));
+                if (client.player != null) client.setScreen(new HexGenScreen(null));
             }
         });
 
@@ -38,7 +38,7 @@ public class HexGenClient implements ClientModInitializer {
 
             MovableButton button = new MovableButton(0, 0, SIZE, SIZE,
                     Component.empty(),
-                    b -> client.gui.setScreen(new HexGenScreen(inventory)),
+                    b -> client.setScreen(new HexGenScreen(inventory)),
                     HexConfig::save);
             button.setTooltip(!HexConfig.showHints ? null : Tooltip.create(Component.literal(HexUi.TITLE + "\n")
                     .append(Component.literal(HexUi.tr("button.move_hint")).withStyle(Style.EMPTY.withColor(0xA0A0A0)))));

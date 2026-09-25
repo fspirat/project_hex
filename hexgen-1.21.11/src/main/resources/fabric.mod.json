@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "id": "hexgen",
   "version": "${version}",
-  "name": "HEX Generator (fspirat.ru)",
-  "description": "Кнопка над инвентарём, открывающая HEX-генератор градиентов прямо в игре.",
+  "name": "FSTWEAK",
+  "description": "HEX GENERATOR — генератор HEX-градиентов прямо в игре: палитра, пресеты, история, импорт команд и форматирование части текста. Кнопка над инвентарём или клавиша H.",
   "authors": [
     "fspirat"
   ],
