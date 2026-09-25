@@ -3,6 +3,11 @@ name: Build mod
 on:
   push:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Опубликовать релиз с этим тегом (например v1.0.0); пусто — только сборка"
+        required: false
+        default: ""
 
 jobs:
   build:
@@ -52,9 +57,10 @@ jobs:
           name: release-${{ matrix.project }}
           path: dist/*.jar
 
-  # Релиз на GitHub при пуше тега вида v1.0.0 (git tag v1.0.0 && git push origin v1.0.0).
+  # Релиз на GitHub: при пуше тега вида v1.0.0 или при ручном запуске с заполненным release_tag
+  # (Actions → Build mod → Run workflow).
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release_tag != '')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -68,5 +74,8 @@ jobs:
 
       - uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ inputs.release_tag || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: FSTWEAK ${{ inputs.release_tag || github.ref_name }}
           files: dist/*.jar
           generate_release_notes: true
