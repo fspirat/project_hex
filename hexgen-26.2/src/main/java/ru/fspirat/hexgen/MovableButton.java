@@ -5,7 +5,7 @@ import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
 
 /** Кнопка, которую можно перетаскивать с зажатым Ctrl. */
-public class MovableButton extends Button {
+public class MovableButton extends Button.Plain {
     private boolean dragging = false;
     private int grabX;
     private int grabY;

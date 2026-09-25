@@ -29,7 +29,7 @@ public class HexGenClient implements ClientModInitializer {
             ((ScreenInvoker) (Object) screen).hexgen$addRenderableWidget(button);
 
             // Перетаскивание: пока зажата ЛКМ, кнопка следует за курсором.
-            ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
+            ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> {
                 if (!button.isDragging()) return;
                 if (!client.mouseHandler.isLeftPressed()) {
                     button.stopDragging();
