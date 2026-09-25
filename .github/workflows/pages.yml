@@ -1,0 +1,46 @@
+name: Deploy fspirat.online (GitHub Pages)
+
+# fspirat.online открывается с GitHub Pages — так сайт доступен и там, где блокируют российский хостинг.
+# Источник — sites/fspirat.online/, а пока там нет своих файлов — копия sites/fspirat.ru/.
+# Один раз: Settings → Pages → Source: GitHub Actions; DNS домена fspirat.online → GitHub Pages.
+on:
+  push:
+    branches: [main]
+    paths: ["sites/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build site
+        run: |
+          src=sites/fspirat.online
+          if ! find "$src" -type f ! -name README.md | grep -q .; then src=sites/fspirat.ru; fi
+          echo "Источник: $src"
+          mkdir -p _site
+          cp -r "$src"/. _site/
+          rm -f _site/README.md
+          echo "fspirat.online" > _site/CNAME
+          touch _site/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,23 +1,18 @@
-name: Deploy sites
+name: Deploy fspirat.ru (reg.ru)
 
-# Выкладывает сайты на хостинг reg.ru по FTP:
-#   sites/fspirat.ru/      → /www/fspirat.ru
-#   sites/fspirat.online/  → /www/fspirat.online
-# Пока в sites/fspirat.online/ нет своих файлов, fspirat.online — зеркало fspirat.ru
-# (на него выкладывается sites/fspirat.ru/).
-# Запускается, когда изменения в sites/ попадают в main, или вручную (Actions → Deploy sites → Run workflow).
+# Выкладывает sites/fspirat.ru/ на хостинг reg.ru по FTP (→ /www/fspirat.ru).
+# fspirat.online открывается с GitHub Pages — см. pages.yml.
+# Запускается, когда изменения в sites/ попадают в main, или вручную (Actions → Run workflow).
 #
 # Секреты (Settings → Secrets and variables → Actions):
-#   FTP_HOST               — адрес FTP-сервера из панели reg.ru (общий для обоих сайтов)
-#   FTP_USER_RU            — FTP-пользователь с домашней папкой /www/fspirat.ru
-#   FTP_PASSWORD_RU        — его пароль
-#   FTP_USER_ONLINE        — (необязательно) FTP-пользователь с домашней папкой /www/fspirat.online
-#   FTP_PASSWORD_ONLINE    — (необязательно) его пароль; без этих двух секретов fspirat.online пропускается
-#   FTP_PROTOCOL           — необязательно: ftps (по умолчанию) или ftp, если хостинг не поддерживает шифрование
+#   FTP_HOST          — адрес FTP-сервера из панели reg.ru
+#   FTP_USER_RU       — FTP-пользователь с домашней папкой /www/fspirat.ru
+#   FTP_PASSWORD_RU   — его пароль
+#   FTP_PROTOCOL      — необязательно: ftps (по умолчанию) или ftp, если хостинг не поддерживает шифрование
 #
-# Каждый пользователь видит только папку своего сайта, поэтому файлы загружаются в его корень (./).
-# Загружаются только изменённые файлы; чужие файлы на сервере (например hex_generator/) не трогаются —
-# удаляются только те, что раньше выкладывал этот же сценарий и которые убрали из репозитория.
+# Пользователь видит только папку сайта, поэтому файлы загружаются в его корень (./).
+# Загружаются только изменённые файлы; удаляются только те, что раньше выкладывал этот же сценарий
+# и которые убрали из репозитория.
 on:
   push:
     branches: [main]
@@ -37,8 +32,6 @@ jobs:
         include:
           - site: fspirat.ru
             key: RU
-          - site: fspirat.online
-            key: ONLINE
     steps:
       - uses: actions/checkout@v4
 
