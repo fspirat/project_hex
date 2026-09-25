@@ -1,0 +1,72 @@
+name: Deploy sites
+
+# Выкладывает сайты на хостинг reg.ru по FTP:
+#   sites/fspirat.ru/      → /www/fspirat.ru
+#   sites/fspirat.online/  → /www/fspirat.online
+# Запускается, когда изменения в sites/ попадают в main, или вручную (Actions → Deploy sites → Run workflow).
+#
+# Секреты (Settings → Secrets and variables → Actions):
+#   FTP_HOST               — адрес FTP-сервера из панели reg.ru (общий для обоих сайтов)
+#   FTP_USER_RU            — FTP-пользователь с домашней папкой /www/fspirat.ru
+#   FTP_PASSWORD_RU        — его пароль
+#   FTP_USER_ONLINE        — FTP-пользователь с домашней папкой /www/fspirat.online
+#   FTP_PASSWORD_ONLINE    — его пароль
+#   FTP_PROTOCOL           — необязательно: ftps (по умолчанию) или ftp, если хостинг не поддерживает шифрование
+#
+# Каждый пользователь видит только папку своего сайта, поэтому файлы загружаются в его корень (./).
+# Загружаются только изменённые файлы; чужие файлы на сервере (например hex_generator/) не трогаются —
+# удаляются только те, что раньше выкладывал этот же сценарий и которые убрали из репозитория.
+on:
+  push:
+    branches: [main]
+    paths: ["sites/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-sites
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - site: fspirat.ru
+            key: RU
+          - site: fspirat.online
+            key: ONLINE
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check ${{ matrix.site }}
+        id: check
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets[format('FTP_USER_{0}', matrix.key)] }}
+        run: |
+          if ! find "sites/${{ matrix.site }}" -type f ! -name README.md | grep -q .; then
+            echo "Нет файлов сайта — пропускаю ${{ matrix.site }}"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$FTP_HOST" ] || [ -z "$FTP_USER" ]; then
+            echo "::error::Не заданы секреты FTP_HOST / FTP_USER_${{ matrix.key }} / FTP_PASSWORD_${{ matrix.key }}"
+            exit 1
+          fi
+
+      - name: Upload ${{ matrix.site }}
+        if: steps.check.outputs.skip != 'true'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets[format('FTP_USER_{0}', matrix.key)] }}
+          password: ${{ secrets[format('FTP_PASSWORD_{0}', matrix.key)] }}
+          protocol: ${{ secrets.FTP_PROTOCOL || 'ftps' }}
+          local-dir: ./sites/${{ matrix.site }}/
+          server-dir: ./
+          exclude: |
+            **/.git*
+            **/.git*/**
+            README.md
