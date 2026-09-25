@@ -87,10 +87,10 @@ kbd{border-bottom-width:3px}
 .shots{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(max-width:640px){.shots{grid-template-columns:1fr}}
 .shot{margin:0;background:var(--field);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:zoom-in}
-.shot img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;image-rendering:auto;background:#050505}
+.shot img{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;image-rendering:auto;background:#050505}
 .shot figcaption{font-size:15px;color:var(--soft);padding:10px 12px}
 .shot figcaption small{display:block;color:var(--muted);font-size:13px;margin-top:3px}
-.ph{aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#555;font-size:14px;text-align:center;padding:12px;
+.ph{aspect-ratio:16/10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#555;font-size:14px;text-align:center;padding:12px;
   background:repeating-linear-gradient(45deg,#060606 0 10px,#0a0a0a 10px 20px)}
 .ph b{font-weight:400;font-size:28px;color:#333}
 .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50;cursor:zoom-out}
@@ -185,7 +185,7 @@ footer{margin-top:28px;color:#4a4a4a;font-size:13px;text-align:center}
       <figure class="shot"><img src="screens/main.png" alt="Главное окно HEX GENERATOR" loading="lazy"><figcaption>Главное окно<small>Текст, цвета, формат и готовая команда</small></figcaption></figure>
       <figure class="shot"><img src="screens/palette.png" alt="Палитра цветов" loading="lazy"><figcaption>Палитра цветов<small>Ползунки HSV, быстрая палитра и недавние цвета</small></figcaption></figure>
       <figure class="shot"><img src="screens/presets.png" alt="Пресеты" loading="lazy"><figcaption>Пресеты<small>16 готовых градиентов и свои пресеты</small></figcaption></figure>
-      <figure class="shot"><img src="screens/part-color.png" alt="Цвет части текста" loading="lazy"><figcaption>Цвет части<small>Свой цвет или градиент для выделенного слова</small></figcaption></figure>
+      <figure class="shot"><img src="screens/part-color.png" alt="Цвет части текста" loading="lazy"><figcaption>Формат части текста<small>Выдели слово мышью — формат или свой цвет только для него</small></figcaption></figure>
       <figure class="shot"><img src="screens/symbols.png" alt="Символы" loading="lazy"><figcaption>Символы<small>48 символов для названий: ✦ ★ ⚔ ❤ ♛ …</small></figcaption></figure>
       <figure class="shot"><img src="screens/inventory.png" alt="Кнопка в инвентаре" loading="lazy"><figcaption>Кнопка в инвентаре<small>Можно перетащить в любое место с Ctrl</small></figcaption></figure>
     </div>
