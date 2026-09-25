@@ -11,8 +11,8 @@ name: Deploy sites
 #   FTP_HOST               — адрес FTP-сервера из панели reg.ru (общий для обоих сайтов)
 #   FTP_USER_RU            — FTP-пользователь с домашней папкой /www/fspirat.ru
 #   FTP_PASSWORD_RU        — его пароль
-#   FTP_USER_ONLINE        — FTP-пользователь с домашней папкой /www/fspirat.online
-#   FTP_PASSWORD_ONLINE    — его пароль
+#   FTP_USER_ONLINE        — (необязательно) FTP-пользователь с домашней папкой /www/fspirat.online
+#   FTP_PASSWORD_ONLINE    — (необязательно) его пароль; без этих двух секретов fspirat.online пропускается
 #   FTP_PROTOCOL           — необязательно: ftps (по умолчанию) или ftp, если хостинг не поддерживает шифрование
 #
 # Каждый пользователь видит только папку своего сайта, поэтому файлы загружаются в его корень (./).
@@ -54,12 +54,15 @@ jobs:
             dir="sites/fspirat.ru"
           fi
           echo "dir=./$dir/" >> "$GITHUB_OUTPUT"
+          # Сайт без своих FTP-секретов просто пропускается — можно подключать сайты по одному.
           if [ -z "$FTP_HOST" ] || [ -z "$FTP_USER" ]; then
-            echo "::error::Не заданы секреты FTP_HOST / FTP_USER_${{ matrix.key }} / FTP_PASSWORD_${{ matrix.key }}"
-            exit 1
+            echo "::warning::${{ matrix.site }} пропущен: нет секретов FTP_HOST / FTP_USER_${{ matrix.key }} / FTP_PASSWORD_${{ matrix.key }}"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
 
       - name: Upload ${{ matrix.site }}
+        if: steps.check.outputs.skip != 'true'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_HOST }}
