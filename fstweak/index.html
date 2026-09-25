@@ -150,6 +150,7 @@ footer{margin-top:28px;color:#4a4a4a;font-size:13px;text-align:center}
   </header>
 
   <div class="tags">
+    <span class="tag">Версия <b>1.1</b></span>
     <span class="tag">Fabric</span>
     <span class="tag">Minecraft <b>1.21.11</b> · <b>26.1.2</b> · <b>26.2</b></span>
     <span class="tag">Только клиент</span>
@@ -176,6 +177,7 @@ footer{margin-top:28px;color:#4a4a4a;font-size:13px;text-align:center}
   <section class="panel">
     <h2>Что это</h2>
     <p>FSTWEAK добавляет в Minecraft окно <b class="grad">HEX GENERATOR</b> — тот же генератор градиентов, что и на сайте, только внутри игры. Пишешь текст, выбираешь цвета — и сразу видишь, как будет выглядеть название предмета. Готовую команду можно скопировать или выполнить одной кнопкой.</p>
+    <p>Кроме команд AgeMagic мод выдаёт текст во всех популярных RGB-форматах — для ников, чата, конфигов плагинов, MiniMessage и форумов.</p>
     <p>Генератор открывается кнопкой <b>✦</b> над инвентарём или клавишей <kbd>H</kbd>. Мод работает только на клиенте — на сервер ставить ничего не нужно.</p>
   </section>
 
@@ -194,13 +196,16 @@ footer{margin-top:28px;color:#4a4a4a;font-size:13px;text-align:center}
   <section class="panel" id="features">
     <h2>Возможности</h2>
     <div class="features">
+      <div class="feat"><h3><i>≡</i>Все RGB-форматы <span class="badge">1.1</span></h3><p>AgeMagic (<code>/itemname</code>, <code>/itemlore</code>, <code>/sponsor prefix</code>), а также Nickname <code>&amp;#</code>, Chat <code>&lt;#&gt;</code>, Legacy <code>&amp;x</code>, Console <code>§x</code>, BBCode, MiniMessage и BirdFlop со своим шаблоном.</p></div>
+      <div class="feat"><h3><i>⇪</i>Название из предмета <span class="badge">1.1</span></h3><p>Клик по иконке предмета в предпросмотре — название из руки загрузится в редактор вместе с цветами и форматом.</p></div>
+      <div class="feat"><h3><i>⇄</i>Пресеты через чат <span class="badge">1.1</span></h3><p>Отправь код пресета в чат — у друзей с модом он станет кнопкой: одно нажатие, и пресет сохранён.</p></div>
       <div class="feat"><h3><i>✦</i>Градиенты до 6 цветов</h3><p>Живой предпросмотр настоящим шрифтом Minecraft, с иконкой предмета из руки.</p></div>
       <div class="feat"><h3><i>◆</i>Палитра прямо в игре</h3><p>Оттенок, насыщенность и яркость ползунками, 30 быстрых цветов и история недавних.</p></div>
       <div class="feat"><h3><i>L</i>Формат части текста</h3><p>Жирный, курсив, подчёркнутый и зачёркнутый — для всего текста или только для выделенного куска.</p></div>
       <div class="feat"><h3><i>✎</i>Свой цвет для слова</h3><p>Выдели слово мышью и задай ему один цвет или отдельный градиент.</p></div>
       <div class="feat"><h3><i>★</i>Свои пресеты</h3><p>Сохраняй градиенты под своими именами, переименовывай и расставляй в нужном порядке.</p></div>
-      <div class="feat"><h3><i>⟲</i>История и импорт</h3><p>Последние 10 команд под рукой. Вставь готовую команду из буфера — она разберётся обратно в редактор.</p></div>
-      <div class="feat"><h3><i>⚑</i>Все команды</h3><p><code>/itemname</code>, <code>/itemlore</code>, <code>/sponsor prefix</code> или просто текст с тегами.</p></div>
+      <div class="feat"><h3><i>⟲</i>История и импорт</h3><p>Последние 10 команд под рукой. Вставь готовую команду в любом формате из буфера — она разберётся обратно в редактор.</p></div>
+      <div class="feat"><h3><i>⚑</i>Команда перед текстом</h3><p>Для других форматов можно задать команду, например <code>/nick</code>, — тогда «Выполнить» отправит её сразу.</p></div>
       <div class="feat"><h3><i>#</i>Счётчик длины</h3><p>Показывает, сколько символов осталось до лимита команды, и предупреждает заранее.</p></div>
       <div class="feat"><h3><i>ᴀ</i>Small caps и символы</h3><p>Шрифт ꜱᴍᴀʟʟ ᴄᴀᴘꜱ для латиницы и кириллицы и 48 символов для оформления.</p></div>
       <div class="feat"><h3><i>↶</i>Отмена действий</h3><p><kbd>Ctrl</kbd>+<kbd>Z</kbd> и <kbd>Ctrl</kbd>+<kbd>Y</kbd> — любую правку можно откатить.</p></div>
@@ -219,19 +224,29 @@ footer{margin-top:28px;color:#4a4a4a;font-size:13px;text-align:center}
         <tr><td>Выделить часть текста</td><td>Протянуть мышью в поле текста</td></tr>
         <tr><td>Отменить / повторить</td><td><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd> или кнопки ↶ ↷</td></tr>
         <tr><td>Открыть палитру</td><td>Клик по цветной полоске под HEX-полем</td></tr>
+        <tr><td>Сменить формат</td><td>Кнопка справа от поля текста — откроется окно «Формат»</td></tr>
+        <tr><td>Взять название из предмета</td><td>Клик по иконке предмета в предпросмотре</td></tr>
+        <tr><td>Поделиться пресетом</td><td>«Пресеты» → режим «Поделиться» → клик по пресету → вставить код в чат</td></tr>
       </table>
     </div>
   </section>
 
   <section class="panel">
-    <h2>Команды и лимиты</h2>
+    <h2>Форматы и лимиты</h2>
     <div class="table-wrap">
       <table>
-        <tr><th>Команда</th><th>Лимит</th><th>Формат</th></tr>
+        <tr><th>Формат</th><th>Лимит</th><th>Как выглядит</th></tr>
         <tr><td><code>/itemname</code></td><td>64 символа текста</td><td class="muted">{#B04DFF&gt;}текст{#FF8FE0&lt;}</td></tr>
         <tr><td><code>/itemlore</code></td><td>65 символов текста</td><td class="muted">{#B04DFF&gt;}текст{#FF8FE0&lt;}</td></tr>
         <tr><td><code>/sponsor prefix</code></td><td>до 7 цветов</td><td class="muted">{#..}{#..}… {#ник}</td></tr>
-        <tr><td>Без команды</td><td>—</td><td class="muted">текст с тегами для чата или плагинов</td></tr>
+        <tr><td>no command (AgeMagic)</td><td>256</td><td class="muted">{#B04DFF&gt;}текст{#FF8FE0&lt;} без команды</td></tr>
+        <tr><td>Nickname</td><td>256</td><td class="muted">&amp;#B04DFFт&amp;#C45EF7е…</td></tr>
+        <tr><td>Chat</td><td>256</td><td class="muted">&lt;#B04DFF&gt;т&lt;#C45EF7&gt;е…</td></tr>
+        <tr><td>Legacy</td><td>256</td><td class="muted">&amp;x&amp;B&amp;0&amp;4&amp;D&amp;F&amp;Fт…</td></tr>
+        <tr><td>Console</td><td>256</td><td class="muted">§x§B§0§4§D§F§Fт… (только копирование)</td></tr>
+        <tr><td>BBCode</td><td>256</td><td class="muted">[COLOR=#B04DFF]т[/COLOR]…</td></tr>
+        <tr><td>MiniMessage</td><td>256</td><td class="muted">&lt;gradient:#B04DFF:#FF8FE0&gt;текст&lt;/gradient&gt;</td></tr>
+        <tr><td>BirdFlop</td><td>256</td><td class="muted">свой шаблон: $1…$6 — цвет, $f — формат, $c — символ</td></tr>
       </table>
     </div>
     <p class="muted" style="margin-top:10px">Свой цвет или формат для части текста записывается цветом каждой буквы — такая команда заметно длиннее, счётчик это покажет.</p>
@@ -270,6 +285,7 @@ footer{margin-top:28px;color:#4a4a4a;font-size:13px;text-align:center}
 
   <section class="panel">
     <h2>Вопросы</h2>
+    <details><summary>Как поделиться пресетом с другом?</summary><p>В окне «Пресеты» выбери режим «Поделиться» и нажми на пресет — в буфер скопируется код вида <code>FSTWEAK{Закат|FAE8F3,FF8F5A}</code>. Отправь его в чат: у игроков с FSTWEAK код станет кнопкой, нажатие сохранит пресет. Код можно вставить и кнопкой «Импорт».</p></details>
     <details><summary>Где хранятся настройки и пресеты?</summary><p>В файле <code>config/fstweak.properties</code>. Там же положение кнопки, свои пресеты и история команд.</p></details>
     <details><summary>Кнопка перекрывает другой мод</summary><p>Зажми <kbd>Ctrl</kbd> и перетащи её в свободное место. Вернуть на место можно в настройках генератора (⚙).</p></details>
     <details><summary>Сервер пишет, что текст слишком длинный</summary><p>Следи за счётчиком под результатом. Если задан свой цвет или формат для части текста, команда пишет цвет каждой буквы и сильно удлиняется — убери лишнее или сократи текст.</p></details>
