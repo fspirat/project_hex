@@ -13,6 +13,39 @@ public final class HexCore {
 
     public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor"};
     public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", "Без команды", "/sponsor prefix"};
+    /** Лимит длины для каждой команды: для /itemname и /itemlore считается только текст после команды. */
+    public static final int[] LIMITS = {64, 65, 256, 256};
+
+    /** Длина, которую сервер сравнивает с лимитом. */
+    public static int measuredLength(String out, int command) {
+        if (command <= 1 && out.startsWith(COMMANDS[command])) return out.length() - COMMANDS[command].length();
+        return out.length();
+    }
+
+    /** Фаза анимации 0..1: градиент «бежит» по тексту и плавно возвращается. */
+    public static double animationPhase() {
+        return (System.currentTimeMillis() % 4000L) / 4000.0;
+    }
+
+    /** Цвет в точке t (0..1) со сдвигом фазы — туда и обратно, без скачков. */
+    public static int animatedColorAt(List<String> stops, double t, double phase) {
+        double u = (t / 2 + phase) % 1.0;
+        double tri = u < 0.5 ? u * 2 : 2 - u * 2;
+        return colorAt(stops, tri);
+    }
+
+    /** Те же буквы, но общий градиент сдвинут по фазе (свои цвета символов не трогаются). */
+    public static List<StyledGlyph> animate(List<StyledGlyph> glyphs, List<String> stops, int[] colors, double phase) {
+        List<StyledGlyph> out = new ArrayList<>(glyphs.size());
+        int n = glyphs.size();
+        for (int i = 0; i < n; i++) {
+            StyledGlyph g = glyphs.get(i);
+            boolean own = colors != null && i < colors.length && colors[i] >= 0;
+            int rgb = own ? g.rgb() : animatedColorAt(stops, n > 1 ? i / (double) (n - 1) : 0, phase);
+            out.add(new StyledGlyph(g.ch(), rgb, g.bits()));
+        }
+        return out;
+    }
     public static final String[] SYMBOLS = {
         "✦", "★", "❖", "➤", "⚔", "❤", "•", "❀",
         "☆", "✧", "✪", "✯", "❂", "✺", "✿", "❁", "❋", "☀", "☁", "☂", "☃", "☄", "☾", "⚡",

@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 /** Настройки FSTWEAK. */
 public class SettingsScreen extends Screen {
     private static final int W = 260;
-    private static final int H = 170;
+    private static final int H = 214;
 
     private final Screen parent;
     private int left;
@@ -38,12 +38,24 @@ public class SettingsScreen extends Screen {
             rebuild();
         }).bounds(left, y, W, 20).build());
 
+        this.addRenderableWidget(Button.builder(Component.literal("Анимация градиента: " + (HexConfig.animatePreview ? "вкл" : "выкл")), b -> {
+            HexConfig.animatePreview = !HexConfig.animatePreview;
+            HexConfig.save();
+            rebuild();
+        }).bounds(left, y + 24, W, 20).tooltip(HexUi.tip("Градиент переливается в предпросмотре и заголовках (в команду не попадает)")).build());
+
+        this.addRenderableWidget(Button.builder(Component.literal("Тема окна: " + HexConfig.THEMES[HexConfig.theme]), b -> {
+            HexConfig.theme = (HexConfig.theme + 1) % HexConfig.THEMES.length;
+            HexConfig.save();
+            rebuild();
+        }).bounds(left, y + 48, W, 20).tooltip(HexUi.tip("«По градиенту» — рамка окна в цветах текущего градиента")).build());
+
         this.addRenderableWidget(Button.builder(Component.literal("Вернуть кнопку в инвентаре на место"), b -> {
             HexConfig.buttonOffsetX = HexConfig.DEFAULT_OFFSET_X;
             HexConfig.buttonOffsetY = HexConfig.DEFAULT_OFFSET_Y;
             HexConfig.save();
             b.setMessage(Component.literal("Готово ✔"));
-        }).bounds(left, y + 24, W, 20).build());
+        }).bounds(left, y + 72, W, 20).build());
 
         Button hist = Button.builder(Component.literal("history".equals(confirming)
                 ? "Точно очистить? Нажмите ещё раз"
@@ -56,7 +68,7 @@ public class SettingsScreen extends Screen {
                 confirming = "history";
             }
             rebuild();
-        }).bounds(left, y + 48, W, 20).build();
+        }).bounds(left, y + 96, W, 20).build();
         hist.active = !HexConfig.HISTORY.isEmpty();
         this.addRenderableWidget(hist);
 
@@ -71,7 +83,7 @@ public class SettingsScreen extends Screen {
                 confirming = "presets";
             }
             rebuild();
-        }).bounds(left, y + 72, W, 20).build();
+        }).bounds(left, y + 120, W, 20).build();
         presets.active = !HexConfig.USER_PRESETS.isEmpty();
         this.addRenderableWidget(presets);
 
@@ -88,8 +100,8 @@ public class SettingsScreen extends Screen {
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
 
         Component key = HexGenClient.OPEN_KEY.getTranslatedKeyMessage();
-        g.drawString(this.font, Component.literal("Открыть генератор из игры: ").append(key), left, top + 116, 0xFFA0A0A0, false);
-        g.drawString(this.font, Component.literal("Сменить: Настройки → Управление → «Разное»"), left, top + 128, 0xFF707070, false);
+        g.drawString(this.font, Component.literal("Открыть генератор из игры: ").append(key), left, top + 164, 0xFFA0A0A0, false);
+        g.drawString(this.font, Component.literal("Сменить: Настройки → Управление → «Разное»"), left, top + 176, 0xFF707070, false);
     }
 
     @Override

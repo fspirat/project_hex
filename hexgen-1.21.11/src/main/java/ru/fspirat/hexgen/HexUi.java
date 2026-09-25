@@ -20,11 +20,15 @@ public final class HexUi {
         return HexConfig.showHints ? Tooltip.create(Component.literal(text)) : null;
     }
 
-    /** Текст, раскрашенный градиентом (жирным). */
+    /** Текст, раскрашенный градиентом (жирным); с включённой анимацией градиент переливается. */
     public static MutableComponent gradientTitle(String text) {
         MutableComponent c = Component.empty();
-        for (HexCore.Glyph gl : HexCore.gradientGlyphs(text, TITLE_STOPS)) {
-            c.append(Component.literal(gl.ch()).withStyle(Style.EMPTY.withColor(gl.rgb()).withBold(true)));
+        int[] cps = text.codePoints().toArray();
+        double phase = HexCore.animationPhase();
+        for (int i = 0; i < cps.length; i++) {
+            double t = cps.length > 1 ? i / (double) (cps.length - 1) : 0;
+            int rgb = HexConfig.animatePreview ? HexCore.animatedColorAt(TITLE_STOPS, t, phase) : HexCore.colorAt(TITLE_STOPS, t);
+            c.append(Component.literal(new String(Character.toChars(cps[i]))).withStyle(Style.EMPTY.withColor(rgb).withBold(true)));
         }
         return c;
     }
@@ -42,14 +46,44 @@ public final class HexUi {
         return root;
     }
 
-    /** Тёмная подложка окна, чтобы интерфейс не сливался с миром. */
+    /** Подложка окна в выбранной теме, чтобы интерфейс не сливался с миром. */
     public static void drawPanel(GuiGraphics g, int x, int y, int w, int h) {
         int x0 = x - 8, y0 = y - 6, x1 = x + w + 8, y1 = y + h + 6;
-        g.fill(x0, y0, x1, y1, 0xD0101014);
-        g.fill(x0, y0, x1, y0 + 1, 0xFF5A2A8A);
-        g.fill(x0, y1 - 1, x1, y1, 0xFF5A2A8A);
-        g.fill(x0, y0, x0 + 1, y1, 0xFF5A2A8A);
-        g.fill(x1 - 1, y0, x1, y1, 0xFF5A2A8A);
+        List<String> stops = HexState.S.stops;
+        boolean gradient = HexConfig.theme == 2 && stops.size() >= 1 && stops.stream().allMatch(HexCore::valid);
+        switch (HexConfig.theme) {
+            case 1 -> {
+                g.fill(x0, y0, x1, y1, 0xE8080808);
+                border(g, x0, y0, x1, y1, 0xFF3A3A3A);
+            }
+            case 2 -> {
+                g.fill(x0, y0, x1, y1, 0xD8101014);
+                if (!gradient) {
+                    border(g, x0, y0, x1, y1, 0xFF5A2A8A);
+                    break;
+                }
+                // Рамка цвета текущего градиента: слева первый цвет, справа последний.
+                int w0 = x1 - x0;
+                for (int i = 0; i < w0; i++) {
+                    int c = 0xFF000000 | HexCore.colorAt(stops, w0 > 1 ? i / (double) (w0 - 1) : 0);
+                    g.fill(x0 + i, y0, x0 + i + 1, y0 + 1, c);
+                    g.fill(x0 + i, y1 - 1, x0 + i + 1, y1, c);
+                }
+                g.fill(x0, y0, x0 + 1, y1, 0xFF000000 | HexCore.rgb(stops.get(0)));
+                g.fill(x1 - 1, y0, x1, y1, 0xFF000000 | HexCore.rgb(stops.get(stops.size() - 1)));
+            }
+            default -> {
+                g.fill(x0, y0, x1, y1, 0xD0101014);
+                border(g, x0, y0, x1, y1, 0xFF5A2A8A);
+            }
+        }
+    }
+
+    private static void border(GuiGraphics g, int x0, int y0, int x1, int y1, int c) {
+        g.fill(x0, y0, x1, y0 + 1, c);
+        g.fill(x0, y1 - 1, x1, y1, c);
+        g.fill(x0, y0, x0 + 1, y1, c);
+        g.fill(x1 - 1, y0, x1, y1, c);
     }
 
     /** Образец цвета с рамкой; белая рамка — при наведении, жёлтая — если цвет выбран. */

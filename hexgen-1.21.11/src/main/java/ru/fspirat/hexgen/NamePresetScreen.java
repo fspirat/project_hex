@@ -20,6 +20,8 @@ public class NamePresetScreen extends Screen {
     private final Screen parent;
     private final String[] colors;
     private final Consumer<String> saved;
+    /** Имя переименовываемого пресета или null, если сохраняется новый. */
+    private final String renaming;
     private String name;
     private EditBox nameBox;
     private Button saveButton;
@@ -27,11 +29,21 @@ public class NamePresetScreen extends Screen {
     private int top;
 
     public NamePresetScreen(Screen parent, String[] colors, Consumer<String> saved) {
+        this(parent, colors, HexConfig.nextPresetName(), null, saved);
+    }
+
+    public NamePresetScreen(Screen parent, String[] colors, String initialName, String renaming, Consumer<String> saved) {
         super(Component.literal("Имя пресета"));
         this.parent = parent;
         this.colors = colors;
         this.saved = saved;
-        this.name = HexConfig.nextPresetName();
+        this.renaming = renaming;
+        this.name = initialName;
+    }
+
+    /** Имя занято другим пресетом (при переименовании своё старое имя не считается). */
+    private boolean taken(String n) {
+        return HexConfig.hasPreset(n) && !n.equals(renaming);
     }
 
     @Override
@@ -63,6 +75,11 @@ public class NamePresetScreen extends Screen {
     private void updateSaveButton() {
         if (saveButton == null) return;
         String n = name.strip();
+        if (renaming != null) {
+            saveButton.active = !n.isEmpty() && !taken(n);
+            saveButton.setMessage(Component.literal("Переименовать"));
+            return;
+        }
         saveButton.active = !n.isEmpty();
         saveButton.setMessage(Component.literal(HexConfig.hasPreset(n) ? "Заменить" : "Сохранить"));
     }
@@ -70,7 +87,11 @@ public class NamePresetScreen extends Screen {
     private void save() {
         String n = name.strip();
         if (n.isEmpty()) return;
-        HexConfig.addPreset(n, colors);
+        if (renaming != null) {
+            if (!HexConfig.renamePreset(renaming, n)) return;
+        } else {
+            HexConfig.addPreset(n, colors);
+        }
         this.onClose();
         saved.accept(n);
     }
@@ -90,11 +111,15 @@ public class NamePresetScreen extends Screen {
         HexUi.drawPanel(g, left, top, W, H);
         super.render(g, mouseX, mouseY, delta);
 
-        Component t = HexUi.gradientTitle("Сохранить пресет");
+        Component t = HexUi.gradientTitle(renaming != null ? "Переименовать пресет" : "Сохранить пресет");
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
         g.drawString(this.font, Component.literal("Название:"), left, top + 19, 0xFFA0A0A0, false);
         HexUi.drawGradient(g, left, top + 54, W, 6, List.of(colors));
-        if (HexConfig.hasPreset(name.strip())) {
+        if (renaming != null) {
+            if (taken(name.strip())) {
+                g.drawString(this.font, Component.literal("Это имя уже занято"), left, top + 64, 0xFFFF5555, false);
+            }
+        } else if (HexConfig.hasPreset(name.strip())) {
             g.drawString(this.font, Component.literal("Пресет с таким именем будет заменён"), left, top + 64, 0xFFFFD24D, false);
         } else if (HexConfig.USER_PRESETS.size() >= HexConfig.MAX_PRESETS) {
             g.drawString(this.font, Component.literal("Лимит " + HexConfig.MAX_PRESETS + " — самый старый пресет удалится"),

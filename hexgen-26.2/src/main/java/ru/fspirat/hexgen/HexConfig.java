@@ -25,6 +25,11 @@ public final class HexConfig {
     public static int buttonOffsetY = DEFAULT_OFFSET_Y;
     /** Показывать всплывающие подсказки на кнопках. */
     public static boolean showHints = true;
+    /** Анимированный градиент в предпросмотре и заголовке. */
+    public static boolean animatePreview = true;
+    /** Тема окна: индекс в THEMES. */
+    public static int theme = 0;
+    public static final String[] THEMES = {"Фиолетовая", "Тёмная", "По градиенту"};
     public static final List<HexCore.Preset> USER_PRESETS = new ArrayList<>();
     /** Последние скопированные/выполненные команды, новые сверху. */
     public static final List<String> HISTORY = new ArrayList<>();
@@ -51,6 +56,8 @@ public final class HexConfig {
         buttonOffsetX = intProp(p, "buttonOffsetX", DEFAULT_OFFSET_X);
         buttonOffsetY = intProp(p, "buttonOffsetY", DEFAULT_OFFSET_Y);
         showHints = !"false".equals(p.getProperty("showHints"));
+        animatePreview = !"false".equals(p.getProperty("animatePreview"));
+        theme = Math.floorMod(intProp(p, "theme", 0), THEMES.length);
         USER_PRESETS.clear();
         for (int i = 0; i < MAX_PRESETS; i++) {
             String v = p.getProperty("preset." + i);
@@ -82,6 +89,8 @@ public final class HexConfig {
         p.setProperty("buttonOffsetX", String.valueOf(buttonOffsetX));
         p.setProperty("buttonOffsetY", String.valueOf(buttonOffsetY));
         p.setProperty("showHints", String.valueOf(showHints));
+        p.setProperty("animatePreview", String.valueOf(animatePreview));
+        p.setProperty("theme", String.valueOf(theme));
         for (int i = 0; i < USER_PRESETS.size(); i++) {
             HexCore.Preset pr = USER_PRESETS.get(i);
             p.setProperty("preset." + i, pr.name() + "|" + String.join(",", pr.colors()));
@@ -132,5 +141,26 @@ public final class HexConfig {
     public static boolean hasPreset(String name) {
         for (HexCore.Preset p : USER_PRESETS) if (p.name().equals(name)) return true;
         return false;
+    }
+
+    /** Переименовывает свой пресет. False — если новое имя уже занято другим пресетом. */
+    public static boolean renamePreset(String oldName, String newName) {
+        if (!oldName.equals(newName) && hasPreset(newName)) return false;
+        for (int i = 0; i < USER_PRESETS.size(); i++) {
+            HexCore.Preset p = USER_PRESETS.get(i);
+            if (p.name().equals(oldName)) {
+                USER_PRESETS.set(i, new HexCore.Preset(newName, p.colors()));
+                save();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Переставляет свой пресет с позиции from на позицию to. */
+    public static void movePreset(int from, int to) {
+        if (from < 0 || from >= USER_PRESETS.size() || to < 0 || to >= USER_PRESETS.size() || from == to) return;
+        USER_PRESETS.add(to, USER_PRESETS.remove(from));
+        save();
     }
 }

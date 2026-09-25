@@ -22,7 +22,8 @@ import org.lwjgl.glfw.GLFW;
 public class HexGenScreen extends Screen {
     private static final int W = 340;
     private static final int H = 232;
-    private static final int LIMIT = 256;
+    /** Максимальная длина текста в поле (сам лимит команды — HexCore.LIMITS). */
+    private static final int TEXT_MAX = 256;
 
     // Вертикальная разметка окна (смещения от top).
     private static final int Y_PREVIEW = 14;
@@ -149,7 +150,7 @@ public class HexGenScreen extends Screen {
         // --- Строка 1: текст (или ник) + команда ---
         if (!sponsor()) {
             textBox = new SelectableEditBox(this.font, left, y1, 214, 18, Component.literal("Текст"));
-            textBox.setMaxLength(LIMIT);
+            textBox.setMaxLength(TEXT_MAX);
             textBox.setValue(s().text);
             textBox.setResponder(v -> {
                 if (v.equals(s().text)) return;
@@ -286,13 +287,16 @@ public class HexGenScreen extends Screen {
             if (out.isEmpty()) { flash("Сначала исправьте цвета", 0xFFFF5555); return; }
             this.minecraft.keyboardHandler.setClipboard(out);
             HexConfig.addHistory(out);
-            flash("Скопировано в буфер обмена");
+            int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
+            if (len > limit) flash("Скопировано, но " + overLimitMessage(len, limit).toLowerCase(), 0xFFFFD24D);
+            else flash("Скопировано в буфер обмена");
         }).bounds(left, y6, bw, 20).build());
 
         Button run = Button.builder(Component.literal("Выполнить"), b -> {
             String out = output();
             if (out.isEmpty() || !out.startsWith("/")) { flash("Выберите команду", 0xFFFF5555); return; }
-            if (out.length() > LIMIT) { flash("Команда длиннее " + LIMIT + " символов", 0xFFFF5555); return; }
+            int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
+            if (len > limit) { flash(overLimitMessage(len, limit), 0xFFFF5555); return; }
             if (this.minecraft.player != null) {
                 this.minecraft.player.connection.sendCommand(out.substring(1));
                 HexConfig.addHistory(out);
@@ -368,6 +372,11 @@ public class HexGenScreen extends Screen {
         textBox = null;
         rebuild();
         return true;
+    }
+
+    private String overLimitMessage(int len, int limit) {
+        boolean perChar = HexCore.uniformBits(s().mask, s().defaultBits) < 0 || HexCore.hasOverrides(s().colors);
+        return "Длиннее лимита: " + len + " / " + limit + (perChar ? " — свой цвет/формат части сильно удлиняет команду" : "");
     }
 
     /** Выделение в поле текста в символах (code points): {начало, конец} или null. */
@@ -448,7 +457,7 @@ public class HexGenScreen extends Screen {
         String text = s().text;
         int c = Math.max(0, Math.min(cursor, text.length()));
         String v = text.substring(0, c) + sym + text.substring(c);
-        if (v.length() > LIMIT) return;
+        if (v.length() > TEXT_MAX) return;
         HexState.push();
         s().setText(v);
         cursor = highlight = c + sym.length();
@@ -507,7 +516,9 @@ public class HexGenScreen extends Screen {
             root.append(Component.literal(st.nickName.isEmpty() ? "nickname" : st.nickName).withStyle(Style.EMPTY.withColor(nc)));
             return root;
         }
-        return HexUi.styled(HexCore.styled(shownText(), st.stops, st.mask, st.colors, st.defaultBits));
+        List<HexCore.StyledGlyph> glyphs = HexCore.styled(shownText(), st.stops, st.mask, st.colors, st.defaultBits);
+        if (HexConfig.animatePreview) glyphs = HexCore.animate(glyphs, st.stops, st.colors, HexCore.animationPhase());
+        return HexUi.styled(glyphs);
     }
 
     /** Предмет для предпросмотра: из руки, а если рука пустая — бирка. */
@@ -575,9 +586,9 @@ public class HexGenScreen extends Screen {
         String out = output();
         g.drawString(this.font, Component.literal("Результат:"), left, ry, 0xFFA0A0A0, false);
         if (!out.isEmpty()) {
-            int len = out.length();
-            int cc = len > LIMIT ? 0xFFFF5555 : len > LIMIT - 40 ? 0xFFFFD24D : 0xFF55FF55;
-            String counter = len + " / " + LIMIT;
+            int limit = HexCore.LIMITS[st.command], len = HexCore.measuredLength(out, st.command);
+            int cc = len > limit ? 0xFFFF5555 : len > limit * 0.85 ? 0xFFFFD24D : 0xFF55FF55;
+            String counter = (st.command <= 1 ? "длина текста " : "") + len + " / " + limit;
             g.drawString(this.font, Component.literal(counter), left + W - this.font.width(counter), ry, cc, false);
         }
         g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);

@@ -21,7 +21,15 @@ public class PresetsScreen extends Screen {
     private final Consumer<String[]> apply;
     private final List<Button> buttons = new ArrayList<>();
     private final List<HexCore.Preset> presets = new ArrayList<>();
-    private boolean deleting = false;
+    private static final String[] MODES = {"Применить", "Переименовать", "Переместить", "Удалить"};
+    private static final String[] MODE_HINTS = {
+        "Свои", "Свои — нажмите, чтобы переименовать", "Свои — выберите пресет, затем место, куда его поставить",
+        "Свои — нажмите, чтобы удалить"
+    };
+    /** Что делает нажатие на свой пресет: 0 применить, 1 переименовать, 2 переместить, 3 удалить. */
+    private int mode = 0;
+    /** Пресет, выбранный для перемещения (индекс в своих), или -1. */
+    private int moving = -1;
     private int left;
     private int top;
 
@@ -47,12 +55,15 @@ public class PresetsScreen extends Screen {
             add(own.get(i), left + (i % COLS) * STEP, top + 128 + (i / COLS) * 22, true);
         }
 
-        Button del = Button.builder(Component.literal(deleting ? "Удаление: вкл" : "Удаление: выкл"), b -> {
-            deleting = !deleting;
+        if (own.isEmpty()) mode = 0;
+        Button modeButton = Button.builder(Component.literal("Свои: " + MODES[mode]), b -> {
+            mode = (mode + 1) % MODES.length;
+            moving = -1;
             rebuild();
-        }).bounds(left, top + H - 20, 150, 20).tooltip(HexUi.tip("Когда включено, нажатие на свой пресет удаляет его")).build();
-        del.active = !own.isEmpty();
-        this.addRenderableWidget(del);
+        }).bounds(left, top + H - 20, 150, 20)
+                .tooltip(HexUi.tip("Что делает нажатие на свой пресет — нажмите, чтобы сменить")).build();
+        modeButton.active = !own.isEmpty();
+        this.addRenderableWidget(modeButton);
 
         this.addRenderableWidget(Button.builder(Component.literal("Назад"), b -> this.onClose())
                 .bounds(left + W - 150, top + H - 20, 150, 20).build());
@@ -60,12 +71,30 @@ public class PresetsScreen extends Screen {
 
     private void add(HexCore.Preset p, int x, int y, boolean own) {
         Button b = Button.builder(Component.literal(p.name()), btn -> {
-            if (own && deleting) {
-                HexConfig.USER_PRESETS.remove(p);
-                HexConfig.save();
-                if (HexConfig.USER_PRESETS.isEmpty()) deleting = false;
-                rebuild();
-                return;
+            if (own) {
+                int idx = HexConfig.USER_PRESETS.indexOf(p);
+                switch (mode) {
+                    case 1 -> {
+                        this.minecraft.setScreen(new NamePresetScreen(this, p.colors(), p.name(), p.name(), name -> {}));
+                        return;
+                    }
+                    case 2 -> {
+                        if (moving < 0) moving = idx;
+                        else {
+                            HexConfig.movePreset(moving, idx);
+                            moving = -1;
+                        }
+                        rebuild();
+                        return;
+                    }
+                    case 3 -> {
+                        HexConfig.USER_PRESETS.remove(p);
+                        HexConfig.save();
+                        rebuild();
+                        return;
+                    }
+                    default -> { }
+                }
             }
             apply.accept(p.colors());
             this.onClose();
@@ -88,16 +117,22 @@ public class PresetsScreen extends Screen {
         Component t = HexUi.gradientTitle("Пресеты");
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
         g.drawString(this.font, Component.literal("Готовые"), left, top + 14, 0xFFA0A0A0, false);
-        g.drawString(this.font, Component.literal(deleting ? "Свои — нажмите, чтобы удалить" : "Свои"), left, top + 118,
-                deleting ? 0xFFFF5555 : 0xFFA0A0A0, false);
+        String hint = mode == 2 && moving >= 0 ? "Свои — теперь нажмите на место, куда поставить" : MODE_HINTS[mode];
+        g.drawString(this.font, Component.literal(hint), left, top + 118, mode == 3 ? 0xFFFF5555 : mode == 0 ? 0xFFA0A0A0 : 0xFFFFD24D, false);
         if (HexConfig.USER_PRESETS.isEmpty()) {
             g.drawString(this.font, Component.literal("Пока пусто — нажмите «★ Сохранить» в генераторе"),
                     left, top + 134, 0xFF707070, false);
         }
 
-        // Полоска градиента внизу каждой кнопки.
+        // Полоска градиента внизу каждой кнопки; выбранный для перемещения — в жёлтой рамке.
         for (int i = 0; i < buttons.size(); i++) {
             Button b = buttons.get(i);
+            if (moving >= 0 && moving < HexConfig.USER_PRESETS.size() && presets.get(i) == HexConfig.USER_PRESETS.get(moving)) {
+                g.fill(b.getX() - 1, b.getY() - 1, b.getX() + b.getWidth() + 1, b.getY(), 0xFFFFD24D);
+                g.fill(b.getX() - 1, b.getY() + b.getHeight(), b.getX() + b.getWidth() + 1, b.getY() + b.getHeight() + 1, 0xFFFFD24D);
+                g.fill(b.getX() - 1, b.getY(), b.getX(), b.getY() + b.getHeight(), 0xFFFFD24D);
+                g.fill(b.getX() + b.getWidth(), b.getY(), b.getX() + b.getWidth() + 1, b.getY() + b.getHeight(), 0xFFFFD24D);
+            }
             HexUi.drawGradient(g, b.getX() + 3, b.getY() + b.getHeight() - 4, b.getWidth() - 6, 2, List.of(presets.get(i).colors()));
         }
     }
