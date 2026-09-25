@@ -23,11 +23,13 @@ for TARGET in hexgen-26.2 hexgen-26.1.2; do
         -e 's/import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;/import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;/' \
         -e 's/KeyBindingHelper\.registerKeyBinding(/KeyMappingHelper.registerKeyMapping(/' \
         -e 's/\bClientCommandManager\b/ClientCommands/g' \
+        -e 's/gui\.getChat()\.addMessage(/gui.getChat().addClientSystemMessage(/g' \
         "$f" > "$DST/$rel"
-    # В 26.2 окна открываются через minecraft.gui, в 26.1 — как раньше, через minecraft.
+    # В 26.2 окна открываются через minecraft.gui, а чат — через gui.hud; в 26.1 — как раньше.
     if [ "$TARGET" = hexgen-26.2 ]; then
       sed -i -e 's/this\.minecraft\.setScreen(/this.minecraft.gui.setScreen(/g' \
-             -e 's/client\.setScreen(/client.gui.setScreen(/g' "$DST/$rel"
+             -e 's/client\.setScreen(/client.gui.setScreen(/g' \
+             -e 's/gui\.getChat()/gui.hud.getChat()/g' "$DST/$rel"
     fi
   done
   cp "$SRC"/resources/assets/hexgen/icon.png "$DST/resources/assets/hexgen/icon.png"

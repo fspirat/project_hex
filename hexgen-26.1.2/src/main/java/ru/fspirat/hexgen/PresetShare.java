@@ -46,7 +46,7 @@ public final class PresetShare {
             HexCore.Preset p = HexCore.findPreset(message.getString());
             if (p == null) return;
             Minecraft client = Minecraft.getInstance();
-            client.execute(() -> client.gui.getChat().addMessage(Component.literal("✦ ").append(named(p)).append(" ")
+            client.execute(() -> client.gui.getChat().addClientSystemMessage(Component.literal("✦ ").append(named(p)).append(" ")
                     .append(Component.literal(HexUi.tr("preset.chat.save")).withStyle(clickStyle(p).withColor(0x55FF55)))));
         });
     }
