@@ -37,3 +37,36 @@ jobs:
         with:
           name: ${{ matrix.project }}
           path: ${{ matrix.project }}/build/libs/*.jar
+
+      # Копия с постоянным именем (fstweak-<версия MC>.jar) — на неё ссылается страница fspirat.ru/fstweak/.
+      - name: Prepare release file
+        run: |
+          mkdir -p dist
+          jar=$(ls ${{ matrix.project }}/build/libs/*.jar | grep -v -- '-sources' | head -n 1)
+          cp "$jar" "dist/fstweak-${MC#hexgen-}.jar"
+        env:
+          MC: ${{ matrix.project }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.project }}
+          path: dist/*.jar
+
+  # Релиз на GitHub при пуше тега вида v1.0.0 (git tag v1.0.0 && git push origin v1.0.0).
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.jar
+          generate_release_notes: true
