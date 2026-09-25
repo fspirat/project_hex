@@ -14,6 +14,10 @@ public final class HexUi {
     private HexUi() {}
 
     public static final String TITLE = "HEX GENERATOR";
+
+    /** «fstweak 1.1» — версия берётся из fabric.mod.json (то же, что видно в Mod Menu). */
+    public static final String VERSION_LABEL = "fstweak " + net.fabricmc.loader.api.FabricLoader.getInstance()
+            .getModContainer("hexgen").map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("");
     public static final List<String> TITLE_STOPS = List.of("B04DFF", "FF8FE0");
 
     /** Перевод строки мода на язык игры (assets/hexgen/lang): ключ без префикса «fstweak.». */

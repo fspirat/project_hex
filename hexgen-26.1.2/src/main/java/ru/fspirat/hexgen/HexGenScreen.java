@@ -628,6 +628,9 @@ public class HexGenScreen extends Screen {
 
         MutableComponent title = HexUi.gradientTitle(HexUi.TITLE);
         g.text(this.font, title, (this.width - this.font.width(title)) / 2, top + 1, 0xFFFFFFFF, true);
+        // Версия мода — в правом верхнем углу, слева от ⚙.
+        g.text(this.font, Component.literal(HexUi.VERSION_LABEL),
+                left + W - 20 - this.font.width(HexUi.VERSION_LABEL), top + 1, 0xFF606060, false);
 
         // Предпросмотр в стиле подсказки предмета; для /itemname и /itemlore — с иконкой предмета.
         int px = left, py = top + Y_PREVIEW, pw = W, ph = 22;
