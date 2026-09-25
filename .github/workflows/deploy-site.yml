@@ -6,7 +6,7 @@ name: Deploy site
 #   FTP_HOST      — адрес FTP-сервера из панели reg.ru
 #   FTP_USER      — FTP-пользователь
 #   FTP_PASSWORD  — его пароль
-#   FTP_DIR       — папка сайта на сервере, со слешем в конце (например www/fspirat.ru/)
+#   FTP_DIR       — папка сайта fspirat.ru от корня FTP, со слешем в конце (например www/fspirat.ru/)
 #   FTP_PROTOCOL  — необязательно: ftps (по умолчанию) или ftp, если хостинг не поддерживает шифрование
 on:
   push:
@@ -27,11 +27,19 @@ jobs:
       - name: Check secrets
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_DIR: ${{ secrets.FTP_DIR }}
         run: |
           if [ -z "$FTP_HOST" ]; then
             echo "::error::Секреты FTP_HOST / FTP_USER / FTP_PASSWORD / FTP_DIR не заданы"
             exit 1
           fi
+          # FTP-доступ открыт на весь аккаунт (там и fspirat.ru, и fspirat.online) —
+          # без явной папки сайта файлы ушли бы в корень аккаунта.
+          case "$FTP_DIR" in
+            ""|"./"|"/"|".") echo "::error::FTP_DIR должен указывать на папку сайта, например www/fspirat.ru/"; exit 1 ;;
+            */) ;;
+            *) echo "::error::FTP_DIR должен заканчиваться на /"; exit 1 ;;
+          esac
 
       # Загружает только изменённые файлы. Чужие файлы на сервере (например hex_generator/) не трогает:
       # удаляются только те, что раньше выкладывал этот же шаг и которые убрали из website/.
