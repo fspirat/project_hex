@@ -106,7 +106,7 @@
   "fstweak.presets.own.move": "Yours — pick a preset, then the place to put it",
   "fstweak.presets.own.move_target": "Yours — now click where to put it",
   "fstweak.presets.own.delete": "Yours — click to delete",
-  "fstweak.presets.mode_button": "Yours: %s",
+  "fstweak.presets.mode_button": "Click: %s",
   "fstweak.presets.mode.hint": "What clicking your preset does — click to change",
   "fstweak.presets.builtin": "Built-in",
   "fstweak.presets.empty": "Empty for now — press \"★ Save\" in the generator",
@@ -151,5 +151,16 @@
   "fstweak.format.prefix.hint": "E.g. \"/nick \" — then \"Run\" sends the command. Empty — only \"Copy\".",
   "fstweak.format.template": "BirdFlop template",
   "fstweak.format.template.hint": "$1…$6 — color digits, $f — format codes (&l, &o…), $c — the character",
-  "fstweak.no_section": "Text with § can’t be sent to chat — copy it instead"
+  "fstweak.no_section": "Text with § can’t be sent to chat — copy it instead",
+  "fstweak.take_item.hint": "Take the name of the item in your hand — with its colors",
+  "fstweak.take_item.empty": "No item in your hand",
+  "fstweak.take_item.done": "Item name loaded",
+  "fstweak.presets.mode.share": "Share",
+  "fstweak.presets.share.hint": "Click a preset to copy its code, then send it to chat",
+  "fstweak.presets.share.copied": "Code copied — paste it into chat (Ctrl+V)",
+  "fstweak.preset.bad": "Invalid preset code",
+  "fstweak.preset.saved_short": "saved to FSTWEAK presets",
+  "fstweak.preset.chat.save": "[Save preset]",
+  "fstweak.preset.chat.hover": "Click to save the \"%s\" preset to FSTWEAK",
+  "fstweak.preset.imported": "Preset \"%s\" saved from clipboard"
 }

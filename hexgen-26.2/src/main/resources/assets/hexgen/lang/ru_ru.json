@@ -106,7 +106,7 @@
   "fstweak.presets.own.move": "Свои — выберите пресет, затем место, куда его поставить",
   "fstweak.presets.own.move_target": "Свои — теперь нажмите на место, куда поставить",
   "fstweak.presets.own.delete": "Свои — нажмите, чтобы удалить",
-  "fstweak.presets.mode_button": "Свои: %s",
+  "fstweak.presets.mode_button": "Нажатие: %s",
   "fstweak.presets.mode.hint": "Что делает нажатие на свой пресет — нажмите, чтобы сменить",
   "fstweak.presets.builtin": "Готовые",
   "fstweak.presets.empty": "Пока пусто — нажмите «★ Сохранить» в генераторе",
@@ -151,5 +151,16 @@
   "fstweak.format.prefix.hint": "Например «/nick » — тогда «Выполнить» отправит команду. Пусто — только «Скопировать».",
   "fstweak.format.template": "Шаблон BirdFlop",
   "fstweak.format.template.hint": "$1…$6 — цифры цвета, $f — коды формата (&l, &o…), $c — символ",
-  "fstweak.no_section": "Текст с § нельзя отправить в чат — только скопировать"
+  "fstweak.no_section": "Текст с § нельзя отправить в чат — только скопировать",
+  "fstweak.take_item.hint": "Взять название предмета в руке — вместе с цветами",
+  "fstweak.take_item.empty": "В руке нет предмета",
+  "fstweak.take_item.done": "Название предмета загружено",
+  "fstweak.presets.mode.share": "Поделиться",
+  "fstweak.presets.share.hint": "Нажмите на пресет — код скопируется, отправьте его в чат",
+  "fstweak.presets.share.copied": "Код скопирован — вставьте его в чат (Ctrl+V)",
+  "fstweak.preset.bad": "Неверный код пресета",
+  "fstweak.preset.saved_short": "сохранён в пресеты FSTWEAK",
+  "fstweak.preset.chat.save": "[Сохранить пресет]",
+  "fstweak.preset.chat.hover": "Нажмите, чтобы сохранить пресет «%s» в FSTWEAK",
+  "fstweak.preset.imported": "Пресет «%s» из буфера сохранён"
 }

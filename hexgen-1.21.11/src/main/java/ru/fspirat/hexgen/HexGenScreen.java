@@ -46,6 +46,7 @@ public class HexGenScreen extends Screen {
     private SelectableEditBox textBox;
     private EditBox nickColorBox;
     private final Button[] formatButtons = new Button[4];
+    private Button itemButton;
     private final List<Button> swatchButtons = new ArrayList<>();
     private String status = "";
     private int statusColor = 0xFF55FF55;
@@ -159,6 +160,14 @@ public class HexGenScreen extends Screen {
                 .bounds(left + 18, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("redo"))).build());
         this.addRenderableWidget(Button.builder(Component.literal("⚙"), b -> open(new SettingsScreen(this)))
                 .bounds(left + W - 16, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("settings"))).build());
+
+        // Иконка предмета в предпросмотре — кнопка «взять название из предмета в руке».
+        itemButton = null;
+        if (!sponsor()) {
+            itemButton = Button.builder(Component.empty(), b -> takeFromItem())
+                    .bounds(left + 2, top + Y_PREVIEW + 1, 20, 20).tooltip(HexUi.tip(HexUi.tr("take_item.hint"))).build();
+            this.addRenderableWidget(itemButton);
+        }
 
         // --- Строка 1: текст (или ник) + команда ---
         if (!sponsor()) {
@@ -325,7 +334,12 @@ public class HexGenScreen extends Screen {
         this.addRenderableWidget(run);
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("import")), b -> {
-            if (applyCommand(this.minecraft.keyboardHandler.getClipboard())) flash(HexUi.tr("imported"));
+            String clip = this.minecraft.keyboardHandler.getClipboard();
+            HexCore.Preset shared = HexCore.findPreset(clip);
+            if (shared != null) {
+                HexConfig.addPreset(shared.name(), shared.colors());
+                flash(HexUi.tr("preset.imported", shared.name()));
+            } else if (applyCommand(clip)) flash(HexUi.tr("imported"));
             else flash(HexUi.tr("import_failed"), 0xFFFF5555);
         }).bounds(left + step * 2, y6, bw, 20)
                 .tooltip(HexUi.tip(HexUi.tr("import.hint"))).build());
@@ -399,6 +413,43 @@ public class HexGenScreen extends Screen {
     private String overLimitMessage(int len, int limit) {
         boolean perChar = HexCore.uniformBits(s().mask, s().defaultBits) < 0 || HexCore.hasOverrides(s().colors);
         return HexUi.tr("over_limit", len, limit) + (perChar ? HexUi.tr("over_limit.per_char") : "");
+    }
+
+    /** Загружает название предмета в руке вместе с цветами и форматом. */
+    private void takeFromItem() {
+        if (this.minecraft.player == null || this.minecraft.player.getMainHandItem().isEmpty()) {
+            flash(HexUi.tr("take_item.empty"), 0xFFFFD24D);
+            return;
+        }
+        Component name = this.minecraft.player.getMainHandItem().getHoverName();
+        StringBuilder text = new StringBuilder();
+        List<Integer> mask = new ArrayList<>(), colors = new ArrayList<>();
+        name.visit((style, part) -> {
+            int bits = (style.isBold() ? HexCore.BOLD : 0) | (style.isItalic() ? HexCore.ITALIC : 0)
+                    | (style.isUnderlined() ? HexCore.UNDERLINE : 0) | (style.isStrikethrough() ? HexCore.STRIKE : 0);
+            int rgb = style.getColor() != null ? style.getColor().getValue() & 0xFFFFFF : -1;
+            for (int cp : part.codePoints().toArray()) {
+                text.appendCodePoint(cp);
+                mask.add(bits);
+                colors.add(rgb);
+            }
+            return java.util.Optional.empty();
+        }, Style.EMPTY);
+        if (text.length() == 0) return;
+        HexCore.Parsed p = HexCore.fromGlyphs(s().command, text.toString(), mask, colors);
+        HexState.push();
+        HexState st = s();
+        st.text = p.text();
+        st.mask = p.mask();
+        boolean anyColor = colors.stream().anyMatch(c -> c >= 0);
+        st.colors = anyColor ? p.colors() : HexCore.spliceMask("", st.text, null, -1);
+        if (anyColor) st.stops = new ArrayList<>(p.stops());
+        st.smallCaps = false;
+        st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
+        cursor = highlight = st.text.length();
+        textBox = null;
+        rebuild();
+        flash(HexUi.tr("take_item.done"));
     }
 
     /** Выделение в поле текста в символах (code points): {начало, конец} или null. */
@@ -581,9 +632,11 @@ public class HexGenScreen extends Screen {
         // Предпросмотр в стиле подсказки предмета; для /itemname и /itemlore — с иконкой предмета.
         int px = left, py = top + Y_PREVIEW, pw = W, ph = 22;
         HexUi.drawTooltipBox(g, px, py, pw, ph);
-        boolean item = s().command <= 1;
+        boolean item = !sponsor();
         int textLeft = px;
         if (item) {
+            // Кнопка лежит под рамкой предпросмотра — подсвечиваем иконку при наведении сами.
+            if (itemButton != null && itemButton.isHovered()) g.fill(px + 3, py + 2, px + 21, py + 20, 0x50FFFFFF);
             g.renderItem(previewItem(), px + 4, py + 3);
             textLeft = px + 22;
         }

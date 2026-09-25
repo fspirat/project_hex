@@ -21,14 +21,17 @@ public class PresetsScreen extends Screen {
     private final Consumer<String[]> apply;
     private final List<Button> buttons = new ArrayList<>();
     private final List<HexCore.Preset> presets = new ArrayList<>();
-    private static final String[] MODES = {"presets.mode.apply", "presets.mode.rename", "presets.mode.move", "presets.mode.delete"};
+    private static final String[] MODES = {"presets.mode.apply", "presets.mode.rename", "presets.mode.move", "presets.mode.delete", "presets.mode.share"};
     private static final String[] MODE_HINTS = {
-        "presets.own", "presets.own.rename", "presets.own.move", "presets.own.delete"
+        "presets.own", "presets.own.rename", "presets.own.move", "presets.own.delete", "presets.share.hint"
     };
-    /** Что делает нажатие на свой пресет: 0 применить, 1 переименовать, 2 переместить, 3 удалить. */
+    private static final int SHARE = 4;
+    /** Что делает нажатие: 0 применить, 1 переименовать, 2 переместить, 3 удалить (свои), 4 поделиться (любой). */
     private int mode = 0;
     /** Пресет, выбранный для перемещения (индекс в своих), или -1. */
     private int moving = -1;
+    /** Код, только что скопированный в режиме «Поделиться». */
+    private String copied = null;
     private int left;
     private int top;
 
@@ -54,14 +57,15 @@ public class PresetsScreen extends Screen {
             add(own.get(i), left + (i % COLS) * STEP, top + 128 + (i / COLS) * 22, true);
         }
 
-        if (own.isEmpty()) mode = 0;
+        if (own.isEmpty() && mode >= 1 && mode <= 3) mode = 0;
         Button modeButton = Button.builder(Component.literal(HexUi.tr("presets.mode_button", HexUi.tr(MODES[mode]))), b -> {
             mode = (mode + 1) % MODES.length;
+            if (HexConfig.USER_PRESETS.isEmpty() && mode >= 1 && mode <= 3) mode = SHARE;
+            copied = null;
             moving = -1;
             rebuild();
         }).bounds(left, top + H - 20, 150, 20)
                 .tooltip(HexUi.tip(HexUi.tr("presets.mode.hint"))).build();
-        modeButton.active = !own.isEmpty();
         this.addRenderableWidget(modeButton);
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())
@@ -70,6 +74,11 @@ public class PresetsScreen extends Screen {
 
     private void add(HexCore.Preset p, int x, int y, boolean own) {
         Button b = Button.builder(Component.literal(HexUi.presetName(p)), btn -> {
+            if (mode == SHARE) {
+                copied = HexCore.presetCode(HexUi.presetName(p), p.colors());
+                this.minecraft.keyboardHandler.setClipboard(copied);
+                return;
+            }
             if (own) {
                 int idx = HexConfig.USER_PRESETS.indexOf(p);
                 switch (mode) {
@@ -116,8 +125,11 @@ public class PresetsScreen extends Screen {
         Component t = HexUi.gradientTitle(HexUi.tr("presets"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
         g.text(this.font, Component.literal(HexUi.tr("presets.builtin")), left, top + 14, 0xFFA0A0A0, false);
-        String hint = mode == 2 && moving >= 0 ? HexUi.tr("presets.own.move_target") : HexUi.tr(MODE_HINTS[mode]);
-        g.text(this.font, Component.literal(hint), left, top + 118, mode == 3 ? 0xFFFF5555 : mode == 0 ? 0xFFA0A0A0 : 0xFFFFD24D, false);
+        String hint = mode == 2 && moving >= 0 ? HexUi.tr("presets.own.move_target")
+                : mode == SHARE && copied != null ? HexUi.tr("presets.share.copied")
+                : HexUi.tr(MODE_HINTS[mode]);
+        int hintColor = mode == 3 ? 0xFFFF5555 : mode == 0 ? 0xFFA0A0A0 : mode == SHARE && copied != null ? 0xFF55FF55 : 0xFFFFD24D;
+        g.text(this.font, Component.literal(hint), left, top + 118, hintColor, false);
         if (HexConfig.USER_PRESETS.isEmpty()) {
             g.text(this.font, Component.literal(HexUi.tr("presets.empty")),
                     left, top + 134, 0xFF707070, false);

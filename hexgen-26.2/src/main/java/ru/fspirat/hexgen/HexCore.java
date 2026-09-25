@@ -528,6 +528,36 @@ public final class HexCore {
         return finish(format, text.toString(), stops, mask, colors, null, prefix);
     }
 
+    /** Буквы с цветами (-1 — без цвета) и форматом, например из названия предмета. */
+    public static Parsed fromGlyphs(int format, String text, List<Integer> mask, List<Integer> colors) {
+        return finish(format, text, new ArrayList<>(), mask, colors, null, "");
+    }
+
+    // ------------------------------------------------------------ обмен пресетами
+
+    /** Код пресета для чата: FSTWEAK{Имя|B04DFF,FF8FE0}. */
+    public static final java.util.regex.Pattern PRESET_CODE = java.util.regex.Pattern.compile(
+            "FSTWEAK\\{([^{}|]{1,24})\\|([0-9A-Fa-f]{6}(?:,[0-9A-Fa-f]{6}){0,5})\\}");
+
+    public static String presetCode(String name, String[] colors) {
+        String n = name.replaceAll("[{}|]", "").strip();
+        if (n.length() > 24) n = n.substring(0, 24);
+        return "FSTWEAK{" + (n.isEmpty() ? "Preset" : n) + "|" + String.join(",", colors) + "}";
+    }
+
+    /** Разбирает «Имя|HEX,HEX» (тело кода пресета). Null — если формат неверный. */
+    public static Preset parsePresetBody(String body) {
+        java.util.regex.Matcher m = PRESET_CODE.matcher("FSTWEAK{" + body.strip() + "}");
+        if (!m.matches()) return null;
+        return new Preset(m.group(1).strip(), m.group(2).toUpperCase(Locale.ROOT).split(","));
+    }
+
+    /** Первый код пресета в тексте или null. */
+    public static Preset findPreset(String text) {
+        java.util.regex.Matcher m = PRESET_CODE.matcher(text == null ? "" : text);
+        return m.find() ? new Preset(m.group(1).strip(), m.group(2).toUpperCase(Locale.ROOT).split(",")) : null;
+    }
+
     /** Общий хвост разбора: если градиента нет — крайние цвета становятся его точками, цвета букв остаются как есть. */
     private static Parsed finish(int format, String text, List<String> stops, List<Integer> mask, List<Integer> colors,
                                  String nickHex, String prefix) {

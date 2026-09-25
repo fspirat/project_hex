@@ -3,7 +3,7 @@
 # Код правится только в hexgen-1.21.11, затем: ./sync-versions.sh
 # Различия 26.x: GuiGraphics → GuiGraphicsExtractor, render → extractRenderState,
 # drawString → text, renderItem → item, setScreen идёт через minecraft.gui (только 26.2),
-# afterRender → afterExtract, KeyBindingHelper → KeyMappingHelper.
+# afterRender → afterExtract, KeyBindingHelper → KeyMappingHelper, ClientCommandManager → ClientCommands.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -22,6 +22,7 @@ for TARGET in hexgen-26.2 hexgen-26.1.2; do
         -e 's/ScreenEvents\.afterRender(screen)/ScreenEvents.afterExtract(screen)/' \
         -e 's/import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;/import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;/' \
         -e 's/KeyBindingHelper\.registerKeyBinding(/KeyMappingHelper.registerKeyMapping(/' \
+        -e 's/\bClientCommandManager\b/ClientCommands/g' \
         "$f" > "$DST/$rel"
     # В 26.2 окна открываются через minecraft.gui, в 26.1 — как раньше, через minecraft.
     if [ "$TARGET" = hexgen-26.2 ]; then

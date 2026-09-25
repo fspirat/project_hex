@@ -22,6 +22,7 @@ public class HexGenClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         HexConfig.load();
+        PresetShare.register();
 
         OPEN_KEY = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.fstweak.open_hexgen", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));
