@@ -29,6 +29,10 @@ public final class HexConfig {
     public static boolean animatePreview = true;
     /** Тема окна: индекс в THEMES. */
     public static int theme = 0;
+    /** Команда перед текстом в других форматах (например «/nick »). Пусто — только копирование. */
+    public static String formatPrefix = "";
+    /** Шаблон формата BirdFlop. */
+    public static String birdflopTemplate = HexCore.DEFAULT_BIRDFLOP;
     /** Ключи перевода тем. */
     public static final String[] THEMES = {"theme.purple", "theme.dark", "theme.gradient"};
     public static final List<HexCore.Preset> USER_PRESETS = new ArrayList<>();
@@ -59,6 +63,8 @@ public final class HexConfig {
         showHints = !"false".equals(p.getProperty("showHints"));
         animatePreview = !"false".equals(p.getProperty("animatePreview"));
         theme = Math.floorMod(intProp(p, "theme", 0), THEMES.length);
+        formatPrefix = p.getProperty("formatPrefix", "");
+        birdflopTemplate = p.getProperty("birdflopTemplate", HexCore.DEFAULT_BIRDFLOP);
         USER_PRESETS.clear();
         for (int i = 0; i < MAX_PRESETS; i++) {
             String v = p.getProperty("preset." + i);
@@ -92,6 +98,8 @@ public final class HexConfig {
         p.setProperty("showHints", String.valueOf(showHints));
         p.setProperty("animatePreview", String.valueOf(animatePreview));
         p.setProperty("theme", String.valueOf(theme));
+        p.setProperty("formatPrefix", formatPrefix);
+        p.setProperty("birdflopTemplate", birdflopTemplate);
         for (int i = 0; i < USER_PRESETS.size(); i++) {
             HexCore.Preset pr = USER_PRESETS.get(i);
             p.setProperty("preset." + i, pr.name() + "|" + String.join(",", pr.colors()));

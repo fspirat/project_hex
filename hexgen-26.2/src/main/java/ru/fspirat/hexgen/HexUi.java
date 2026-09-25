@@ -31,8 +31,15 @@ public final class HexUi {
     }
 
     public static String commandLabel(int command) {
-        String label = HexCore.COMMAND_LABELS[command];
-        return label != null ? label : tr("command.none");
+        return visible(HexCore.COMMAND_LABELS[command]);
+    }
+
+    /**
+     * Строка для показа на экране: «§» игра считает кодом форматирования и съедает,
+     * поэтому показываем похожий символ «⸹». В буфер обмена уходит настоящий «§».
+     */
+    public static String visible(String s) {
+        return s.replace('§', '⸹');
     }
 
     /** Подсказка для кнопки или null, если подсказки выключены в настройках. */
@@ -104,6 +111,38 @@ public final class HexUi {
         g.fill(x0, y1 - 1, x1, y1, c);
         g.fill(x0, y0, x0 + 1, y1, c);
         g.fill(x1 - 1, y0, x1, y1, c);
+    }
+
+    /** Иконка кнопки в инвентаре: белая четырёхлучевая звёздочка 16×16 (как иконка предмета). */
+    private static final String[] SPARKLE = {
+        ".......##.......",
+        ".......##.......",
+        ".......##.......",
+        "......####......",
+        "......####......",
+        ".....######.....",
+        "...##########...",
+        "################",
+        "################",
+        "...##########...",
+        ".....######.....",
+        "......####......",
+        "......####......",
+        ".......##.......",
+        ".......##.......",
+        ".......##......."
+    };
+
+    public static void drawSparkle(GuiGraphicsExtractor g, int x, int y) {
+        // Сначала тень со сдвигом на пиксель, потом сама звёздочка — рядами, чтобы не рисовать по пикселю.
+        for (int pass = 0; pass < 2; pass++) {
+            int off = pass == 0 ? 1 : 0, color = pass == 0 ? 0xFF3A3A3A : 0xFFFFFFFF;
+            for (int row = 0; row < SPARKLE.length; row++) {
+                String line = SPARKLE[row];
+                int start = line.indexOf('#'), end = line.lastIndexOf('#') + 1;
+                g.fill(x + start + off, y + row + off, x + end + off, y + row + 1 + off, color);
+            }
+        }
     }
 
     /** Образец цвета с рамкой; белая рамка — при наведении, жёлтая — если цвет выбран. */

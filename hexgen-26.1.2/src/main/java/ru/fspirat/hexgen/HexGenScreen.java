@@ -194,11 +194,13 @@ public class HexGenScreen extends Screen {
             this.addRenderableWidget(nickColorBox);
             addSwatchButton(left + 156, y1 + 20, 58, () -> s().nickHex, v -> s().nickHex = v);
         }
-        this.addRenderableWidget(Button.builder(Component.literal(HexUi.commandLabel(s().command)), b -> change(() -> {
-            s().command = (s().command + 1) % HexCore.COMMANDS.length;
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.commandLabel(s().command)), b -> open(new FormatScreen(this, f -> {
+            if (f == s().command) return;
+            HexState.push();
+            s().command = f;
             normalizeStops();
             if (sponsor()) syncNick(true);
-        })).bounds(left + 220, y1 - 1, 120, 20).tooltip(HexUi.tip(HexUi.tr("command.hint"))).build());
+        }))).bounds(left + 220, y1 - 1, 120, 20).tooltip(HexUi.tip(HexUi.tr("format.hint"))).build());
 
         // --- Строка 2: шрифт, форматирование, символы, цвет части ---
         if (!sponsor()) {
@@ -308,6 +310,7 @@ public class HexGenScreen extends Screen {
         Button run = Button.builder(Component.literal(HexUi.tr("run")), b -> {
             String out = output();
             if (out.isEmpty() || !out.startsWith("/")) { flash(HexUi.tr("pick_command"), 0xFFFF5555); return; }
+            if (out.indexOf('§') >= 0) { flash(HexUi.tr("no_section"), 0xFFFF5555); return; }
             int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
             if (len > limit) { flash(capitalize(overLimitMessage(len, limit)), 0xFFFF5555); return; }
             if (this.minecraft.player != null) {
@@ -316,7 +319,9 @@ public class HexGenScreen extends Screen {
                 flash(HexUi.tr("sent"));
             }
         }).bounds(left + step, y6, bw, 20).tooltip(HexUi.tip(HexUi.tr("run.hint"))).build();
-        run.active = !HexCore.COMMANDS[s().command].isEmpty();
+        run.active = HexCore.isAgeMagic(s().command)
+                ? !HexCore.COMMANDS[s().command].isEmpty()
+                : HexConfig.formatPrefix.startsWith("/") && s().command != HexCore.CONSOLE;
         this.addRenderableWidget(run);
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("import")), b -> {
@@ -371,6 +376,10 @@ public class HexGenScreen extends Screen {
         HexState st = s();
         st.command = p.command();
         st.stops = new ArrayList<>(p.stops());
+        if (!HexCore.isAgeMagic(p.command())) {
+            HexConfig.formatPrefix = p.prefix();
+            HexConfig.save();
+        }
         if (p.command() == 3) {
             st.nickHex = p.nickHex();
             st.lastEndSynced = st.stops.get(st.stops.size() - 1);
@@ -509,6 +518,10 @@ public class HexGenScreen extends Screen {
             if (!HexCore.valid(st.nickHex)) return "";
             return HexCore.sponsorCommand(st.stops, st.nickHex);
         }
+        if (!HexCore.isAgeMagic(st.command)) {
+            return HexConfig.formatPrefix + HexCore.formatText(st.command, shownText(), st.stops, st.mask, st.colors,
+                    st.defaultBits, HexConfig.birdflopTemplate);
+        }
         return HexCore.gradientCommand(HexCore.COMMANDS[st.command], shownText(), st.stops, st.mask, st.colors, st.defaultBits);
     }
 
@@ -606,7 +619,7 @@ public class HexGenScreen extends Screen {
         }
         g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
         String shown = out.isEmpty() ? HexUi.tr("hex_help") : out;
-        g.text(this.font, Component.literal(fit(shown, W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
+        g.text(this.font, Component.literal(fit(HexUi.visible(shown), W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
 
         if (!status.isEmpty()) {
             Component sc = Component.literal(status);

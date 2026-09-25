@@ -36,7 +36,7 @@ public class HexGenClient implements ClientModInitializer {
             AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) (Object) inventory;
 
             MovableButton button = new MovableButton(0, 0, SIZE, SIZE,
-                    Component.literal("✦").withStyle(Style.EMPTY.withColor(0xB04DFF)),
+                    Component.empty(),
                     b -> client.setScreen(new HexGenScreen(inventory)),
                     HexConfig::save);
             button.setTooltip(!HexConfig.showHints ? null : Tooltip.create(Component.literal(HexUi.TITLE + "\n")
@@ -46,6 +46,7 @@ public class HexGenClient implements ClientModInitializer {
 
             // Перемещение: каждый кадр кнопка следует за курсором.
             ScreenEvents.afterRender(screen).register((s, g, mouseX, mouseY, delta) -> {
+                HexUi.drawSparkle(g, button.getX() + 2, button.getY() + 2);
                 if (!button.isDragging()) return;
                 button.follow(mouseX, mouseY);
                 button.setPosition(Math.max(0, Math.min(s.width - SIZE, button.getX())),

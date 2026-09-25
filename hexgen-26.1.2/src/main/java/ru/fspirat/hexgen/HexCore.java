@@ -11,11 +11,25 @@ import java.util.Random;
 public final class HexCore {
     private HexCore() {}
 
-    public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor"};
-    /** Подписи команд; null — перевести ключ command.none. */
-    public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", null, "/sponsor prefix"};
-    /** Лимит длины для каждой команды: для /itemname и /itemlore считается только текст после команды. */
-    public static final int[] LIMITS = {64, 65, 256, 256};
+    // Форматы: 0–3 — AgeMagic (как раньше), 4–10 — другие RGB-форматы.
+    public static final int NICKNAME = 4, CHAT = 5, LEGACY = 6, CONSOLE = 7, BBCODE = 8, MINIMESSAGE = 9, BIRDFLOP = 10;
+    public static final int FIRST_OTHER = NICKNAME;
+    public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor", "", "", "", "", "", "", ""};
+    /** Короткие подписи для кнопки в главном окне. */
+    public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", "no command", "/sponsor prefix",
+        "Nickname &#", "Chat <#>", "Legacy &x", "Console §x", "BBCode", "MiniMessage", "BirdFlop"};
+    /** Полные названия в окне выбора формата. */
+    public static final String[] FORMAT_NAMES = {"/itemname (AgeMagic)", "/itemlore (AgeMagic)", "no command (AgeMagic)",
+        "/sponsor prefix (AgeMagic)", "Nickname &#rrggbb", "Chat <#rrggbb>", "Legacy &x&r&r&g&g&b&b",
+        "Console §x§r§r§g§g§b§b", "BBCode [COLOR=#rrggbb]", "MiniMessage", "BirdFlop"};
+    /** Лимит длины: для /itemname и /itemlore считается только текст после команды, остальное — лимит чата. */
+    public static final int[] LIMITS = {64, 65, 256, 256, 256, 256, 256, 256, 256, 256, 256};
+    /** Шаблон BirdFlop по умолчанию: $1…$6 — цифры цвета, $f — коды формата, $c — символ. */
+    public static final String DEFAULT_BIRDFLOP = "&#$1$2$3$4$5$6$f$c";
+
+    public static boolean isAgeMagic(int format) {
+        return format < FIRST_OTHER;
+    }
 
     /** Длина, которую сервер сравнивает с лимитом. */
     public static int measuredLength(String out, int command) {
@@ -252,7 +266,7 @@ public final class HexCore {
     }
 
     /** Результат разбора готовой команды (импорт и история). */
-    public record Parsed(int command, String text, List<String> stops, int[] mask, int[] colors, String nickHex) {}
+    public record Parsed(int command, String text, List<String> stops, int[] mask, int[] colors, String nickHex, String prefix) {}
 
     private static final java.util.regex.Pattern TOKEN =
             java.util.regex.Pattern.compile("\\{#([0-9A-Fa-f]{6})(>|<>|<)?\\}|&([0-9a-fk-orA-FK-OR])");
@@ -277,7 +291,12 @@ public final class HexCore {
             while (m.find()) if (m.group(1) != null) tags.add(m.group(1).toUpperCase(Locale.ROOT));
             if (tags.size() < 2) return null;
             List<String> stops = new ArrayList<>(tags.subList(0, Math.min(7, tags.size() - 1)));
-            return new Parsed(3, "", stops, new int[0], new int[0], tags.get(tags.size() - 1));
+            return new Parsed(3, "", stops, new int[0], new int[0], tags.get(tags.size() - 1), "");
+        }
+        // Теги AgeMagic — {#rrggbb…}; без них это один из других форматов.
+        if (!s.contains("{#")) {
+            int other = detectOther(s);
+            return other < 0 ? null : parseOther(s, other);
         }
 
         StringBuilder text = new StringBuilder();
@@ -318,10 +337,202 @@ public final class HexCore {
             }
         }
         if (tags == 0 || text.length() == 0) return null;
+        return finish(command, text.toString(), stops, mask, colors, null, "");
+    }
 
+    // ------------------------------------------------------------ другие форматы
+
+    private static final String[] BB_TAGS = {"B", "I", "U", "S"};
+    private static final String[] MM_TAGS = {"b", "i", "u", "st"};
+
+    private static String codes(int bits, char sign) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append(sign).append("lonm".charAt(i));
+        return sb.toString();
+    }
+
+    /** Цвет в синтаксисе формата (для «буквенных» форматов, где цвет ставится перед каждым символом). */
+    private static String colorCode(int format, int rgb) {
+        String h = hex(rgb);
+        return switch (format) {
+            case NICKNAME -> "&#" + h;
+            case CHAT -> "<#" + h + ">";
+            case LEGACY, CONSOLE -> {
+                char sign = format == CONSOLE ? '§' : '&';
+                StringBuilder sb = new StringBuilder().append(sign).append('x');
+                for (char c : h.toCharArray()) sb.append(sign).append(c);
+                yield sb.toString();
+            }
+            default -> "";
+        };
+    }
+
+    private static String mmEscape(String ch) {
+        return ch.replace("\\", "\\\\").replace("<", "\\<");
+    }
+
+    /** Открыть/закрыть теги формата при смене формата между символами (BBCode, MiniMessage). */
+    private static void switchTags(StringBuilder sb, int from, int to, boolean bb) {
+        if (from == to) return;
+        for (int i = 3; i >= 0; i--) if ((from & (1 << i)) != 0) sb.append(bb ? "[/" + BB_TAGS[i] + "]" : "</" + MM_TAGS[i] + ">");
+        for (int i = 0; i < 4; i++) if ((to & (1 << i)) != 0) sb.append(bb ? "[" + BB_TAGS[i] + "]" : "<" + MM_TAGS[i] + ">");
+    }
+
+    /** Текст в одном из других RGB-форматов (без команды — её добавляет вызывающий). */
+    public static String formatText(int format, String text, List<String> stops, int[] mask, int[] colors, int fallback, String template) {
+        List<StyledGlyph> glyphs = styled(text, stops, mask, colors, fallback);
+        int uniform = uniformBits(mask, fallback);
+        StringBuilder sb = new StringBuilder();
+
+        if (format == MINIMESSAGE && uniform >= 0 && !hasOverrides(colors) && stops.size() >= 2) {
+            // Родной градиент MiniMessage — короче, чем цвет на каждую букву.
+            sb.append("<gradient");
+            for (String st : stops) sb.append(":#").append(st);
+            sb.append('>');
+            switchTags(sb, 0, uniform, false);
+            sb.append(mmEscape(text));
+            switchTags(sb, uniform, 0, false);
+            return sb.append("</gradient>").toString();
+        }
+
+        if (format == MINIMESSAGE || format == BBCODE) {
+            boolean bb = format == BBCODE;
+            int open = 0;
+            for (StyledGlyph g : glyphs) {
+                switchTags(sb, open, g.bits(), bb);
+                open = g.bits();
+                boolean plainSpace = g.ch().equals(" ") && (g.bits() & (UNDERLINE | STRIKE)) == 0;
+                if (plainSpace) sb.append(' ');
+                else if (bb) sb.append("[COLOR=#").append(hex(g.rgb())).append(']').append(g.ch()).append("[/COLOR]");
+                else sb.append("<#").append(hex(g.rgb())).append('>').append(mmEscape(g.ch()));
+            }
+            switchTags(sb, open, 0, bb);
+            return sb.toString();
+        }
+
+        if (format == BIRDFLOP) {
+            String tpl = template == null || template.isEmpty() ? DEFAULT_BIRDFLOP : template;
+            for (StyledGlyph g : glyphs) {
+                String h = hex(g.rgb());
+                String part = tpl;
+                for (int i = 0; i < 6; i++) part = part.replace("$" + (i + 1), String.valueOf(h.charAt(i)));
+                part = part.replace("$f", codes(g.bits(), '&')).replace("$c", g.ch());
+                sb.append(part);
+            }
+            return sb.toString();
+        }
+
+        // Nickname, Chat, Legacy, Console: цвет и коды перед каждым символом.
+        char sign = format == CONSOLE ? '§' : '&';
+        int prevBits = -1;
+        for (StyledGlyph g : glyphs) {
+            if (g.ch().equals(" ") && g.bits() == prevBits && (g.bits() & (UNDERLINE | STRIKE)) == 0) {
+                sb.append(' ');
+                continue;
+            }
+            sb.append(colorCode(format, g.rgb())).append(codes(g.bits(), sign)).append(g.ch());
+            prevBits = g.bits();
+        }
+        return sb.toString();
+    }
+
+    private static final java.util.regex.Pattern OTHER_TOKEN = java.util.regex.Pattern.compile(
+            "(?i)&#([0-9a-f]{6})"                                  // 1  Nickname
+            + "|<#([0-9a-f]{6})>"                                  // 2  Chat / MiniMessage
+            + "|[&§]x((?:[&§][0-9a-f]){6})"                        // 3  Legacy / Console
+            + "|\\[color=#([0-9a-f]{6})\\]"                          // 4  BBCode
+            + "|<color:#([0-9a-f]{6})>"                            // 5  MiniMessage
+            + "|<gradient((?::#[0-9a-f]{6})+)(?::[-0-9.]+)?>"      // 6  MiniMessage gradient
+            + "|(</gradient>|\\[/color\\]|</color>|</#[0-9a-f]{6}>)" // 7  закрытие цвета
+            + "|<(/?)(b|bold|i|italic|u|underlined|st|strikethrough)>" // 8, 9  MiniMessage формат
+            + "|\\[(/?)([bius])\\]"                                  // 10, 11  BBCode формат
+            + "|[&§]([0-9a-fk-or])");                              // 12  коды & и §
+
+    private static int formatBit(String tag) {
+        return switch (tag.toLowerCase(Locale.ROOT)) {
+            case "b", "bold" -> BOLD;
+            case "i", "italic" -> ITALIC;
+            case "u", "underlined" -> UNDERLINE;
+            case "st", "strikethrough", "s" -> STRIKE;
+            default -> 0;
+        };
+    }
+
+    /** Определяет, в каком из других форматов записан текст, или -1. */
+    private static int detectOther(String s) {
+        String l = s.toLowerCase(Locale.ROOT);
+        if (l.contains("<gradient:") || l.contains("<color:#") || l.contains("</") || l.contains("\\<")) return MINIMESSAGE;
+        if (l.contains("[color=#")) return BBCODE;
+        if (l.matches("(?s).*§x(§[0-9a-f]){6}.*")) return CONSOLE;
+        if (l.matches("(?s).*&x(&[0-9a-f]){6}.*")) return LEGACY;
+        if (l.matches("(?s).*<#[0-9a-f]{6}>.*")) return CHAT;
+        if (l.matches("(?s).*&#[0-9a-f]{6}.*")) return NICKNAME;
+        return -1;
+    }
+
+    /** Разбор других форматов. Команда перед текстом (например «/nick ») возвращается в prefix. */
+    private static Parsed parseOther(String s, int format) {
+        java.util.regex.Matcher m = OTHER_TOKEN.matcher(s);
+        String prefix = "";
+        if (s.startsWith("/") && m.find()) {
+            prefix = s.substring(0, m.start());
+            s = s.substring(m.start());
+            m = OTHER_TOKEN.matcher(s);
+        }
+        // В «буквенных» форматах новый цвет сбрасывает жирность и т. п., в MiniMessage и BBCode — нет.
+        boolean colorResets = format != MINIMESSAGE && format != BBCODE;
+        StringBuilder text = new StringBuilder();
+        List<Integer> mask = new ArrayList<>(), colors = new ArrayList<>();
+        List<String> stops = new ArrayList<>();
+        boolean gradient = false;
+        int solid = -1, bits = 0, tags = 0, pos = 0;
+        while (true) {
+            boolean found = m.find();
+            int end = found ? m.start() : s.length();
+            String chunk = s.substring(pos, end);
+            if (format == MINIMESSAGE) chunk = chunk.replace("\\<", "<").replace("\\\\", "\\");
+            for (int cp : chunk.codePoints().toArray()) {
+                text.appendCodePoint(cp);
+                mask.add(bits);
+                colors.add(gradient ? -1 : solid);
+            }
+            if (!found) break;
+            pos = m.end();
+            String hex = m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2)
+                    : m.group(3) != null ? m.group(3).replaceAll("[&§]", "") : m.group(4) != null ? m.group(4) : m.group(5);
+            if (hex != null) {
+                tags++;
+                solid = rgb(hex.toUpperCase(Locale.ROOT));
+                gradient = false;
+                if (colorResets) bits = 0;
+            } else if (m.group(6) != null) {
+                tags++;
+                stops.clear();
+                for (String st : m.group(6).split(":#")) if (!st.isEmpty()) stops.add(st.toUpperCase(Locale.ROOT));
+                gradient = true;
+            } else if (m.group(7) != null) {
+                if (m.group(7).equalsIgnoreCase("</gradient>")) gradient = false;
+                else solid = -1;
+            } else if (m.group(9) != null || m.group(11) != null) {
+                boolean close = !(m.group(9) != null ? m.group(8) : m.group(10)).isEmpty();
+                int bit = formatBit(m.group(9) != null ? m.group(9) : m.group(11));
+                bits = close ? bits & ~bit : bits | bit;
+            } else if (m.group(12) != null) {
+                char c = Character.toLowerCase(m.group(12).charAt(0));
+                int idx = "lonm".indexOf(c);
+                if (idx >= 0) bits |= 1 << idx;
+                else if (c == 'r') { bits = 0; solid = -1; }
+            }
+        }
+        if (tags == 0 || text.length() == 0) return null;
+        return finish(format, text.toString(), stops, mask, colors, null, prefix);
+    }
+
+    /** Общий хвост разбора: если градиента нет — крайние цвета становятся его точками, цвета букв остаются как есть. */
+    private static Parsed finish(int format, String text, List<String> stops, List<Integer> mask, List<Integer> colors,
+                                 String nickHex, String prefix) {
         int[] cm = colors.stream().mapToInt(Integer::intValue).toArray();
         if (stops.size() < 2) {
-            // Градиента нет — берём крайние цвета как основу, а сами цвета оставляем посимвольно.
             int first = -1, last = -1;
             for (int c : cm) if (c >= 0) { if (first < 0) first = c; last = c; }
             stops.clear();
@@ -329,7 +540,7 @@ public final class HexCore {
             stops.add(hex(last < 0 ? 0xFFFFFF : last));
         }
         while (stops.size() > 6) stops.remove(stops.size() - 2);
-        return new Parsed(command, text.toString(), stops, mask.stream().mapToInt(Integer::intValue).toArray(), cm, null);
+        return new Parsed(format, text, stops, mask.stream().mapToInt(Integer::intValue).toArray(), cm, nickHex, prefix);
     }
 
     /** Формат {#AAAAAA>}текст{#BBBBBB<>}текст{#CCCCCC<} для /itemname, /itemlore и «без команды». */

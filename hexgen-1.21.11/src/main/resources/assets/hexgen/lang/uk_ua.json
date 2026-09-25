@@ -24,7 +24,7 @@
   "fstweak.format.italic": "&o Курсив",
   "fstweak.format.underline": "&n Підкреслений",
   "fstweak.format.strike": "&m Закреслений",
-  "fstweak.format.hint": "Без виділення — весь текст, з виділенням — лише виділена частина",
+  "fstweak.format.hint": "Формат — натисніть, щоб обрати",
   "fstweak.symbols": "✦ Символи",
   "fstweak.symbols.hint": "Вставити символ у позицію курсора",
   "fstweak.part_color": "Колір частини",
@@ -144,5 +144,12 @@
   "fstweak.settings.hotkey.change": "Змінити: Налаштування → Керування → «Різне»",
   "fstweak.symbols.title": "Символи",
   "fstweak.symbols.insert": "Вставити %s",
-  "modmenu.descriptionTranslation.hexgen": "HEX GENERATOR — генератор HEX-градієнтів прямо в грі: палітра, пресети, історія, імпорт команд і форматування частини тексту. Кнопка над інвентарем або клавіша H."
+  "modmenu.descriptionTranslation.hexgen": "HEX GENERATOR — генератор HEX-градієнтів прямо в грі: палітра, пресети, історія, імпорт команд і форматування частини тексту. Кнопка над інвентарем або клавіша H.",
+  "fstweak.format.title": "Формат",
+  "fstweak.format.other": "Інші формати",
+  "fstweak.format.prefix": "Команда перед текстом",
+  "fstweak.format.prefix.hint": "Наприклад «/nick » — тоді «Виконати» надішле команду. Порожньо — лише «Копіювати».",
+  "fstweak.format.template": "Шаблон BirdFlop",
+  "fstweak.format.template.hint": "$1…$6 — цифри кольору, $f — коди формату (&l, &o…), $c — символ",
+  "fstweak.no_section": "Текст з § не можна надіслати в чат — лише скопіювати"
 }

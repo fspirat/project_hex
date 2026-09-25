@@ -42,7 +42,7 @@ public class HistoryScreen extends Screen {
             Button b = Button.builder(Component.empty(), btn -> {
                 this.minecraft.setScreen(this.parent);
                 load.test(cmd);
-            }).bounds(left, top + 16 + i * ROW, W, ROW - 2).tooltip(HexUi.tip(cmd)).build();
+            }).bounds(left, top + 16 + i * ROW, W, ROW - 2).tooltip(HexUi.tip(HexUi.visible(cmd))).build();
             rows.add(b);
             this.addRenderableWidget(b);
         }
@@ -65,7 +65,9 @@ public class HistoryScreen extends Screen {
         HexCore.Parsed p = HexCore.parse(cmd);
         MutableComponent root = Component.empty();
         if (p == null) return root.append(Component.literal(cmd));
-        String prefix = p.command() == 3 ? "/sponsor " : HexCore.COMMANDS[p.command()];
+        String prefix = p.command() == 3 ? "/sponsor "
+                : HexCore.isAgeMagic(p.command()) ? HexCore.COMMANDS[p.command()]
+                : p.prefix().isEmpty() ? "[" + HexUi.commandLabel(p.command()) + "] " : p.prefix();
         root.append(Component.literal(prefix).withStyle(Style.EMPTY.withColor(0x808080)));
         int w = this.font.width(prefix);
 

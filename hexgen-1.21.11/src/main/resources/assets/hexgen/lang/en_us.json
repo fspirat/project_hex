@@ -24,7 +24,7 @@
   "fstweak.format.italic": "&o Italic",
   "fstweak.format.underline": "&n Underlined",
   "fstweak.format.strike": "&m Strikethrough",
-  "fstweak.format.hint": "No selection — whole text; with a selection — only the selected part",
+  "fstweak.format.hint": "Format — click to choose",
   "fstweak.symbols": "✦ Symbols",
   "fstweak.symbols.hint": "Insert a symbol at the cursor",
   "fstweak.part_color": "Part color",
@@ -144,5 +144,12 @@
   "fstweak.settings.hotkey.change": "Change: Options → Controls → \"Miscellaneous\"",
   "fstweak.symbols.title": "Symbols",
   "fstweak.symbols.insert": "Insert %s",
-  "modmenu.descriptionTranslation.hexgen": "HEX GENERATOR — an in-game HEX gradient generator: palette, presets, history, command import and formatting part of the text. Button above the inventory or the H key."
+  "modmenu.descriptionTranslation.hexgen": "HEX GENERATOR — an in-game HEX gradient generator: palette, presets, history, command import and formatting part of the text. Button above the inventory or the H key.",
+  "fstweak.format.title": "Format",
+  "fstweak.format.other": "Other formats",
+  "fstweak.format.prefix": "Command before text",
+  "fstweak.format.prefix.hint": "E.g. \"/nick \" — then \"Run\" sends the command. Empty — only \"Copy\".",
+  "fstweak.format.template": "BirdFlop template",
+  "fstweak.format.template.hint": "$1…$6 — color digits, $f — format codes (&l, &o…), $c — the character",
+  "fstweak.no_section": "Text with § can’t be sent to chat — copy it instead"
 }
