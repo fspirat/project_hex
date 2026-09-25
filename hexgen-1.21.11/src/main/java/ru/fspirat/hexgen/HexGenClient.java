@@ -29,7 +29,7 @@ public class HexGenClient implements ClientModInitializer {
                             Component.literal("✦").withStyle(Style.EMPTY.withColor(0xB04DFF)),
                             b -> client.setScreen(new HexGenScreen(inventory)))
                     .bounds(acc.hexgen$getLeftPos() + BUTTON_OFFSET_X, acc.hexgen$getTopPos() + BUTTON_OFFSET_Y, 20, 20)
-                    .tooltip(Tooltip.create(Component.literal("HEX генератор")))
+                    .tooltip(Tooltip.create(Component.literal("FSHEX GENERATOR")))
                     .build();
             ((ScreenInvoker) (Object) screen).hexgen$addRenderableWidget(button);
 

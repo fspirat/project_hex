@@ -26,18 +26,30 @@ public class HexGenScreen extends Screen {
     private static String lastEndSynced = null;
 
     private static final int W = 340;
-    private static final int H = 190;
+    private static final int H = 228;
+
+    // Вертикальная разметка окна (смещения от top).
+    private static final int Y_PREVIEW = 14;
+    private static final int Y_TEXT = 42;
+    private static final int Y_FORMAT = 66;
+    private static final int Y_COLORS_LABEL = 94;
+    private static final int Y_COLORS = 105;
+    private static final int Y_COLOR_BUTTONS = 138;
+    private static final int Y_RESULT = 164;
+    private static final int Y_BOTTOM = 196;
+    private static final String[] TITLE_STOPS = {"B04DFF", "FF8FE0"};
 
     private final Screen parent;
     private int left;
     private int top;
     private EditBox textBox;
     private EditBox nickColorBox;
+    private final List<Button> swatchButtons = new ArrayList<>();
     private String status = "";
     private int statusTicks = 0;
 
     public HexGenScreen(Screen parent) {
-        super(Component.literal("HEX генератор"));
+        super(Component.literal("FSHEX GENERATOR"));
         this.parent = parent;
     }
 
@@ -85,7 +97,8 @@ public class HexGenScreen extends Screen {
         if (sponsor()) syncNick(lastEndSynced == null);
         left = (this.width - W) / 2;
         top = Math.max(4, (this.height - H) / 2);
-        int y1 = top + 40, y2 = top + 62, y3 = top + 86, y4 = top + 112, y6 = top + 166;
+        int y1 = top + Y_TEXT, y2 = top + Y_FORMAT, y3 = top + Y_COLORS, y4 = top + Y_COLOR_BUTTONS, y6 = top + Y_BOTTOM;
+        swatchButtons.clear();
 
         // --- Строка 1: текст (или ник) + команда ---
         if (!sponsor()) {
@@ -110,6 +123,7 @@ public class HexGenScreen extends Screen {
             nickColorBox.setResponder(v -> nickHex = HexCore.clean(v));
             nickColorBox.setTooltip(Tooltip.create(Component.literal("Цвет ника (= конечный цвет, можно поменять)")));
             this.addRenderableWidget(nickColorBox);
+            addSwatchButton(left + 156, y1 + 20, 58, () -> nickHex, v -> nickHex = v);
         }
         this.addRenderableWidget(Button.builder(Component.literal(HexCore.COMMAND_LABELS[command]), b -> {
             command = (command + 1) % HexCore.COMMANDS.length;
@@ -148,11 +162,11 @@ public class HexGenScreen extends Screen {
             }
         }
 
-        // --- Строка 3: цвета ---
-        int boxW = 44;
+        // --- Строка 3: цвета (поле HEX + полоска-кнопка палитры под ним) ---
+        int stride = colorStride(), boxW = stride - 4;
         for (int i = 0; i < STOPS.size(); i++) {
             final int idx = i;
-            EditBox hex = new EditBox(this.font, left + i * 48, y3, boxW, 16, Component.literal("Цвет " + (i + 1)));
+            EditBox hex = new EditBox(this.font, left + i * stride, y3, boxW, 16, Component.literal("Цвет " + (i + 1)));
             hex.setMaxLength(7);
             hex.setValue(STOPS.get(i));
             hex.setResponder(v -> {
@@ -160,6 +174,10 @@ public class HexGenScreen extends Screen {
                 if (sponsor() && idx == STOPS.size() - 1) syncNick(false);
             });
             this.addRenderableWidget(hex);
+            addSwatchButton(left + i * stride, y3 + 18, boxW, () -> STOPS.get(idx), v -> {
+                STOPS.set(idx, v);
+                if (sponsor() && idx == STOPS.size() - 1) syncNick(false);
+            });
         }
 
         // --- Строка 4: кнопки цветов ---
@@ -200,7 +218,7 @@ public class HexGenScreen extends Screen {
         }).bounds(left + 135, y4, 70, 20).build());
 
         HexCore.Preset p = HexCore.PRESETS.get(preset);
-        this.addRenderableWidget(Button.builder(Component.literal("Палитра: " + p.name()), b -> {
+        this.addRenderableWidget(Button.builder(Component.literal("Пресет: " + p.name()), b -> {
             HexCore.Preset cur = HexCore.PRESETS.get(preset);
             STOPS.clear();
             STOPS.addAll(List.of(cur.colors()));
@@ -208,7 +226,7 @@ public class HexGenScreen extends Screen {
             normalizeStops();
             if (sponsor()) syncNick(false);
             rebuild();
-        }).bounds(left + 208, y4, 132, 20).tooltip(Tooltip.create(Component.literal("Нажмите, чтобы применить палитру и перейти к следующей"))).build());
+        }).bounds(left + 208, y4, 132, 20).tooltip(Tooltip.create(Component.literal("Нажмите, чтобы применить пресет и перейти к следующему"))).build());
 
         // --- Нижние кнопки ---
         this.addRenderableWidget(Button.builder(Component.literal("Скопировать"), b -> {
@@ -232,6 +250,38 @@ public class HexGenScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(Component.literal("Назад"), b -> this.onClose())
                 .bounds(left + 230, y6, 110, 20).build());
+    }
+
+    /** Шаг между полями цветов: все поля всегда помещаются в ширину окна. */
+    private int colorStride() {
+        return (W + 4) / maxStops();
+    }
+
+    /** Цветная полоска, по нажатию открывающая палитру. */
+    private void addSwatchButton(int x, int y, int w, java.util.function.Supplier<String> get, java.util.function.Consumer<String> set) {
+        Button b = Button.builder(Component.empty(), btn -> this.minecraft.gui.setScreen(new ColorPickerScreen(this, get.get(), set)))
+                .bounds(x, y, w, 8)
+                .tooltip(Tooltip.create(Component.literal("Открыть палитру")))
+                .build();
+        swatchButtons.add(b);
+        this.addRenderableWidget(b);
+    }
+
+    /** Тёмная подложка окна, чтобы интерфейс не сливался с миром. */
+    static void drawPanel(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+        int x0 = x - 8, y0 = y - 6, x1 = x + w + 8, y1 = y + h + 6;
+        g.fill(x0, y0, x1, y1, 0xD0101014);
+        g.fill(x0, y0, x1, y0 + 1, 0xFF5A2A8A);
+        g.fill(x0, y1 - 1, x1, y1, 0xFF5A2A8A);
+        g.fill(x0, y0, x0 + 1, y1, 0xFF5A2A8A);
+        g.fill(x1 - 1, y0, x1, y1, 0xFF5A2A8A);
+    }
+
+    /** Образец цвета с рамкой; белая рамка — при наведении или если цвет выбран. */
+    static void drawSwatch(GuiGraphicsExtractor g, int x, int y, int w, int h, int rgb, boolean hovered, boolean selected) {
+        int border = hovered ? 0xFFFFFFFF : selected ? 0xFFFFFF55 : 0xFF000000;
+        g.fill(x, y, x + w, y + h, border);
+        g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF000000 | rgb);
     }
 
     /** Готовая команда или пустая строка, если цвета некорректны. */
@@ -286,14 +336,18 @@ public class HexGenScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+        drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
 
-        // Заголовок
-        Component title = Component.literal("HEX генератор").withStyle(Style.EMPTY.withColor(0xFFFFFF));
+        // Заголовок с градиентом
+        MutableComponent title = Component.empty();
+        for (HexCore.Glyph gl : HexCore.gradientGlyphs("FSHEX GENERATOR", List.of(TITLE_STOPS))) {
+            title.append(Component.literal(gl.ch()).withStyle(Style.EMPTY.withColor(gl.rgb()).withBold(true)));
+        }
         g.text(this.font, title, (this.width - this.font.width(title)) / 2, top + 2, 0xFFFFFFFF, true);
 
         // Окно предпросмотра в стиле подсказки предмета
-        int px = left, py = top + 14, pw = W, ph = 22;
+        int px = left, py = top + Y_PREVIEW, pw = W, ph = 22;
         g.fill(px, py, px + pw, py + ph, 0xF0100010);
         g.fill(px + 1, py + 1, px + pw - 1, py + 2, 0x505000FF);
         g.fill(px + 1, py + ph - 2, px + pw - 1, py + ph - 1, 0x5028007F);
@@ -303,32 +357,30 @@ public class HexGenScreen extends Screen {
         int tw = this.font.width(pv);
         g.text(this.font, pv, px + Math.max(4, (pw - tw) / 2), py + 7, 0xFFFFFFFF, true);
 
-        // Подписи
-        int y3 = top + 86;
-        String colorsLabel = sponsor() ? "Цвета префикса (1–7)" : "Цвета (2–6)";
-        g.text(this.font, Component.literal(colorsLabel), left, y3 - 10, 0xFFA0A0A0, false);
+        // Подпись над цветами
+        String colorsLabel = (sponsor() ? "Цвета префикса (1–7)" : "Цвета (2–6)") + " — нажмите на полоску, чтобы открыть палитру";
+        g.text(this.font, Component.literal(fit(colorsLabel, W)), left, top + Y_COLORS_LABEL, 0xFFA0A0A0, false);
 
-        // Полоски цвета под каждым HEX-полем
-        for (int i = 0; i < STOPS.size(); i++) {
-            String s = STOPS.get(i);
-            int col = HexCore.valid(s) ? (0xFF000000 | HexCore.rgb(s)) : 0xFF550000;
-            g.fill(left + i * 48, y3 + 17, left + i * 48 + 44, y3 + 20, col);
-        }
-        if (sponsor() && HexCore.valid(nickHex)) {
-            g.fill(left + 156, top + 40 + 19, left + 214, top + 40 + 21, 0xFF000000 | HexCore.rgb(nickHex));
+        // Полоски-кнопки палитры: цвет поля (или тёмно-красный, если HEX неверный)
+        int n = sponsor() ? 1 : 0;
+        for (int i = 0; i < swatchButtons.size(); i++) {
+            Button b = swatchButtons.get(i);
+            String s = sponsor() ? (i == 0 ? nickHex : STOPS.get(i - n)) : STOPS.get(i);
+            int col = HexCore.valid(s) ? HexCore.rgb(s) : 0x550000;
+            drawSwatch(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), col, b.isHovered(), false);
         }
 
         // Результат
-        int ry = top + 138;
-        g.text(this.font, Component.literal("Результат:"), left, ry - 2, 0xFFA0A0A0, false);
-        g.fill(left, ry + 8, left + W, ry + 22, 0xC0000000);
+        int ry = top + Y_RESULT;
+        g.text(this.font, Component.literal("Результат:"), left, ry, 0xFFA0A0A0, false);
+        g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
         String out = output();
         String shown = out.isEmpty() ? "Каждый цвет — 6 символов HEX, например FF8F5A" : out;
-        g.text(this.font, Component.literal(fit(shown, W - 8)), left + 4, ry + 11, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
+        g.text(this.font, Component.literal(fit(shown, W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
 
         if (!status.isEmpty()) {
             Component st = Component.literal(status);
-            g.text(this.font, st, (this.width - this.font.width(st)) / 2, top + H - 2, 0xFF55FF55, true);
+            g.text(this.font, st, (this.width - this.font.width(st)) / 2, top + Y_BOTTOM + 22, 0xFF55FF55, true);
         }
     }
 

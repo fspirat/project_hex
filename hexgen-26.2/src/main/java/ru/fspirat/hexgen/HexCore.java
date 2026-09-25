@@ -154,6 +154,42 @@ public final class HexCore {
         return sb.toString();
     }
 
+    /** HSV → RGB: h в градусах (0..360), s и v в 0..1. */
+    public static int hsvToRgb(double h, double s, double v) {
+        h = ((h % 360) + 360) % 360;
+        double c = v * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = v - c;
+        double r, g, b;
+        if (h < 60) { r = c; g = x; b = 0; }
+        else if (h < 120) { r = x; g = c; b = 0; }
+        else if (h < 180) { r = 0; g = c; b = x; }
+        else if (h < 240) { r = 0; g = x; b = c; }
+        else if (h < 300) { r = x; g = 0; b = c; }
+        else { r = c; g = 0; b = x; }
+        return ((int) Math.round((r + m) * 255) << 16) | ((int) Math.round((g + m) * 255) << 8) | (int) Math.round((b + m) * 255);
+    }
+
+    /** RGB → {h (0..360), s (0..1), v (0..1)}. */
+    public static double[] rgbToHsv(int rgb) {
+        double r = ((rgb >> 16) & 255) / 255.0, g = ((rgb >> 8) & 255) / 255.0, b = (rgb & 255) / 255.0;
+        double max = Math.max(r, Math.max(g, b)), min = Math.min(r, Math.min(g, b)), d = max - min;
+        double h = 0;
+        if (d > 0) {
+            if (max == r) h = 60 * (((g - b) / d) % 6);
+            else if (max == g) h = 60 * ((b - r) / d + 2);
+            else h = 60 * ((r - g) / d + 4);
+        }
+        if (h < 0) h += 360;
+        return new double[]{h, max == 0 ? 0 : d / max, max};
+    }
+
+    /** Цвета быстрой палитры: 16 цветов Minecraft + популярные оттенки. */
+    public static final String[] SWATCHES = {
+        "000000", "0000AA", "00AA00", "00AAAA", "AA0000", "AA00AA", "FFAA00", "AAAAAA",
+        "555555", "5555FF", "55FF55", "55FFFF", "FF5555", "FF55FF", "FFFF55",
+        "FFFFFF", "FF8FE0", "FF3CAC", "B04DFF", "8A2BE2", "1B0033", "2B86C5", "0066FF",
+        "00F0FF", "1FAA59", "C6FF8A", "FFF6B7", "FFC300", "FF7A00", "D10000"
+    };
+
     private static final Random RNG = new Random();
 
     private static String hsl(double h, double s, double l) {
