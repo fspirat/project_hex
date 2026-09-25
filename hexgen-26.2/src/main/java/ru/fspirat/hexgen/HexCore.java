@@ -13,7 +13,16 @@ public final class HexCore {
 
     public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor"};
     public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", "Без команды", "/sponsor prefix"};
-    public static final String[] SYMBOLS = {"✦", "★", "❖", "➤", "⚔", "❤", "•", "❀"};
+    public static final String[] SYMBOLS = {
+        "✦", "★", "❖", "➤", "⚔", "❤", "•", "❀",
+        "☆", "✧", "✪", "✯", "❂", "✺", "✿", "❁", "❋", "☀", "☁", "☂", "☃", "☄", "☾", "⚡",
+        "☠", "☢", "⚠", "♛", "♚", "♠", "♣", "♥", "♦", "♡", "❥", "♪", "♫", "☯", "✔", "✘",
+        "➜", "«", "»", "◆", "◇", "▲", "●", "⚜"
+    };
+
+    /** Биты форматирования: &l, &o, &n, &m. */
+    public static final int BOLD = 1, ITALIC = 2, UNDERLINE = 4, STRIKE = 8;
+    private static final String[] FORMAT_CODES = {"&l", "&o", "&n", "&m"};
     public static final String SPONSOR_PREFIX = "sponsor";
 
     public record Preset(String name, String[] colors) {}
@@ -49,7 +58,8 @@ public final class HexCore {
 
     public static String toSmallCaps(String text) {
         StringBuilder sb = new StringBuilder();
-        text.toLowerCase(Locale.ROOT).codePoints().forEach(cp -> {
+        // Посимвольно, чтобы число символов не менялось (важно для маски форматирования).
+        text.codePoints().map(Character::toLowerCase).forEach(cp -> {
             String r = SMALL.get(cp);
             sb.append(r != null ? r : new String(Character.toChars(cp)));
         });
@@ -119,16 +129,69 @@ public final class HexCore {
         return out;
     }
 
-    public static String formatCodes(boolean[] fmt) {
-        String[] c = {"&l", "&o", "&n", "&m"};
+    public static String formatCodes(int bits) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++) if (fmt[i]) sb.append(c[i]);
+        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append(FORMAT_CODES[i]);
+        return sb.toString();
+    }
+
+    /**
+     * Переносит маску форматирования (по одному значению на символ) на изменённый текст:
+     * общее начало и конец сохраняются, вставленные символы берут формат соседа слева.
+     */
+    public static int[] spliceMask(String oldText, String newText, int[] oldMask, int fallback) {
+        int[] o = oldText.codePoints().toArray();
+        int[] n = newText.codePoints().toArray();
+        if (oldMask == null || oldMask.length != o.length) {
+            int[] m = new int[n.length];
+            java.util.Arrays.fill(m, fallback);
+            return m;
+        }
+        int p = 0;
+        while (p < o.length && p < n.length && o[p] == n[p]) p++;
+        int sfx = 0;
+        while (sfx < o.length - p && sfx < n.length - p && o[o.length - 1 - sfx] == n[n.length - 1 - sfx]) sfx++;
+        int inherit = p > 0 ? oldMask[p - 1] : (o.length > 0 ? oldMask[0] : fallback);
+        int[] m = new int[n.length];
+        System.arraycopy(oldMask, 0, m, 0, p);
+        for (int i = p; i < n.length - sfx; i++) m[i] = inherit;
+        System.arraycopy(oldMask, o.length - sfx, m, n.length - sfx, sfx);
+        return m;
+    }
+
+    /** Общий формат всех символов или -1, если формат разный. */
+    public static int uniformBits(int[] mask, int fallback) {
+        if (mask.length == 0) return fallback;
+        for (int b : mask) if (b != mask[0]) return -1;
+        return mask[0];
+    }
+
+    /**
+     * Команда с учётом маски: если формат одинаковый, получается короткий градиент,
+     * иначе каждый символ пишется своим цветом {#RRGGBB} со своими кодами.
+     */
+    public static String gradientCommand(String prefix, String text, List<String> stops, int[] mask, int fallback) {
+        int uniform = uniformBits(mask, fallback);
+        if (uniform >= 0) return gradientCommand(prefix, text, stops, uniform);
+        StringBuilder sb = new StringBuilder(prefix);
+        List<Glyph> glyphs = gradientGlyphs(text, stops);
+        int prev = -1;
+        for (int i = 0; i < glyphs.size(); i++) {
+            Glyph g = glyphs.get(i);
+            int bits = i < mask.length ? mask[i] : fallback;
+            if (g.ch().equals(" ") && bits == prev) {
+                sb.append(' ');
+                continue;
+            }
+            sb.append("{#").append(hex(g.rgb())).append("}").append(formatCodes(bits)).append(g.ch());
+            prev = bits;
+        }
         return sb.toString();
     }
 
     /** Формат {#AAAAAA>}текст{#BBBBBB<>}текст{#CCCCCC<} для /itemname, /itemlore и «без команды». */
-    public static String gradientCommand(String prefix, String text, List<String> stops, boolean[] fmt) {
-        String codes = formatCodes(fmt);
+    public static String gradientCommand(String prefix, String text, List<String> stops, int bits) {
+        String codes = formatCodes(bits);
         List<String> segs = segments(text, stops.size());
         StringBuilder sb = new StringBuilder(prefix);
         for (int k = 0; k < segs.size(); k++) {

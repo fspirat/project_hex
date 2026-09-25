@@ -18,7 +18,12 @@ public class HexGenScreen extends Screen {
     private static String text = "Пример текста";
     private static int command = 0;
     private static boolean smallCaps = false;
-    private static final boolean[] FMT = new boolean[4];
+    /** Формат каждого символа текста (биты HexCore.BOLD…STRIKE). */
+    private static int[] mask = HexCore.spliceMask("", text, null, 0);
+    /** Формат для нового текста, когда поле пустое. */
+    private static int defaultBits = 0;
+    /** Позиция курсора в тексте — сюда вставляются символы из окна «Символы». */
+    private static int cursor = text.length();
     private static final List<String> STOPS = new ArrayList<>(List.of("B04DFF", "FF8FE0"));
     private static int preset = 0;
     private static String nickName = "nickname";
@@ -44,6 +49,7 @@ public class HexGenScreen extends Screen {
     private int top;
     private EditBox textBox;
     private EditBox nickColorBox;
+    private final Button[] formatButtons = new Button[4];
     private final List<Button> swatchButtons = new ArrayList<>();
     private String status = "";
     private int statusTicks = 0;
@@ -82,6 +88,7 @@ public class HexGenScreen extends Screen {
     }
 
     private void rebuild() {
+        if (textBox != null) cursor = textBox.getCursorPosition();
         this.clearWidgets();
         this.init();
     }
@@ -105,7 +112,13 @@ public class HexGenScreen extends Screen {
             textBox = new EditBox(this.font, left, y1, 214, 18, Component.literal("Текст"));
             textBox.setMaxLength(256);
             textBox.setValue(text);
-            textBox.setResponder(v -> text = v);
+            textBox.setResponder(v -> {
+                mask = HexCore.spliceMask(text, v, mask, defaultBits);
+                text = v;
+            });
+            textBox.setCursorPosition(Math.min(cursor, text.length()));
+            textBox.setHighlightPos(textBox.getCursorPosition());
+            textBox.setTooltip(Tooltip.create(Component.literal("Выделите часть текста и нажмите L / O / N / M, чтобы отформатировать только её")));
             this.addRenderableWidget(textBox);
             nickColorBox = null;
         } else {
@@ -139,27 +152,23 @@ public class HexGenScreen extends Screen {
                 rebuild();
             }).bounds(left, y2, 96, 20).build());
 
-            String[] letters = {"L", "O", "N", "M"};
             String[] tips = {"&l Жирный", "&o Курсив", "&n Подчёркнутый", "&m Зачёркнутый"};
             for (int i = 0; i < 4; i++) {
-                final int idx = i;
-                Style st = Style.EMPTY.withColor(FMT[i] ? 0x55FF55 : 0xAAAAAA)
-                        .withBold(i == 0).withItalic(i == 1).withUnderlined(i == 2).withStrikethrough(i == 3);
-                this.addRenderableWidget(Button.builder(Component.literal(letters[i]).withStyle(st), b -> {
-                    FMT[idx] = !FMT[idx];
-                    rebuild();
-                }).bounds(left + 100 + i * 22, y2, 20, 20).tooltip(Tooltip.create(Component.literal(tips[i]))).build());
+                final int bit = 1 << i;
+                formatButtons[i] = Button.builder(Component.empty(), b -> toggleFormat(bit))
+                        .bounds(left + 100 + i * 22, y2, 20, 20)
+                        .tooltip(Tooltip.create(Component.literal(tips[i] + "\nБез выделения — весь текст, с выделением — только выделенная часть")))
+                        .build();
+                this.addRenderableWidget(formatButtons[i]);
             }
+            refreshFormatButtons();
 
-            for (int i = 0; i < HexCore.SYMBOLS.length; i++) {
-                final String sym = HexCore.SYMBOLS[i];
-                this.addRenderableWidget(Button.builder(Component.literal(sym), b -> {
-                    if (textBox != null) {
-                        textBox.insertText(sym);
-                        text = textBox.getValue();
-                    }
-                }).bounds(left + 190 + i * 18, y2, 17, 20).build());
-            }
+            this.addRenderableWidget(Button.builder(Component.literal("✦ Символы"), b -> {
+                cursor = textBox.getCursorPosition();
+                this.minecraft.setScreen(new SymbolsScreen(this, this::insertSymbol));
+            }).bounds(left + 190, y2, W - 190, 20)
+                    .tooltip(Tooltip.create(Component.literal("Вставить символ в текст (в позицию курсора)")))
+                    .build());
         }
 
         // --- Строка 3: цвета (поле HEX + полоска-кнопка палитры под ним) ---
@@ -252,6 +261,67 @@ public class HexGenScreen extends Screen {
                 .bounds(left + 230, y6, 110, 20).build());
     }
 
+    /** Выделение в поле текста в символах (code points): {начало, конец} или null. */
+    private int[] selection() {
+        if (textBox == null) return null;
+        String sel = textBox.getHighlighted();
+        if (sel.isEmpty()) return null;
+        String v = textBox.getValue();
+        int c = textBox.getCursorPosition();
+        int start = v.startsWith(sel, c) ? c : c - sel.length();
+        if (start < 0 || start + sel.length() > v.length()) return null;
+        int a = v.codePointCount(0, start);
+        return new int[]{a, a + sel.codePointCount(0, sel.length())};
+    }
+
+    /** Включает/выключает формат для выделения или для всего текста. */
+    private void toggleFormat(int bit) {
+        int[] sel = selection();
+        int a = 0, b = mask.length;
+        if (sel != null) {
+            a = Math.max(0, sel[0]);
+            b = Math.min(mask.length, sel[1]);
+        } else {
+            defaultBits ^= bit;
+        }
+        if (b > a) {
+            boolean all = true;
+            for (int i = a; i < b; i++) if ((mask[i] & bit) == 0) all = false;
+            for (int i = a; i < b; i++) mask[i] = all ? mask[i] & ~bit : mask[i] | bit;
+            if (sel == null) defaultBits = all ? defaultBits & ~bit : defaultBits | bit;
+        }
+        refreshFormatButtons();
+    }
+
+    /** Зелёный — формат у всего текста, жёлтый — у части, серый — нет. */
+    private void refreshFormatButtons() {
+        String[] letters = {"L", "O", "N", "M"};
+        for (int i = 0; i < 4; i++) {
+            if (formatButtons[i] == null) continue;
+            int bit = 1 << i, count = 0;
+            for (int m : mask) if ((m & bit) != 0) count++;
+            boolean on = mask.length == 0 ? (defaultBits & bit) != 0 : count == mask.length;
+            int color = on ? 0x55FF55 : count > 0 ? 0xFFD24D : 0xAAAAAA;
+            Style st = Style.EMPTY.withColor(color)
+                    .withBold(i == 0).withItalic(i == 1).withUnderlined(i == 2).withStrikethrough(i == 3);
+            formatButtons[i].setMessage(Component.literal(letters[i]).withStyle(st));
+        }
+    }
+
+    /** Вставка символа из окна «Символы» в позицию курсора. */
+    private void insertSymbol(String sym) {
+        int c = Math.max(0, Math.min(cursor, text.length()));
+        String v = text.substring(0, c) + sym + text.substring(c);
+        if (v.length() > 256) return;
+        mask = HexCore.spliceMask(text, v, mask, defaultBits);
+        text = v;
+        cursor = c + sym.length();
+    }
+
+    static String currentText() {
+        return text;
+    }
+
     /** Шаг между полями цветов: все поля всегда помещаются в ширину окна. */
     private int colorStride() {
         return (W + 4) / maxStops();
@@ -259,7 +329,10 @@ public class HexGenScreen extends Screen {
 
     /** Цветная полоска, по нажатию открывающая палитру. */
     private void addSwatchButton(int x, int y, int w, java.util.function.Supplier<String> get, java.util.function.Consumer<String> set) {
-        Button b = Button.builder(Component.empty(), btn -> this.minecraft.setScreen(new ColorPickerScreen(this, get.get(), set)))
+        Button b = Button.builder(Component.empty(), btn -> {
+                    if (textBox != null) cursor = textBox.getCursorPosition();
+                    this.minecraft.setScreen(new ColorPickerScreen(this, get.get(), set));
+                })
                 .bounds(x, y, w, 8)
                 .tooltip(Tooltip.create(Component.literal("Открыть палитру")))
                 .build();
@@ -292,7 +365,7 @@ public class HexGenScreen extends Screen {
             return HexCore.sponsorCommand(STOPS, nickHex);
         }
         String t = smallCaps ? HexCore.toSmallCaps(text) : text;
-        return HexCore.gradientCommand(HexCore.COMMANDS[command], t, STOPS, FMT);
+        return HexCore.gradientCommand(HexCore.COMMANDS[command], t, STOPS, mask, defaultBits);
     }
 
     /** Предпросмотр, отрисованный настоящим шрифтом Minecraft. */
@@ -312,9 +385,12 @@ public class HexGenScreen extends Screen {
             return root;
         }
         String t = smallCaps ? HexCore.toSmallCaps(text) : text;
-        for (HexCore.Glyph g : HexCore.gradientGlyphs(t, STOPS)) {
-            Style st = Style.EMPTY.withColor(g.rgb()).withBold(FMT[0]).withItalic(FMT[1])
-                    .withUnderlined(FMT[2]).withStrikethrough(FMT[3]);
+        List<HexCore.Glyph> glyphs = HexCore.gradientGlyphs(t, STOPS);
+        for (int i = 0; i < glyphs.size(); i++) {
+            HexCore.Glyph g = glyphs.get(i);
+            int bits = i < mask.length ? mask[i] : defaultBits;
+            Style st = Style.EMPTY.withColor(g.rgb()).withBold((bits & HexCore.BOLD) != 0).withItalic((bits & HexCore.ITALIC) != 0)
+                    .withUnderlined((bits & HexCore.UNDERLINE) != 0).withStrikethrough((bits & HexCore.STRIKE) != 0);
             root.append(Component.literal(g.ch()).withStyle(st));
         }
         return root;

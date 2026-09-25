@@ -22,31 +22,31 @@ public class HexGenClient implements ClientModInitializer {
 
             MovableButton button = new MovableButton(0, 0, SIZE, SIZE,
                     Component.literal("✦").withStyle(Style.EMPTY.withColor(0xB04DFF)),
-                    b -> client.gui.setScreen(new HexGenScreen(inventory)));
+                    b -> client.gui.setScreen(new HexGenScreen(inventory)),
+                    HexConfig::save);
             button.setTooltip(Tooltip.create(Component.literal("FSHEX GENERATOR\n")
-                    .append(Component.literal("Ctrl + перетащить — переместить кнопку").withStyle(Style.EMPTY.withColor(0xA0A0A0)))));
+                    .append(Component.literal("Ctrl + перетащить (или Ctrl + клик) — переместить кнопку").withStyle(Style.EMPTY.withColor(0xA0A0A0)))));
             place(button, acc, screen.width, screen.height);
             ((ScreenInvoker) (Object) screen).hexgen$addRenderableWidget(button);
 
-            // Перетаскивание: пока зажата ЛКМ, кнопка следует за курсором.
+            // Перемещение: каждый кадр кнопка следует за курсором.
             ScreenEvents.afterExtract(screen).register((s, g, mouseX, mouseY, delta) -> {
                 if (!button.isDragging()) return;
-                if (!client.mouseHandler.isLeftPressed()) {
-                    button.stopDragging();
-                    HexConfig.save();
-                    return;
-                }
-                button.dragTo(mouseX, mouseY);
+                button.follow(mouseX, mouseY);
                 button.setPosition(Math.max(0, Math.min(s.width - SIZE, button.getX())),
                         Math.max(0, Math.min(s.height - SIZE, button.getY())));
                 HexConfig.buttonOffsetX = button.getX() - acc.hexgen$getLeftPos();
                 HexConfig.buttonOffsetY = button.getY() - acc.hexgen$getTopPos();
+                if (!button.isDragging()) HexConfig.save();
             });
 
             // Книга рецептов сдвигает инвентарь — двигаем кнопку вслед за ним.
             ScreenEvents.afterTick(screen).register(s -> {
                 if (!button.isDragging()) place(button, acc, s.width, s.height);
             });
+
+            // Инвентарь закрыли посреди перемещения — сохраняем, где кнопка оказалась.
+            ScreenEvents.remove(screen).register(s -> button.stop());
         });
     }
 
