@@ -275,9 +275,8 @@ public class HexGenScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(Component.literal("★ Сохранить"), b -> {
             if (!stopsValid()) { flash("Сначала исправьте цвета", 0xFFFF5555); return; }
-            HexConfig.addPreset(s().stops.toArray(new String[0]));
-            HexCore.Preset p = HexConfig.USER_PRESETS.get(HexConfig.USER_PRESETS.size() - 1);
-            flash("Сохранено в пресеты как «" + p.name() + "»");
+            String[] colors = s().stops.toArray(new String[0]);
+            open(new NamePresetScreen(this, colors, name -> flash("Сохранено в пресеты как «" + name + "»")));
         }).bounds(left + 271, y4, 69, 20).tooltip(HexUi.tip("Сохранить текущие цвета как свой пресет")).build());
 
         // --- Нижние кнопки ---

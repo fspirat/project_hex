@@ -103,17 +103,34 @@ public final class HexConfig {
         save();
     }
 
-    public static void addPreset(String[] colors) {
+    /** Свободное имя вида «Мой N» для нового пресета. */
+    public static String nextPresetName() {
         int n = 1;
         while (true) {
             String name = "Мой " + n;
             boolean used = false;
             for (HexCore.Preset p : USER_PRESETS) used |= p.name().equals(name);
-            if (!used) break;
+            if (!used) return name;
             n++;
         }
+    }
+
+    /** Сохраняет пресет; пресет с тем же именем перезаписывается. */
+    public static void addPreset(String name, String[] colors) {
+        for (int i = 0; i < USER_PRESETS.size(); i++) {
+            if (USER_PRESETS.get(i).name().equals(name)) {
+                USER_PRESETS.set(i, new HexCore.Preset(name, colors));
+                save();
+                return;
+            }
+        }
         if (USER_PRESETS.size() >= MAX_PRESETS) USER_PRESETS.remove(0);
-        USER_PRESETS.add(new HexCore.Preset("Мой " + n, colors));
+        USER_PRESETS.add(new HexCore.Preset(name, colors));
         save();
+    }
+
+    public static boolean hasPreset(String name) {
+        for (HexCore.Preset p : USER_PRESETS) if (p.name().equals(name)) return true;
+        return false;
     }
 }
