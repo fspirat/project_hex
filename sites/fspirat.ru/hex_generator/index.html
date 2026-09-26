@@ -129,6 +129,14 @@ button[disabled]{opacity:.4;cursor:not-allowed}
 #copy{background:#f2f2f2;color:#000;border-color:#f2f2f2}
 #copy:hover{background:#fff}
 .note{font-size:16px;color:var(--muted);margin:10px 0 0}
+.out-actions{align-items:center}
+.len{margin-left:auto;font-size:16px;color:#55ff55}
+.len.warn-len{color:#ffd24d}
+.len.over{color:#ff6b6b}
+#otherBlock .row{margin-bottom:12px;grid-template-columns:1fr 1fr}
+.row:has(#cmd){grid-template-columns:1fr 300px}
+@media(max-width:560px){#otherBlock .row,.row:has(#cmd){grid-template-columns:1fr}}
+optgroup{font-family:system-ui,sans-serif}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 
 body{text-rendering:optimizeSpeed;-webkit-font-smoothing:none;-moz-osx-font-smoothing:grayscale}
@@ -164,13 +172,38 @@ body{text-rendering:optimizeSpeed;-webkit-font-smoothing:none;-moz-osx-font-smoo
         <input type="text" id="txt" value="Пример текста">
       </div>
       <div>
-        <label class="f" for="cmd">Команда</label>
+        <label class="f" for="cmd">Формат</label>
         <select id="cmd">
-          <option value="/itemname ">/itemname</option>
-          <option value="/itemlore ">/itemlore</option>
-          <option value="sponsor">/sponsor prefix</option>
-          <option value="">Без команды</option>
+          <optgroup label="AgeMagic">
+            <option value="/itemname ">/itemname (AgeMagic) — лимит 64</option>
+            <option value="/itemlore ">/itemlore (AgeMagic) — лимит 65</option>
+            <option value="sponsor">/sponsor prefix (AgeMagic) — до 7 цветов</option>
+            <option value="">no command (AgeMagic) — лимит 256</option>
+          </optgroup>
+          <optgroup label="Другие форматы — лимит 256">
+            <option value="fmt:nickname">Nickname &amp;#rrggbb</option>
+            <option value="fmt:chat">Chat &lt;#rrggbb&gt;</option>
+            <option value="fmt:legacy">Legacy &amp;x&amp;r&amp;r&amp;g&amp;g&amp;b&amp;b</option>
+            <option value="fmt:console">Console §x§r§r§g§g§b§b</option>
+            <option value="fmt:bbcode">BBCode [COLOR=#rrggbb]</option>
+            <option value="fmt:minimessage">MiniMessage</option>
+            <option value="fmt:birdflop">BirdFlop</option>
+          </optgroup>
         </select>
+      </div>
+    </div>
+
+    <div id="otherBlock" hidden>
+      <div class="row">
+        <div>
+          <label class="f" for="prefix">Команда перед текстом <span class="hint">(необязательно)</span></label>
+          <input type="text" id="prefix" placeholder="например /nick" maxlength="64">
+        </div>
+        <div id="tplBlock">
+          <label class="f" for="tpl">Шаблон BirdFlop</label>
+          <input type="text" id="tpl" value="&amp;#$1$2$3$4$5$6$f$c" maxlength="128"
+            title="$1…$6 — цифры цвета, $f — коды формата (&amp;l, &amp;o…), $c — символ">
+        </div>
       </div>
     </div>
 
@@ -237,6 +270,7 @@ body{text-rendering:optimizeSpeed;-webkit-font-smoothing:none;-moz-osx-font-smoo
     <textarea id="out" readonly></textarea>
     <div class="out-actions">
       <button id="copy">Скопировать</button>
+      <span class="len" id="outLen"></span>
     </div>
     <p class="note" id="outNote">Промежуточные цвета делят текст на равные части: каждая часть переливается к следующему цвету.</p>
   </section>
@@ -374,6 +408,57 @@ function glyphSvg(rows){
 }
 const SP_PREFIX="sponsor";
 const isSponsor=()=>$("cmd").value==="sponsor";
+// Другие RGB-форматы (как в моде FSTWEAK): значение option вида "fmt:имя".
+const otherFormat=()=>{ const v=$("cmd").value; return v.startsWith("fmt:")?v.slice(4):null; };
+const LIMITS={"/itemname ":64,"/itemlore ":65};
+const DEFAULT_TPL="&#$1$2$3$4$5$6$f$c";
+const store={
+  get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+};
+const BB={l:"B",o:"I",n:"U",m:"S"}, MM={l:"b",o:"i",n:"u",m:"st"};
+const mmEscape=c=>c.replace(/\\/g,"\\\\").replace(/</g,"\\<");
+/** Текст в одном из других форматов. glyphs — [{c, hex}] с цветом каждой буквы. */
+function formatOther(kind,glyphs,text){
+  const on=Object.keys(fmt).filter(k=>fmt[k]);
+  const amp=on.map(k=>"&"+k).join(""), sect=on.map(k=>"§"+k).join("");
+  const plainSpace=c=>c===" "&&!fmt.n&&!fmt.m;
+  if(kind==="minimessage"){
+    // Родной градиент MiniMessage — короче, чем цвет на каждую букву.
+    return "<gradient:"+stops.map(h=>"#"+h).join(":")+">"+on.map(k=>"<"+MM[k]+">").join("")
+      +[...text].map(mmEscape).join("")+on.slice().reverse().map(k=>"</"+MM[k]+">").join("")+"</gradient>";
+  }
+  if(kind==="bbcode"){
+    return on.map(k=>"["+BB[k]+"]").join("")
+      +glyphs.map(g=>plainSpace(g.c)?" ":"[COLOR=#"+g.hex+"]"+g.c+"[/COLOR]").join("")
+      +on.slice().reverse().map(k=>"[/"+BB[k]+"]").join("");
+  }
+  if(kind==="birdflop"){
+    const tpl=$("tpl").value||DEFAULT_TPL;
+    return glyphs.map(g=>{
+      let part=tpl; for(let i=0;i<6;i++) part=part.split("$"+(i+1)).join(g.hex[i]);
+      return part.split("$f").join(amp).split("$c").join(g.c);
+    }).join("");
+  }
+  const color=h=>kind==="nickname"?"&#"+h
+    : kind==="chat"?"<#"+h+">"
+    : kind==="legacy"?"&x"+[...h].map(d=>"&"+d).join("")
+    : "§x"+[...h].map(d=>"§"+d).join("");
+  const codes=kind==="console"?sect:amp;
+  let out="", started=false;
+  glyphs.forEach(g=>{
+    if(started&&plainSpace(g.c)){ out+=" "; return; }
+    out+=color(g.hex)+codes+g.c; started=true;
+  });
+  return out;
+}
+function showLength(){
+  const out=$("out").value, cmd=$("cmd").value, el=$("outLen");
+  if(!out){ el.textContent=""; return; }
+  const limit=LIMITS[cmd]||256, len=cmd in LIMITS&&out.startsWith(cmd)?out.length-cmd.length:out.length;
+  el.textContent=(cmd in LIMITS?"длина текста ":"")+len+" / "+limit;
+  el.classList.toggle("over",len>limit); el.classList.toggle("warn-len",len<=limit&&len>limit*0.85);
+}
 const minStops=()=>isSponsor()?1:2;
 const maxStops=()=>isSponsor()?7:6;
 function colorAt(t){
@@ -410,9 +495,15 @@ function updateSponsor(){
 function applyMode(){
   const sp=isSponsor();
   $("textBlock").hidden=sp; $("fontBlock").hidden=sp; $("fmtBlock").hidden=sp; $("sponsorBlock").hidden=!sp;
+  const other=otherFormat();
+  $("otherBlock").hidden=!other; $("tplBlock").hidden=other!=="birdflop";
+  store.set("fspirat_hex_format",$("cmd").value);
   $("colorsLabel").textContent=sp?"Цвета префикса (1–7)":"Цвета";
   $("outNote").textContent=sp
     ? "Префикс sponsor из 7 букв: каждая буква получает свой цвет из градиента, в конце через пробел идёт цвет ника."
+    : otherFormat()==="minimessage" ? "MiniMessage сам распределяет градиент по тексту — результат получается короче."
+    : otherFormat()==="console" ? "Формат с § — для консоли и конфигов: в чат игры такой текст отправить нельзя."
+    : otherFormat() ? "Каждая буква получает свой цвет в выбранном формате."
     : "Промежуточные цвета делят текст на равные части: каждая часть переливается к следующему цвету.";
   if(sp) syncNickToEnd(true);
   if(!sp){
@@ -422,7 +513,7 @@ function applyMode(){
   renderStops(); update();
 }
 function update(){
-  if(isSponsor()) return updateSponsor();
+  if(isSponsor()){ updateSponsor(); return showLength(); }
   const text=convert($("txt").value), codes=Object.keys(fmt).filter(k=>fmt[k]).map(k=>"&"+k).join("");
   const ok=stops.every(valid);
   $("warn").textContent = !ok ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
@@ -434,6 +525,15 @@ function update(){
   s += `{#${stops[stops.length-1]}<}`;
   // for 2 stops the first tag is ">" already; middle tags use "<>"
   $("out").value = $("cmd").value + s;
+  const other=otherFormat();
+  if(other){
+    // Цвет каждой буквы — так же, как в предпросмотре.
+    const glyphs=[];
+    segs.forEach((seg,k)=>{ const ch=[...seg], n=ch.length;
+      ch.forEach((c,i)=>glyphs.push({c, hex:mix(stops[k],stops[k+1],n>1?i/(n-1):0).slice(1).toUpperCase()})); });
+    $("out").value = ok ? $("prefix").value + formatOther(other,glyphs,text) : "";
+  }
+  showLength();
   // preview
   const p=$("preview"); p.innerHTML="";
   if(!ok) return;
@@ -489,6 +589,10 @@ $("add").addEventListener("click",()=>{
 $("rev").addEventListener("click",()=>{stops.reverse();renderStops();update();});
 $("txt").addEventListener("input",update);
 $("cmd").addEventListener("change",applyMode);
+$("prefix").value=store.get("fspirat_hex_prefix","");
+$("tpl").value=store.get("fspirat_hex_tpl",DEFAULT_TPL);
+$("prefix").addEventListener("input",()=>{ store.set("fspirat_hex_prefix",$("prefix").value); update(); });
+$("tpl").addEventListener("input",()=>{ store.set("fspirat_hex_tpl",$("tpl").value); update(); });
 $("nickPick").addEventListener("input",()=>{ $("nickHex").value=$("nickPick").value.slice(1).toUpperCase(); update(); });
 $("nickHex").addEventListener("input",()=>{ const v=clean($("nickHex").value); if(valid(v)) $("nickPick").value="#"+v; update(); });
 $("nickName").addEventListener("input",update);
@@ -594,7 +698,10 @@ function setTab(which){
 $("tab-ready").addEventListener("click",()=>setTab("ready"));
 $("tab-mine").addEventListener("click",()=>setTab("mine"));
 renderMine();
-renderPresets(); renderStops(); update();
+renderPresets();
+{ const saved=store.get("fspirat_hex_format",null);
+  if(saved!==null && [...$("cmd").options].some(o=>o.value===saved)) $("cmd").value=saved; }
+applyMode();
 </script>
 </body>
 </html>
