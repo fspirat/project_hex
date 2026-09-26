@@ -178,6 +178,7 @@ body{text-rendering:optimizeSpeed;-webkit-font-smoothing:none;-moz-osx-font-smoo
             <option value="/itemname ">/itemname (AgeMagic) — лимит 64</option>
             <option value="/itemlore ">/itemlore (AgeMagic) — лимит 65</option>
             <option value="sponsor">/sponsor prefix (AgeMagic) — до 7 цветов</option>
+            <option value="sponsoredit">/sponsor editprefix (AgeMagic) — лимит 256</option>
             <option value="">no command (AgeMagic) — лимит 256</option>
           </optgroup>
           <optgroup label="Другие форматы — лимит 256">
@@ -221,7 +222,7 @@ body{text-rendering:optimizeSpeed;-webkit-font-smoothing:none;-moz-osx-font-smoo
           <label class="f" for="nickName">Ник для предпросмотра</label>
           <input type="text" id="nickName" value="nickname" maxlength="16">
         </div>
-        <div>
+        <div id="nickColorBox">
           <label class="f">Цвет ника <span class="hint">(= конечный цвет)</span></label>
           <div class="stop">
             <input type="color" id="nickPick" value="#FD2177" aria-label="Цвет ника">
@@ -408,6 +409,8 @@ function glyphSvg(rows){
 }
 const SP_PREFIX="sponsor";
 const isSponsor=()=>$("cmd").value==="sponsor";
+// /sponsor editprefix: градиент MiniMessage на префикс, сервер растягивает его вместе с ником.
+const isSponsorEdit=()=>$("cmd").value==="sponsoredit";
 // Другие RGB-форматы (как в моде FSTWEAK): значение option вида "fmt:имя".
 const otherFormat=()=>{ const v=$("cmd").value; return v.startsWith("fmt:")?v.slice(4):null; };
 const LIMITS={"/itemname ":64,"/itemlore ":65};
@@ -494,13 +497,15 @@ function updateSponsor(){
 }
 function applyMode(){
   const sp=isSponsor();
-  $("textBlock").hidden=sp; $("fontBlock").hidden=sp; $("fmtBlock").hidden=sp; $("sponsorBlock").hidden=!sp;
+  $("textBlock").hidden=sp; $("fontBlock").hidden=sp; $("fmtBlock").hidden=sp;
+  $("sponsorBlock").hidden=!(sp||isSponsorEdit()); $("nickColorBox").hidden=isSponsorEdit();
   const other=otherFormat();
   $("otherBlock").hidden=!other; $("tplBlock").hidden=other!=="birdflop";
   store.set("fspirat_hex_format",$("cmd").value);
   $("colorsLabel").textContent=sp?"Цвета префикса (1–7)":"Цвета";
   $("outNote").textContent=sp
     ? "Префикс sponsor из 7 букв: каждая буква получает свой цвет из градиента, в конце через пробел идёт цвет ника."
+    : isSponsorEdit() ? "В команду попадает только префикс, а градиент сервер растягивает на префикс вместе с ником — как в предпросмотре."
     : otherFormat()==="minimessage" ? "MiniMessage сам распределяет градиент по тексту — результат получается короче."
     : otherFormat()==="console" ? "Формат с § — для консоли и конфигов: в чат игры такой текст отправить нельзя."
     : otherFormat() ? "Каждая буква получает свой цвет в выбранном формате."
@@ -525,6 +530,29 @@ function update(){
   s += `{#${stops[stops.length-1]}<}`;
   // for 2 stops the first tag is ">" already; middle tags use "<>"
   $("out").value = $("cmd").value + s;
+  if(isSponsorEdit()){
+    const on=Object.keys(fmt).filter(k=>fmt[k]);
+    $("out").value = ok ? "/sponsor editprefix <gradient:"+stops.map(h=>"#"+h).join(":")+">"
+      + on.map(k=>"<"+MM[k]+">").join("") + [...text].map(mmEscape).join("") : "";
+    // Предпросмотр: один градиент на «префикс + ник».
+    const pv=$("preview"); pv.innerHTML="";
+    if(ok){
+      const full=[...(text+" "+($("nickName").value||"nickname"))], n=full.length;
+      full.forEach((c,i)=>{
+        const col=colorAt(n>1?i/(n-1):0);
+        const g=makeGlyph(c,col,{bold:fmt.l,italic:fmt.o,underline:fmt.n,strike:fmt.m});
+        if(g){ pv.appendChild(g); return; }
+        const sp=document.createElement("span"); sp.textContent=c; sp.style.color=col;
+        sp.style.textShadow=shadowFor(col);
+        if(fmt.l) sp.style.fontWeight="700";
+        if(fmt.o) sp.style.fontStyle="italic";
+        const deco=[fmt.n?"underline":"",fmt.m?"line-through":""].filter(Boolean).join(" ");
+        if(deco) sp.style.textDecoration=deco;
+        pv.appendChild(sp);
+      });
+    }
+    return showLength();
+  }
   const other=otherFormat();
   if(other){
     // Цвет каждой буквы — так же, как в предпросмотре.
