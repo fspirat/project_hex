@@ -3,6 +3,7 @@ name: Deploy site
 on:
   push:
     branches: [main]
+    paths: ['sites/**', '.github/workflows/deploy.yml']
   workflow_dispatch:
 
 jobs:
@@ -21,5 +22,4 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
           rsync -avz --delete \
-            --exclude '.git' --exclude '.github' --exclude 'CNAME' --exclude 'README.md' \
-            ./ deploy@"$SSH_HOST":/var/www/fspirat.online/
+            ./sites/fspirat.ru/ deploy@"$SSH_HOST":/var/www/fspirat.online/
