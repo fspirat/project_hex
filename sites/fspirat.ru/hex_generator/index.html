@@ -272,10 +272,14 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 .sym-wrap{position:relative;margin-bottom:10px}
 #symBtn[aria-expanded="true"]{background:var(--green);color:#071006;border-color:var(--green)}
 .sym-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:40;background:var(--card);border:1px solid var(--line-hi);border-radius:3px;padding:10px;
-  box-shadow:6px 6px 0 rgba(0,0,0,.55),0 0 30px rgba(127,191,58,.08);width:min(430px,calc(100vw - 48px))}
+  box-shadow:6px 6px 0 rgba(0,0,0,.55),0 0 30px rgba(127,191,58,.08);width:min(600px,calc(100vw - 48px))}
+.sym-tabs{margin-bottom:8px}
+.sym-tabs .chip{padding:3px 8px;font-size:13px}
+.sym-pop .sym-grid{max-height:252px;overflow-y:auto;padding-right:2px}
+.sym-hint{margin:8px 0 0;font-size:13px;color:var(--muted)}
 .panel:has(.sym-pop:not([hidden])){z-index:30}
-.sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(42px,1fr));gap:6px}
-.sym-grid button{height:40px;padding:0;font-size:18px;line-height:1;font-family:system-ui,"Segoe UI Symbol","Noto Sans Symbols 2",sans-serif}
+.sym-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:5px}
+.sym-grid button{height:38px;padding:0;font-size:18px;line-height:1;font-family:system-ui,"Segoe UI Symbol","Noto Sans Symbols 2",sans-serif}
 .sc{display:inline-block;vertical-align:baseline;line-height:0;position:relative}
 .sc-line{position:absolute;left:0}
 .sc-in{display:inline-block;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;image-rendering:pixelated}
@@ -367,7 +371,11 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 
         <div class="sym-wrap" id="symWrap">
           <button type="button" id="symBtn" class="small" aria-expanded="false" aria-controls="symPop">✦ Символы</button>
-          <div class="sym-pop" id="symPop" hidden><div class="sym-grid" id="syms"></div></div>
+          <div class="sym-pop" id="symPop" hidden>
+            <div class="chips sym-tabs" id="symTabs" role="tablist" aria-label="Категории символов"></div>
+            <div class="sym-grid" id="syms"></div>
+            <p class="sym-hint">Нажмите на символ — он встанет в поле, где стоит курсор.</p>
+          </div>
         </div>
 
         <div id="nameBlock">
@@ -1178,8 +1186,33 @@ $("nickHex").addEventListener("input",()=>{ const v=clean($("nickHex").value); S
 let lastInput=null, lastSel=null;
 document.addEventListener("focusin",e=>{ const t=e.target; if(t.matches&&t.matches("#name, .lore-row input[type=text]")) lastInput=t; });
 document.addEventListener("selectionchange",()=>{ const a=document.activeElement; if(a&&a===lastInput) lastSel=[a.selectionStart,a.selectionEnd]; });
-["✦","★","❖","➤","⚔","❤","•","❀","☆","✧","✪","✯","❂","✿","❁","☘","♛","♚","⚜","☠","⚡","☀","☁","❄","☃","☂","☾","♪","♫","♠","♣","♦","♥","❥","✔","✘","⚠","☢","☣","☯","⚓","⚑","✎","✉","⌛","∞","✚","◇"].forEach(sym=>{
-  const b=document.createElement("button"); b.type="button"; b.textContent=sym; b.setAttribute("aria-label","Вставить символ "+sym);
+// Категории символов (только те, что Minecraft показывает своим шрифтом). Первая вкладка — недавние.
+const SYM_CATS = [["Звёзды и снежинки", "⋆✢✣✤✥✦✧✩✪✫✬✭✮✯✰✱✲✳✴✵✶✷✸✹✺✻✼✽✾✿❀❁❂❃❄❅❆❇❈❉❊❋❖★☆⁂⁎⁑"], ["Сердца и смайлы", "❣❤❥❦♠♥♡❧♤☃☻☺☹ツ✌✍☚☛☜☝☞☟ღ"], ["Стрелки", "➱➲➳➴➵➶➷➸➘➙➚➛➜➝➞➟➠➡➢➣➤➥➦➧➨➩➪➫➬➭➮➯➔➹➺➻➼➽➾←↑→↓↔↕↖↗↘↙↚↛↜↝↞↟↠↡↢↣↤↥↦↧↨↩↪↫↬↭↮↯↰↱↲↳↴↵↶↷↸↹↼↽↾↿⇀⇁⇂⇃⇄⇅⇆⇇⇈⇉⇊⇋⇌⇍⇎⇏⇐⇑⇒⇓⇔⇕⇖⇗⇘⇙⇚⇛⇜⇝⇞⇟⇠⇡⇢⇣⇤⇥⇦⇧⇨⇩⇪☇↺↻⇵⏏⏩⏪⏭⏮⏯⊲⊳⊴⊵⤴⤵⟵⟶⟷«»‹›"], ["Предметы", "🗡🏹🔱🧪🪓⛏🛡🎣✂🍖🔔☂☔⛄☃⌛⌚☎☏✁✃✄✆✎✏✐✑✒✈⚓⚡🌊⭐🔥♔♕♚♛♨⚔☠⚠۞⛀⛁⛃⛂⚒⚑⚐⛨⚖⚗⚙⚛⚜⛓✉⏳⚱⚕⚚☤⚘☕⛺⛵⌂⛰⛩"], ["Погода и природа", "☁☀☄🌧⛈❄☼☂☔☃⛄⛅☾☽❅❆⚡☘♣❀✿❁⚘❖"], ["Игры и музыка", "⚀⚁⚂⚃⚄⚅♤♧♡♢♪♩♫♬♔♕♖♗♘♙♚♛♜♝♞♟♠♣♥♦♭♮♯"], ["Галочки и кресты", "╳✕✖✗✘☓❌♱♰✞✟†‡☨☒✓✔☑✙✚✛✜"], ["Ромбы и треугольники", "◆◇◈◊⋄♦♢▲△▴▵▼▽▾▿▶▷▸▹►▻◀◁◂◃◄◅◭◮"], ["Кружки и точки", "◍◎●◐◑◒◓◔◕◖◗◯✇☮☯❍⊕⊖⊗⊘⊙⊚⊛⊜⊝○｡☣☢㊣⭘◦☪⏺∅⋅㊚㊛･∙⋮⋯⋰⋱°∵∴ﾟ❂∶∷•᛫᛬☉✚✪✣✤✥✦❉❃❁❀☖☗☀·‣⁃⦁⦾⦿⁌⁍❏❐❑❒❖➧⁕⁜"], ["Квадраты и блоки", "▁▂▃▄▅▆▇█▉▊▋▌▍■▬▏▕▐░▒▓▔▀⧈□▣▤▥▦▧▨▩▪▫▭▮▯▰▱◘◙◚◛◧◨◩◪◫☐❏❐❑❒回♏♒▢◉◌◢◣◤◥"], ["Линии и скобки", "─━│┃┄┅┆┇┈┉┊┋┌┍–—┱┲‑‒―﹏﹋﹌﹉﹊﹍﹎☰☱☳☴☶☷☲☵‾‗⁃Ξ┎┏┐┑┒┓└┕┖┗┘┙┚┛├┝┞┟┠┡┢┣┤┥┦┧┨┩┪┫┬┭┮┯┰┳┴┵┶┷┸┹┺┻┼┽┾┿╀╁╂╃╄╅╆╇╈╉╊╋╌╍╎╏═║╒╓╔╕╖╗╘╙╚╛╜╝╞╟╠╡╢╣╤╥╦╧╨╩╪╫╬╭╮╯╰╱╲╴╵╶╷╸╹╺╻╼╽╾╿☽☾⌃⌄⌅⌆⌇⌈⌉⌊⌋﹃﹄「」‖︴⌠⌡ΣΠ«»๑⁅⁆⁐ℵℶℷℸ◠◡ぃ【】⁽⁾ʔʕ‸‹›╳▀▄█▌▐░▒▓¦⎯〖〗『』〔〕《》〈〉⟦⟧⟨⟩❨❩❪❫❬❭❮❯❰❱❲❳❴❵"], ["Кавычки", "‘’‚‛“”„‟′″‴‵‶‷՚՛՜՝՞❛❜❝❞"], ["Особые", "⚗⚑✉⚐☠☣☤☩☫☬☭♂♀☿⛨۩☊☋☌☍⁈⁉☥∡∢∱∲∳∸∞Δʊღ₪∀®©℠℡™✓✔✕✖✗✘☑☒⚠☢☮☯☪☸✚✛✜✝✞✟✠⚤⚥⚦⚧℗№§¶†‡※☺☻☹"], ["Буквы", "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺⒶⒷⒸⒹⒺⒻⒼⒽⒾⒿⓀⓁⓂⓃⓄⓅⓆⓇⓈⓉⓊⓋⓌⓍⓎⓏᴀʙᴄᴅᴇғɢʜɪᴊᴋʟᴍɴᴏᴘǫʀᴛᴜᴠᴡʏᴢａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ⒜⒝⒞⒟⒠⒡⒢⒣⒤⒥⒦⒧⒨⒩⒪⒫⒬⒭⒮⒯⒰⒱⒲⒳⒴⒵ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩꜰꜱ"], ["Цифры", "⓪①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳❶❷❸❹❺❻❼❽❾❿⓫⓬⓭⓮⓯⓰⓱⓲⓳⓴➊➋➌➍➎➏➐➑➒➓⑴⑵⑶⑷⑸⑹⑺⑻⑼⑽⑾⑿⒀⒁⒂⒃⒄⒅⒆⒇⒈⒉⒊⒋⒌⒍⒎⒏⒐⒑⒒⒓⒔⒕⒖⒗⒘⒙⒚⒛ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅪⅫⅬ⁰⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉➀➁➂➃➄➅➆➇➈➉¹²³½⅓⅔¼¾"], ["Математика", "½⅓¼⅕⅙⅐⅛⅑⅒⅔⅖¾⅗⅜⅘⅚⅝⅞℅⅟‱⁺⁻⁼⁽⁾ⁿⁱ₊₋₌₍₎ₐₑₒₓₔ≤≥≦≧≨≩≮≯≰≱≲≳≴≵≡±−≣≪≫∹∺∻∼∽∾∿≀≁≂≃≄≅≆≇≈≉≊≋≌≍⊢⊣⊤⊥⊦⊧⊨⊩⊪⊫⊬⊭⊮⊯≎≏≐≑≒≓≔≕≖≗≘≙≚≛≜≝≞≟≠≢≬≭≶≷≸≹≺≻≼≽≾≿⊀⊁⊂⊃⊄⊅⊆⊇⊈⊉⊊⊋⊌⊍⊎⊏⊐⊑⊒⊓⊔⊡⊰⊱⊲⊳⊴⊵⊶⊷⊸⊹⊺⊻⊼⊽⊾⊿⋀⋁⋂⋃⋇⋈⋉⋊⋋⋌⋍⋎⋏⋐⋑⋒⋓⋔⋕⋖⋗⋘⋙⋚⋛⋜⋝⋞⋟∟∃∄∉∋∌∧∨∥⋠⋡⋢⋣⋤⋥⋦⋧⋨⋩⋪⋫⋬⋭⋲⋳⋴⋵⋶⋷⋸⋹⋺⋻⋼⋽⋾⋿∣∤∦∩∪∫∬∭∮∯∰∊∍∈×÷∑∏√∛∆∇∂¬∀∅πΩµ°‰′″€£¥₽₴₿¢"], ["Латиница с акцентами", "ʂʐɶǍǎǞǟǺǻȂȃȦȧǠǡḀḁȀȁḆḇḄḅᵬḈḉḐḑḒḓḎḏḌᵭḔḕḖḗḘḙḜḝȨȩḚḛȄȅȆᵮǴǵǦḦḧḨḩḪḫȞȟḤẖḮḯȊȋǏǐȈȉḬḭǰȷǨǩḲḳḴḵḺḻḼḽḶḷḸḹⱢḾḿṂṃᵯṄṅṆṇṊṋǸǹṈṉᵰǬǭȬȭṌṍṎṏṐṑṒṓȎȏȪȫǑǒȮȯȰȱȌȍǪṔṕᵱȒȓṘṙṜṝṞṟȐȑṚᵳᵲṤṥṦṧṢṣṨṩᵴṰṱṮṯṬẗᵵṲṳṶṷṸṹṺṻǓǔǕǖǗǘǙǚǛǜṴṵȔȕȖṾṿṼṽẆẇẈẉẘẌẍẊẋȲȳẎẏẙẔẕẐẑẓᵶǮǯẛꜾꜿǢǣᵺỻᴂᴔȸʣʥʤʩʪʫȹʨʦʧỺƀƂƃƇƈƊƋƌƓǤǥƗƖɩƘƙƝƤƥɽƦƬƭƫƮȗƱƜƳƴƵƶƢƣȢȣʭʮʯƍƺⱾȿⱿɀᶀꟄꞔᶁᶂᶃꞕᶄᶅᶆᶇᶈᶉᶊᶋᶌᶍᶎᶏᶐᶒᶓᶔᶕᶖᶗᶘᶙᶚẚÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝàáâãäåæçìíîïñòóôõöùúûüýÿĀāĂăĄąĆćĈĉĊċČčĎďĐđĒēĔĕĖėĘęĚěĜĝḠḡĞğĠġĢģĤĥĦħĨĩĪīĬĭĮįİıĴĵĶķĹĺĻļĽľĿŀŁłŃńŅņŇňŊŋŌōŎŏŐőŒœŔŕŖŗŘřŚśŜŝŞşŠšŢţŤťŦŧŨũŪūŬŭŮůŰűŲųŴŵŶŷŸŹźŻżŽžǼǽǾǿȘșȚțḂḃḊḋḞḟḢḣḰḱṀṁṖṗṠṡṪṫẀẁẂẃẄẅỲỳèéêëŉǧǫḍḥṛṭẒỊịỌọỤụȇƔɣʃẴẵẼẽỄễỒỠỡỮỸỹǱǲǳǄǅǆǇǈǊǋǌᵫꜲꜳꜴꜵꜶꜷꜸꜺꜼꜽꝎꝏꝠꝡƠơƯưẮắẤấẾếốỚớỨứẰằẦầỀềồỜờỪừẢảẲẳẨẩẺẻổỞỂểỈỉỎỏỔởỦủỬửỶỷẠạẶặẬậẸẹỆệỘộỢợỰựỴỵỐƕẪẫỖỗữɼƄƅẟȽƚƛȠƞƟƧƨƪƸƹƻƼƽƾȡȴȵȶȺⱥȻȼɆɇȾⱦɁɂɃɄɈɉɊɋɌɍɎɏẜẝỼỽỾỿꞨꞩ§ɱɳɲʈɖɡʡɕʑɸʝʢɻʁɦʋɰɬɮʘǀǃǂǁɓɗᶑʄɠʛɧɫɨʉʊɘɵɤɜɞɑɒɚɝƁƉƑƩƲꜧꜦɺⱱʠʗʖɭɷɿʅʆʓʚ¿×ØÞðøþⱯƆƎꞰꞀꝹᴚɅɐɔǝɟᵷɥᴉɾʞꞁɯɹʇʌʍʎə"], ["Греческий и кириллица", "ԂԪԬԄԐԆԞԚԮԒԠԈԔԨԢԊԤԖԌԎԦԘԜԃԫԭԅԑԇԟԛԯԓԡԉԕԩԣԋԥԗԍԏԧԙԝϓϔΆΈΉΊΌΎΏΐΪΫάέήίΰϊϋόύώһΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩαβγδεζηθικλμνξοπρςστυφχψωЂЅІЈЉЊЋѕіјљњҚқҒғҰұӘәҖҗҢңҺԀ"], ["Другие алфавиты", "ꭣꭐꭑ₧אַאָﬔﬕﬗﬖﬓꚂꚀꚈꚄꚐꚊꚌꚔꚎꚒꚖꚆꚃꚁꚉꚅꚑꚋꚍꚕꚏꚓꚗꚇἈἀἉἁἊἂἋἃἌἄἍἅἎἆἏἇᾺὰᾸᾰᾹᾱΆάᾈᾀᾉᾁᾊᾂᾋᾃᾌᾄᾍᾅᾎᾆᾏᾇᾼᾴᾶᾷᾲᾳἘἐἙἑἚἒἛἓἜἔἝἕῈΈὲέἨἠῊὴἩἡἪἢἫἣἬἤἭἥἮἦἯἧᾘᾐᾙᾑᾚᾒᾛᾓᾜᾔᾝᾕᾞᾖᾟᾗΉήῌῃῂῄῆῇῚὶΊίἸἰἹἱἺἲἻἳἼἴἽἵἾἶἿἷῘῐῙῑῒΐῖῗῸὸΌόὈὀὉὁὊὂὋὃὌὄὍὅῬῤῥῪὺΎύὙὑὛὓὝὕὟὗῨῠῩῡῢΰῧὐὒὔῦὖῺὼΏώὨὠὩὡὪὢὫὣὬὤὭὥὮὦὯὧᾨᾠᾩᾡᾪᾢᾫᾣᾬᾤᾭᾥᾮᾦᾯᾧῼῳῲῴῶῷ₿№ℹﬄﬆᚡᚵ𐌰𐌱𐌲𐌳𐌴𐌵𐌶𐌷𐌸𐌹𐌺𐌻𐌼𐌽𐌾𐌿𐍀𐍁𐍂𐍃𐍄𐍅𐍆𐍇𐍈ႠႡႢႣႤႥႦႧႨႩႪႫႬႭႮႯႰႱႲႳႴႵႶႷႸႹႺႻႼႽႾႿჀჁჂჃჄჅჇჍაბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰჱჲჳჴჵჶჷჸჹჺ჻ჼჽჾჿתּשׂפֿפּכּײַיִוֹוּבֿבּ₪₾֊ⴀⴁⴂⴃⴄⴅⴆⴡⴇⴈⴉⴊⴋⴌⴢⴍⴎⴏⴐⴑⴒⴣⴓⴔⴕⴖⴗⴘⴙⴚⴛⴜⴝⴞⴤⴟⴠⴥ₴≠אבגדהוזחטיכלמםנןסעפףצץקרᗺᗡℲ⅁⟘∩⅄ԱԲԳԴԶԷԹԺԻԼԽԾԿՀՁՂՃՄՅՆՇՈՉՋՌՍՎՏՐՑՒՓՔՕՖՙաբգդեզէըթժիլխծկհձղճմյնշոչպջռսվտրցւփքօֆևשתԸ∞"]];
+const RECENT_KEY="fspirat_recent_symbols";
+let recentSyms=[]; try{ recentSyms=JSON.parse(store.get(RECENT_KEY,"[]")); if(!Array.isArray(recentSyms)) recentSyms=[]; }catch(e){ recentSyms=[]; }
+let symCat = recentSyms.length ? "recent" : 0;
+function renderSymTabs(){
+  const box=$("symTabs"); box.innerHTML="";
+  const tabs=(recentSyms.length?[["recent","★ Недавние"]]:[]).concat(SYM_CATS.map((c,i)=>[i,c[0]]));
+  tabs.forEach(([id,label])=>{
+    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("role","tab");
+    b.setAttribute("aria-selected",symCat===id); b.textContent=label;
+    b.addEventListener("click",()=>{ symCat=id; renderSymTabs(); renderSyms(); });
+    box.appendChild(b);
+  });
+}
+function renderSyms(){
+  const box=$("syms"); box.innerHTML=""; box.scrollTop=0;
+  const list = symCat==="recent" ? recentSyms : [...SYM_CATS[symCat][1]];
+  list.forEach(addSym);
+}
+function rememberSym(sym){
+  recentSyms=[sym,...recentSyms.filter(x=>x!==sym)].slice(0,30);
+  store.set(RECENT_KEY,JSON.stringify(recentSyms));
+}
+function addSym(sym){
+  const b=document.createElement("button"); b.type="button"; b.textContent=sym; b.title=sym+"  U+"+sym.codePointAt(0).toString(16).toUpperCase().padStart(4,"0");
+  b.setAttribute("aria-label","Вставить символ "+sym);
   b.addEventListener("click",()=>{
     let t=lastInput&&document.body.contains(lastInput)&&!lastInput.closest("[hidden]") ? lastInput : null;
     if(!t) t = showName() ? $("name") : document.querySelector(".lore-row input[type=text]");
@@ -1188,12 +1221,15 @@ document.addEventListener("selectionchange",()=>{ const a=document.activeElement
     t.value=t.value.slice(0,a)+sym+t.value.slice(e);
     t.focus(); t.setSelectionRange(a+sym.length,a+sym.length); lastSel=[a+sym.length,a+sym.length];
     t.dispatchEvent(new Event("input"));
+    rememberSym(sym);
   });
   $("syms").appendChild(b);
-});
+}
+renderSymTabs(); renderSyms();
 function toggleSyms(open){
   const o = open===undefined ? $("symPop").hidden : open;
   $("symPop").hidden=!o; $("symBtn").setAttribute("aria-expanded",o);
+  if(o){ if(symCat==="recent"&&!recentSyms.length) symCat=0; renderSymTabs(); renderSyms(); }
 }
 $("symBtn").addEventListener("mousedown",e=>e.preventDefault()); // не забираем фокус у поля ввода
 $("symBtn").addEventListener("click",()=>toggleSyms());
