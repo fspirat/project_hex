@@ -163,6 +163,15 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 /* кнопка палитры у строки + компактный popup */
 .pal-wrap{position:relative;flex:none}
 .panel:has(.pal-pop){z-index:30}
+.font-btn{min-width:44px;padding:6px 6px;font-family:system-ui,"Segoe UI Symbol",sans-serif;font-size:15px;line-height:1.1;color:var(--muted)}
+.font-btn.own{color:var(--green-hi);border-color:rgba(127,191,58,.55)}
+.font-btn[aria-expanded="true"]{border-color:var(--green)}
+.font-pop{width:min(300px,calc(100vw - 40px));left:0;right:auto}
+.font-opt{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:5px 8px;margin-bottom:3px;box-shadow:none;font-size:14px}
+.font-opt .smp{width:38px;flex:none;font-family:system-ui,"Segoe UI Symbol",sans-serif;font-size:16px;color:var(--green-hi)}
+.font-opt .lbl{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.font-opt[aria-pressed="true"]{border-color:var(--green);background:var(--card-hi)}
+.font-opt:hover{transform:none}
 .pal-btn{display:inline-flex;align-items:center;gap:8px;padding:6px 8px;min-width:150px;max-width:190px;justify-content:space-between}
 .pal-btn .sw{width:36px;height:14px;flex:none;border:1px solid rgba(0,0,0,.6)}
 .pal-btn .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
@@ -267,6 +276,8 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 .fmt-row:has(#fontBlock[hidden]){grid-template-columns:1fr}
 .sp-row{grid-template-columns:1fr 240px}
 .sp-row .stop input[type=text]{max-width:none;flex:1}
+#nickTarget{padding:6px;cursor:pointer}
+#nickTarget .pal-wrap,#nickTarget .pal-btn{width:100%;max-width:none}
 @media(max-width:560px){.fmt-row,.sp-row{grid-template-columns:1fr}}
 .hint{color:var(--muted)}
 .sym-wrap{position:relative;margin-bottom:10px}
@@ -307,7 +318,7 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 
 .reveal{opacity:0;transform:translateY(12px);animation:reveal .55s cubic-bezier(.3,.7,.3,1) forwards}
 @keyframes reveal{to{opacity:1;transform:none}}
-@media(max-width:560px){.status{display:none}.sec-meta{display:none}.pal-btn{min-width:0;max-width:none;flex:1}.lore-row{flex-wrap:wrap}.lore-row input[type=text]{flex:1 1 calc(100% - 30px)}.lore-row .pal-wrap{flex:1;margin-left:28px;display:flex}.name-row{flex-wrap:wrap}.name-row .pal-wrap{flex:1 1 100%;display:flex}.chain .node{font-size:12px;padding:2px 4px}}
+@media(max-width:560px){.status{display:none}.sec-meta{display:none}.pal-btn{min-width:0;max-width:none;flex:1}.lore-row{flex-wrap:wrap}.lore-row input[type=text]{flex:1 1 calc(100% - 30px)}.lore-row .pal-wrap:not(.font-wrap){flex:1;display:flex;min-width:0}.lore-row .pal-wrap:not(.font-wrap) .pal-btn{width:100%;min-width:0}.lore-row .font-wrap{margin-left:28px}.lore-row{row-gap:6px}.name-row{flex-wrap:wrap}.name-row .pal-wrap{flex:1 1 100%;display:flex}.chain .node{font-size:12px;padding:2px 4px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}.particles{display:none}}
 </style>
 </head>
@@ -362,10 +373,20 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
             </select>
           </div>
           <div id="fontBlock">
-            <label class="f" for="font">Шрифт</label>
+            <label class="f" for="font" title="Для названия и строк описания без своего шрифта (кнопка «Aa» у строки)">Шрифт</label>
             <select id="font">
-              <option value="normal">Обычный</option>
-              <option value="small">Small Caps</option>
+              <option value="normal">Обычный (eng + ru)</option>
+              <option value="small">Small Caps (eng + ru)</option>
+              <option value="fraktur">𝔮𝔴𝔢𝔯𝔱𝔶 (eng)</option>
+              <option value="frakturBold">𝖖𝖜𝖊𝖗𝖙𝖞 (eng)</option>
+              <option value="scriptBold">𝓺𝔀𝓮𝓻𝓽𝔂 (eng)</option>
+              <option value="script">𝓆𝓌𝑒𝓇𝓉𝓎 (eng)</option>
+              <option value="double">𝕢𝕨𝕖𝕣𝕥𝕪 (eng)</option>
+              <option value="currency">Q₩ɆⱤ₮Ɏ (eng)</option>
+              <option value="asian">Ɋ山乇尺ㄒㄚ (eng)</option>
+              <option value="sansItalic">𝘲𝘸𝘦𝘳𝘵𝘺 (eng)</option>
+              <option value="mono">𝚚𝚠𝚎𝚛𝚝𝚢 (eng)</option>
+              <option value="sansBold">𝗾𝘄𝗲𝗿𝘁𝘆 (eng)</option>
             </select>
           </div>
         </div>
@@ -375,6 +396,10 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
             <div>
               <label class="f" for="nickName">Ник для предпросмотра</label>
               <input type="text" id="nickName" maxlength="16">
+            </div>
+            <div id="nickGradBox" hidden>
+              <label class="f">Цвет ника <span class="hint">(свой градиент)</span></label>
+              <div class="target" id="nickTarget"><div class="pal-wrap" id="nickPal"></div></div>
             </div>
             <div id="nickColorBox">
               <label class="f">Цвет ника <span class="hint">(= конечный цвет)</span></label>
@@ -727,6 +752,7 @@ const DEFAULT_STATE = () => ({
   lore:[],
   sponsor:{text:SP_PREFIX,style:newStyle(PALETTES[0].colors)},
   nick:"nickname",nickHex:"D4FF9A",
+  nickT:{text:"",style:newStyle(["AAAAAA","FFFFFF"])},   // градиент ника для /sponsor editprefix
 });
 const store={
   get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } },
@@ -742,7 +768,7 @@ let mine=[];
 try{ mine=JSON.parse(store.get(TPL_KEY,"[]")); if(!Array.isArray(mine)) mine=[]; }catch(e){ mine=[]; }
 mine=mine.filter(p=>p&&typeof p.n==="string"&&Array.isArray(p.c)&&p.c.every(valid));
 const allPalettes = () => PALETTES.concat(mine.map(p=>({name:p.n,colors:p.c,own:true})));
-const targetObj = t => t==="name" ? S.name : t==="sponsor" ? S.sponsor : S.lore[t];
+const targetObj = t => t==="name" ? S.name : t==="sponsor" ? S.sponsor : t==="nick" ? S.nickT : S.lore[t];
 const cur = () => targetObj(active).style;
 function paletteName(style){
   if(style.mode==="solid") return "Один цвет #"+style.stops[0];
@@ -877,6 +903,37 @@ function palButton(t){
   wrap.appendChild(b);
   return wrap;
 }
+/** Микро-кнопка «Aa» у строки описания: свой шрифт для строки. */
+function fontButton(t){
+  const wrap=document.createElement("div"); wrap.className="pal-wrap font-wrap";
+  const st=targetObj(t).style, own=!!st.font;
+  const b=document.createElement("button"); b.type="button"; b.className="font-btn small"+(own?" own":"");
+  b.setAttribute("aria-haspopup","true"); b.setAttribute("aria-expanded","false");
+  const label=v=>[...$("font").options].find(o=>o.value===v)?.textContent||v;
+  b.textContent=convert("Aa",fontOf(st));
+  b.title="Шрифт строки: "+(own?label(st.font):"как в общем списке ("+label(S.font)+")");
+  b.addEventListener("click",e=>{
+    e.stopPropagation();
+    const was=openPop&&openPop.btn===b; closePop(); if(was) return;
+    if(active!==t) setActive(t);
+    const pop=document.createElement("div"); pop.className="pal-pop font-pop"; pop.setAttribute("role","dialog");
+    const h=document.createElement("h4"); h.textContent="Шрифт строки "+(t+1); pop.appendChild(h);
+    const opt=(value,text,sample)=>{
+      const o=document.createElement("button"); o.type="button"; o.className="font-opt";
+      o.setAttribute("aria-pressed",(st.font||"")===value);
+      o.innerHTML='<span class="smp"></span><span class="lbl"></span>';
+      o.children[0].textContent=sample; o.children[1].textContent=text;
+      o.addEventListener("click",()=>{ if(value) st.font=value; else delete st.font; closePop(); refresh(); });
+      pop.appendChild(o);
+    };
+    opt("","Как в общем списке — "+label(S.font),convert("Aa",S.font));
+    [...$("font").options].forEach(o=>opt(o.value,o.textContent,convert("Aa",o.value)));
+    pop.addEventListener("click",e=>e.stopPropagation());
+    wrap.appendChild(pop); b.setAttribute("aria-expanded","true"); openPop={pop,btn:b};
+  });
+  wrap.appendChild(b);
+  return wrap;
+}
 document.addEventListener("click",closePop);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(openPop){ const b=openPop.btn; closePop(); b.focus(); } else if(!$("dlg").hidden) closeDlg(); } });
 
@@ -885,12 +942,14 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(openPop){ cons
 function setActive(t){ closePop(); active=t; markActive(); renderStops(); renderPalettes(); update(); }
 function markActive(){
   $("nameTarget").classList.toggle("active",active==="name");
+  $("nickTarget").classList.toggle("active",active==="nick");
   document.querySelectorAll(".lore-row").forEach((r,i)=>r.classList.toggle("active",active===i));
-  $("targetLabel").textContent = active==="sponsor" ? "Префикс sponsor"
+  $("targetLabel").textContent = active==="sponsor" ? "Префикс sponsor" : active==="nick" ? "Цвет ника"
     : active==="name" ? $("nameLabel").textContent : "Строка "+(active+1);
 }
 function renderText(){
   const np=$("namePal"); np.replaceWith(Object.assign(palButton("name"),{id:"namePal"}));
+  const kp=$("nickPal"); kp.replaceWith(Object.assign(palButton("nick"),{id:"nickPal"}));
   const box=$("lore"); box.innerHTML="";
   $("loreEmpty").hidden=S.lore.length>0;
   S.lore.forEach((ln,i)=>{
@@ -909,12 +968,14 @@ function renderText(){
     del.addEventListener("click",()=>{ S.lore.splice(i,1);
       if(active===i) active=S.lore.length?Math.min(i,S.lore.length-1):"name"; else if(typeof active==="number"&&active>i) active--; refresh(); });
     r.addEventListener("mousedown",e=>{ if(!e.target.closest("button")&&active!==i) setActive(i); });
-    r.append(num,inp,palButton(i),mv,del);
+    r.append(num,inp,fontButton(i),palButton(i),mv,del);
     box.appendChild(r);
   });
   $("addLore").disabled=S.lore.length>=MAX_LORE;
   markActive();
 }
+$("nickTarget").addEventListener("mousedown",e=>{ if(!e.target.closest("button")&&active!=="nick") setActive("nick"); });
+$("nickName").addEventListener("focus",()=>{ if(isSponsorEdit()&&active!=="nick") setActive("nick"); });
 $("name").addEventListener("input",()=>{ S.name.text=$("name").value; update(); });
 $("name").addEventListener("focus",()=>{ if(active!=="name") setActive("name"); });
 $("nameTarget").addEventListener("mousedown",e=>{ if(!e.target.closest("button")&&active!=="name") setActive("name"); });
@@ -1057,7 +1118,39 @@ const SMALL = {
   "а":"ᴀ","в":"ʙ","е":"ᴇ","ё":"ᴇ","к":"ᴋ","м":"ᴍ","н":"ʜ",
   "о":"ᴏ","р":"ᴘ","с":"ᴄ","ф":"ȹ","х":"x"
 };
-const convert = t => S.font==="small" ? [...t.toLowerCase()].map(c=>SMALL[c]||c).join("") : t;
+/* Шрифты-«стили» из Unicode. Математические буквы: A — код заглавной A, a — строчной, d — цифры 0,
+   ex — буквы, которых нет в блоке (берутся из «Буквоподобных символов»). Меняется только латиница. */
+const MATH_FONTS={
+  fraktur:    {A:0x1D504,a:0x1D51E,ex:{C:"ℭ",H:"ℌ",I:"ℑ",R:"ℜ",Z:"ℨ"}},
+  frakturBold:{A:0x1D56C,a:0x1D586},
+  scriptBold: {A:0x1D4D0,a:0x1D4EA},
+  script:     {A:0x1D49C,a:0x1D4B6,ex:{B:"ℬ",E:"ℰ",F:"ℱ",H:"ℋ",I:"ℐ",L:"ℒ",M:"ℳ",R:"ℛ",e:"𝑒",g:"𝑔",o:"𝑜"}},
+  double:     {A:0x1D538,a:0x1D552,d:0x1D7D8,ex:{C:"ℂ",H:"ℍ",N:"ℕ",P:"ℙ",Q:"ℚ",R:"ℝ",Z:"ℤ"}},
+  sansItalic: {A:0x1D608,a:0x1D622},
+  mono:       {A:0x1D670,a:0x1D68A,d:0x1D7F6},
+  sansBold:   {A:0x1D5D4,a:0x1D5EE,d:0x1D7EC},
+};
+/* Шрифты-замены: одна таблица на заглавные и строчные. */
+const MAP_FONTS={
+  currency:{a:"₳",b:"฿",c:"₵",d:"Đ",e:"Ɇ",f:"₣",g:"₲",h:"Ⱨ",i:"ł",j:"J",k:"₭",l:"Ⱡ",m:"₥",n:"₦",o:"Ø",p:"₱",q:"Q",r:"Ɽ",s:"₴",t:"₮",u:"Ʉ",v:"V",w:"₩",x:"Ӿ",y:"Ɏ",z:"Ⱬ"},
+  asian:   {a:"卂",b:"乃",c:"匚",d:"ᗪ",e:"乇",f:"千",g:"Ꮆ",h:"卄",i:"丨",j:"ﾌ",k:"Ҝ",l:"ㄥ",m:"爪",n:"几",o:"ㄖ",p:"卩",q:"Ɋ",r:"尺",s:"丂",t:"ㄒ",u:"ㄩ",v:"ᐯ",w:"山",x:"乂",y:"ㄚ",z:"乙"},
+};
+function mathFont(t,f){
+  return [...t].map(c=>{
+    if(f.ex&&f.ex[c]) return f.ex[c];
+    const o=c.charCodeAt(0);
+    if(c>="A"&&c<="Z") return String.fromCodePoint(f.A+o-65);
+    if(c>="a"&&c<="z") return String.fromCodePoint(f.a+o-97);
+    if(f.d&&c>="0"&&c<="9") return String.fromCodePoint(f.d+o-48);
+    return c;
+  }).join("");
+}
+/** Шрифт строки: свой (style.font) или общий из списка «Шрифт». */
+const fontOf = style => (style&&style.font) || S.font;
+const convert = (t,font=S.font) => font==="small" ? [...t.toLowerCase()].map(c=>SMALL[c]||c).join("")
+  : MATH_FONTS[font] ? mathFont(t,MATH_FONTS[font])
+  : MAP_FONTS[font] ? [...t].map(c=>MAP_FONTS[font][c.toLowerCase()]||c).join("")
+  : t;
 // Таких букв нет в шрифте Minecraft — в предпросмотре рисуем их пикселями.
 const SC_PIX={
   "ᴀ":[".###.","#...#","#####","#...#","#...#"], "ʙ":["####.","#...#","####.","#...#","####."],
@@ -1117,7 +1210,7 @@ function glyphEl(c,hex,f){
   return sp;
 }
 function renderLine(el,text,style){
-  glyphColors(convert(text),style).forEach(g=>el.appendChild(glyphEl(g.c,g.hex,style.fmt)));
+  glyphColors(convert(text,fontOf(style)),style).forEach(g=>el.appendChild(glyphEl(g.c,g.hex,style.fmt)));
 }
 /** Цвет в точке t∈[0,1] сплошного градиента (как colorAt в генераторе — для sponsor). */
 function colorAt(stops,t){
@@ -1140,10 +1233,14 @@ function renderPreview(){
     return;
   }
   if(isSponsorEdit()){
-    const d=line(), st=S.name.style; if(!st.stops.every(valid)) return;
-    // Сервер растягивает градиент на префикс вместе с ником.
-    const full=[...(convert(S.name.text)+" "+(S.nick||"nickname"))], n=full.length;
-    full.forEach((c,i)=>d.appendChild(glyphEl(c, st.mode==="solid"?st.stops[0]:colorAt(st.stops,n>1?i/(n-1):0), st.fmt)));
+    const d=line(), st=S.name.style, ns=S.nickT.style;
+    if(!st.stops.every(valid)||!ns.stops.every(valid)) return;
+    // Префикс и ник — каждый со своим градиентом, как в команде.
+    const paint=(text,style)=>{ const ch=[...text], n=ch.length;
+      ch.forEach((c,i)=>d.appendChild(glyphEl(c, style.mode==="solid"?style.stops[0]:colorAt(style.stops,n>1?i/(n-1):0), style.fmt))); };
+    paint(convert(S.name.text,fontOf(st)),st);
+    d.appendChild(document.createTextNode(" "));
+    paint(S.nick||"nickname",ns);
     return;
   }
   const nm=line();
@@ -1202,7 +1299,7 @@ function classicBody(text,style){
 }
 /** Команда для названия или строки описания. Пустая строка описания — пропуск строки: &k. */
 function buildLine(isName,t){
-  const other=otherKind(), text=convert(t.text), empty=!t.text.trim(), b=base();
+  const other=otherKind(), text=convert(t.text,fontOf(t.style)), empty=!t.text.trim(), b=base();
   let cmd, limit=256;
   if(b==="item"||b==="/itemname"||b==="/itemlore"){ cmd=isName?"/itemname":"/itemlore"; limit=LIMITS[cmd]; }
   else if(other) cmd=(isName?S.cmdName:S.cmdLore)||"";
@@ -1216,10 +1313,13 @@ function buildLine(isName,t){
 function sponsorLine(){
   return {full:"/sponsor prefix "+sponsorColors().map(c=>"{#"+c+"}").join("")+" {#"+nickColor()+"}",limit:256};
 }
+/** <gradient:…>префикс<gradient:…> — второй градиент сервер применяет к нику. */
 function sponsorEditLine(){
-  const st=S.name.style, on=onFmt(st);
-  const open = st.mode==="solid" ? "<#"+st.stops[0]+">" : "<gradient:"+st.stops.map(h=>"#"+h).join(":")+">";
-  return {full:"/sponsor editprefix "+open+on.map(k=>"<"+MM[k]+">").join("")+[...convert(S.name.text)].map(mmEscape).join(""),limit:256};
+  const st=S.name.style, ns=S.nickT.style, on=onFmt(st), non=onFmt(ns);
+  const tag=x => x.mode==="solid" ? "<#"+x.stops[0]+">" : "<gradient:"+x.stops.map(h=>"#"+h).join(":")+">";
+  const prefix=tag(st)+on.map(k=>"<"+MM[k]+">").join("")+[...convert(S.name.text,fontOf(st))].map(mmEscape).join("")
+    +on.slice().reverse().map(k=>"</"+MM[k]+">").join("");          // формат префикса не переходит на ник
+  return {full:"/sponsor editprefix "+prefix+tag(ns)+non.map(k=>"<"+MM[k]+">").join(""),limit:256};
 }
 function cmdRow(num,line){
   if(line.len===undefined) line.len=line.full.length;
@@ -1258,7 +1358,7 @@ function renderCommands(){
   const other=otherKind();
   $("outNote").textContent =
       isSponsor() ? "Префикс sponsor из 7 букв: каждая буква получает свой цвет из градиента, в конце через пробел идёт цвет ника."
-    : isSponsorEdit() ? "В команду попадает только префикс, а градиент сервер растягивает на префикс вместе с ником — как в предпросмотре."
+    : isSponsorEdit() ? "Первый градиент — цвет префикса, второй (в конце команды) — цвет ника. Цвет ника меняется кнопкой «Цвет ника» выше."
     : isClassic() ? "Только цвета из /colors (&0–&f) и коды формата — доступно обычным игрокам. "+(base()==="am-raw"?"Пустая строка описания — &k.":"Вводите по очереди, держа предмет в руке; пустая строка описания — /itemlore &k.")
     : S.cmd==="item" ? "Вводите по очереди, держа предмет в руке: сначала /itemname, потом строки описания по порядку. Пустая строка описания — /itemlore &k (пропуск строки)."
     : S.cmd==="/itemlore" ? "Каждая строка — отдельная команда /itemlore, по порядку. Пустая строка — /itemlore &k (пропуск строки)."
@@ -1280,7 +1380,8 @@ function syncNickToEnd(force){
 function applyMode(){
   const other=otherKind(), sp=isSponsor(), spe=isSponsorEdit();
   $("otherBlock").hidden=!other; $("tplBlock").hidden=other!=="birdflop";
-  $("sponsorBlock").hidden=!(sp||spe); $("nickColorBox").hidden=!sp;
+  $("sponsorBlock").hidden=!(sp||spe); $("nickColorBox").hidden=!sp; $("nickGradBox").hidden=!spe;
+  if(active==="nick"&&!spe) active="name";
   $("sponsorNote").hidden=!sp;
   $("nameBlock").hidden=!showName(); $("loreBlock").hidden=!showLore();
   $("fontBlock").hidden=sp; $("symWrap").hidden=sp; $("fmtBlock").hidden=sp; $("seg").hidden=sp;
@@ -1367,7 +1468,7 @@ document.addEventListener("mousedown",e=>{ if(!$("symPop").hidden&&!e.target.clo
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("symPop").hidden) toggleSyms(false); });
 
 function update(){
-  const all = isSponsor() ? [S.sponsor] : isSponsorEdit() ? [S.name] : [...(showName()?[S.name]:[]),...(showLore()?S.lore:[])];
+  const all = isSponsor() ? [S.sponsor] : isSponsorEdit() ? [S.name,S.nickT] : [...(showName()?[S.name]:[]),...(showLore()?S.lore:[])];
   const allOk=isClassic() ? true : all.every(t=>t.style.stops.every(valid));
   const nickOk=!isSponsor()||valid(nickColor());
   if(isSponsor()) syncNickToEnd(false);
@@ -1385,7 +1486,7 @@ addEventListener("resize",()=>renderPreview());
 /* ================= Старт ================= */
 if(S.cmd==="am") S.cmd="item";
 if(![...$("cmd").options].some(o=>o.value===S.cmd)) S.cmd="item";
-$("cmd").value=S.cmd; $("font").value=S.font==="small"?"small":"normal"; S.font=$("font").value;
+$("cmd").value=S.cmd; if(![...$("font").options].some(o=>o.value===S.font)) S.font="normal"; $("font").value=S.font;
 $("cmdName").value=S.cmdName; $("cmdLore").value=S.cmdLore; $("tpl").value=S.tpl||DEFAULT_TPL;
 $("nickName").value=S.nick; $("nickHex").value=S.nickHex; if(valid(S.nickHex)) $("nickPick").value="#"+S.nickHex;
 lastEndSynced=S.sponsor.style.stops[S.sponsor.style.stops.length-1];
