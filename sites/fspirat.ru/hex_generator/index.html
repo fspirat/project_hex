@@ -284,6 +284,18 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 .sc-line{position:absolute;left:0}
 .sc-in{display:inline-block;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;image-rendering:pixelated}
 .sc-word{display:inline-block;margin-right:.25em;white-space:nowrap}
+/* классические цвета /colors */
+.leg-seq{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;margin-bottom:10px;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:2px}
+.leg-seq .empty-seq{color:var(--muted);align-self:center;padding:0 4px}
+.leg-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 4px 3px 6px;background:var(--card);border:1px solid var(--line-hi);border-radius:2px;font-size:14px}
+.leg-chip .sq{width:14px;height:14px;border:1px solid rgba(0,0,0,.6)}
+.leg-chip button{padding:0 5px;font-size:12px;box-shadow:none;line-height:16px}
+.leg-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px;margin-bottom:10px}
+.leg-sw{height:40px;padding:0;position:relative;border:1px solid rgba(0,0,0,.6);box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+.leg-sw span{position:absolute;left:3px;bottom:2px;font-size:12px;color:#fff;text-shadow:1px 1px 0 #000}
+.leg-sw:hover{border-color:#fff;transform:translateY(-1px)}
+@media(max-width:560px){.leg-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.obf{display:inline-block}
 /* диалог */
 .dlg{position:fixed;inset:0;background:rgba(3,5,3,.78);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .dlg-box{width:100%;max-width:380px;background:linear-gradient(180deg,var(--card),var(--surface));border:1px solid var(--line-hi);border-radius:3px;padding:18px;
@@ -324,13 +336,19 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
           <div>
             <label class="f" for="cmd">Формат</label>
             <select id="cmd">
-              <optgroup label="AgeMagic">
+              <optgroup label="AgeMagic ( Sponsor's )">
                 <option value="item">Предмет: /itemname + /itemlore (AgeMagic)</option>
                 <option value="/itemname">/itemname (AgeMagic) — лимит 64</option>
                 <option value="/itemlore">/itemlore (AgeMagic) — лимит 65</option>
                 <option value="sponsor">/sponsor prefix (AgeMagic) — до 7 цветов</option>
                 <option value="sponsoredit">/sponsor editprefix (AgeMagic) — лимит 256</option>
                 <option value="am-raw">no command (AgeMagic) — лимит 256</option>
+              </optgroup>
+              <optgroup label="AgeMagic ( обычные игроки цвета из [/colors] )">
+                <option value="c:item">Предмет: /itemname + /itemlore (цвета /colors)</option>
+                <option value="c:/itemname">/itemname (цвета /colors) — лимит 64</option>
+                <option value="c:/itemlore">/itemlore (цвета /colors) — лимит 65</option>
+                <option value="c:raw">Только текст с &amp;-кодами — лимит 256</option>
               </optgroup>
               <optgroup label="Другие форматы — лимит 256">
                 <option value="fmt:nickname">Nickname &amp;#rrggbb</option>
@@ -415,6 +433,16 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
           <button id="rndStops">Случайный градиент</button>
           <button id="savePal" class="accent save-btn"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAADzElEQVR42u2aS6hNURjHf+ucdXDzCBmIkbeQEuUxQd6mUiiKYqCUgUgpMkApJWYyUaRk4FEiA5GURzKR8hq4SXkMcOPec/bZBue/2La9z9nruPucM7hf7fbe56y9vu//vda3vr0NNVoKHAQmAEX+pSJggKqOvKggPn3APuAiUALK9R5aAvQAYYcdP4B1ktGmCW+AB8AC4ClwSg8aTVKQxg8AM4DzwHVNGDShYZNg4VDnCrBD3uDGBsBG4JJ4VpIm7ZaQm+owviVGO8mXTonPVeC2rvuA9WmWsBG0Vd1HkToLlHQ/NGGMD3UBK4BB0q4FXgLPJOwgjXsP7AHuAnOAC/r9H0vEEVViZwfAmbmaMCYLOaa7gcOx/74C04APkd+GA9+BVcANYG4MxO/ALtBaGivNfwbe6noIMCJBkQb4KBCPpYQLcqey84pWA/ipIL4KLNN1mJIQnEt9BlYDT5JAtBqA0TkAemO/JVEgkEkg1gHlVgOol04bgfgkEM6dLgKb2gnAh3cUxBrgoUCcaBeAXuCL5zOBAvcTcFwx0hYXqgLTga269lnRQ1mvpLOxLRZ+qFxnaaRk6GoQyEkgQhoVSXV81zQhuGN4GZgvfw6UJp9p5W1mXm8AvREzGk+3MaqpbskKYayEcXUPPnNbjwAKgNm6L/dDHMQr0RIwVf/1ZgXSCICrha4By4Ftqkt6IlpsdjGLAxoFzNT9lRjAutStgRtSQBWknXMt2sgci/BNU/gGje22GQOwDGwBzgCzPFZRHyprlX0SiY1+iYEwYvp7OvKkgs++23qmwmKz6c4juL2aBr5pNKDDqOA5ttgCmYo+cmW1gCHfflCSlU2WNGozCh+qANuv9koxR+GfA0eBF1lAZFnIQmCKss+YFlhgHrAWWAS8apSVsgCoAHsl/CvgNPAth2wUqhuxC5gknttl7aYBuAcni8FZ4GTOFugCjognjWIvaxC7arLvPxtbWXpHff29EkcLMNNkYysrVWK8+nUd6EgaADAAYADAAID2kvXYeLeTjA+AMLaN7AQK07oUNmVDYfHvW+ZJpUhlHKTFgAOzUjX5Tf683DNtdJuSZHku2f5SvE14YDQwUedChySaOcBIyfSXQm2skLLAfWovl7/LZDY2mW2iGeCTUOJeEQKbgWHAI1Jes4aRSvO1jii5XmiPxuRViToejqfjdT1lm4sF3gHjqb1YHkytsVqIZKMqME7XC6m9cLM5BHhRwi4Ur3HUWojuAxC3RxisXZuR7B37sUejowdY7IJhCXCI9n9u42IgMWVGdodvJO+dX8FwYQdPLI2uAAAAAElFTkSuQmCC" alt="" width="16" height="16"><span>Сохранить палитру</span></button>
         </div>
+        <div id="classicBlock" hidden>
+          <label class="f">Цвета из /colors <span class="hint">— по порядку; текст делится на равные части</span></label>
+          <div class="leg-seq" id="legSeq"></div>
+          <div class="leg-grid" id="legGrid"></div>
+          <div class="tools">
+            <button id="legRev">Поменять порядок</button>
+            <button id="legClear">Очистить</button>
+            <button id="legRnd">Случайные цвета</button>
+          </div>
+        </div>
         <p class="warn" id="warn"></p>
         <div id="fmtBlock">
         <label class="f" style="margin-top:14px">Форматирование</label>
@@ -423,6 +451,7 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
           <button data-c="o" aria-pressed="false">&amp;o Курсив</button>
           <button data-c="n" aria-pressed="false">&amp;n Подчёркнутый</button>
           <button data-c="m" aria-pressed="false">&amp;m Зачёркнутый</button>
+          <button data-c="k" aria-pressed="false" id="fmtK" hidden>&amp;k Мигающий</button>
         </div>
         </div>
       </section>
@@ -430,11 +459,12 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
       <!-- 03 Палитры -->
       <section class="panel reveal" style="animation-delay:.24s">
         <div class="sec-head"><h2><span>03</span>Палитры</h2><span class="sec-meta" id="palCount">готовые · мои</span></div>
-        <div class="pal-bar">
+        <div class="pal-bar" id="palBar">
           <div class="chips" id="cats" role="tablist" aria-label="Категории палитр"></div>
           <input type="text" id="palSearch" placeholder="Поиск…" aria-label="Поиск палитры" spellcheck="false">
         </div>
         <div id="paneReady">
+          <p class="note" id="classicPalNote" hidden style="margin:0 0 10px">Палитры из цветов /colors — для обычных игроков.</p>
           <div class="palettes" id="palettes"></div>
           <button type="button" class="more small" id="palMore"></button>
           <p class="note" id="palNone" hidden>Ничего не найдено.</p>
@@ -606,11 +636,14 @@ const DEFAULT_TPL="&#$1$2$3$4$5$6$f$c";
 const MAX_LORE=20;
 const SP_PREFIX="sponsor";
 /* Какие поля нужны каждому формату */
+const isClassic = () => S.cmd.startsWith("c:");
+/** Формат без пометки режима: c:item → item, c:raw → am-raw (текст без команды). */
+const base = () => { if(!isClassic()) return S.cmd; const b=S.cmd.slice(2); return b==="raw"?"am-raw":b; };
 const isSponsor = () => S.cmd==="sponsor";
 const isSponsorEdit = () => S.cmd==="sponsoredit";
 const otherKind = () => S.cmd.startsWith("fmt:") ? S.cmd.slice(4) : null;
-const showName = () => S.cmd!=="/itemlore" && !isSponsor();
-const showLore = () => !["/itemname","sponsor","sponsoredit"].includes(S.cmd);
+const showName = () => base()!=="/itemlore" && !isSponsor();
+const showLore = () => !["/itemname","sponsor","sponsoredit"].includes(base());
 const minStops = () => isSponsor()?1:2;
 const maxStops = () => isSponsor()?7:6;
 
@@ -634,6 +667,11 @@ function segments(chars,n){
 /** Цвет каждого символа: текст делится на равные части, каждая переливается к следующему цвету (как в генераторе). */
 function glyphColors(text,style){
   const chars=[...text];
+  if(isClassic()){
+    const cs=legOf(style); if(!cs.length) return chars.map(c=>({c,hex:"FFFFFF"}));
+    if(cs.length===1) return chars.map(c=>({c,hex:LEG[cs[0]]}));
+    const out=[]; segments(chars,cs.length+1).forEach((seg,k)=>seg.forEach(c=>out.push({c,hex:LEG[cs[k]]}))); return out;
+  }
   if(style.mode==="solid") return chars.map(c=>({c,hex:style.stops[0]}));
   const st=style.stops, out=[];
   segments(chars,st.length).forEach((seg,k)=>{
@@ -641,6 +679,37 @@ function glyphColors(text,style){
     seg.forEach((c,i)=>out.push({c,hex:mix(st[k],st[k+1],n>1?i/(n-1):0)}));
   });
   return out;
+}
+/* Классические цвета Minecraft (/colors): код → HEX и название */
+const LEG={"0":"000000","1":"0000AA","2":"00AA00","3":"00AAAA","4":"AA0000","5":"AA00AA","6":"FFAA00","7":"AAAAAA",
+  "8":"555555","9":"5555FF","a":"55FF55","b":"55FFFF","c":"FF5555","d":"FF55FF","e":"FFFF55","f":"FFFFFF"};
+const LEG_NAME={"0":"Чёрный","1":"Тёмно-синий","2":"Тёмно-зелёный","3":"Бирюзовый","4":"Тёмно-красный","5":"Фиолетовый","6":"Золотой","7":"Серый",
+  "8":"Тёмно-серый","9":"Синий","a":"Зелёный","b":"Голубой","c":"Красный","d":"Розовый","e":"Жёлтый","f":"Белый"};
+const LEG_MAX=8;
+const CLASSIC=[
+  {name:"Радуга",codes:"c6eab9d"},{name:"Огонь",codes:"4c6e"},{name:"Пламя",codes:"e6c"},{name:"Океан",codes:"19b"},
+  {name:"Лёд",codes:"fb3"},{name:"Небо",codes:"bf"},{name:"Лес",codes:"2a"},{name:"Мята",codes:"ab"},
+  {name:"Закат",codes:"5dc6"},{name:"Золото",codes:"6e"},{name:"Солнце",codes:"ef"},{name:"Неон",codes:"db"},
+  {name:"Эндер",codes:"5d"},{name:"Кровь",codes:"4c"},{name:"Ночь",codes:"87f"},{name:"Тень",codes:"087"},
+].map(p=>({name:p.name,codes:[...p.codes],colors:[...p.codes].map(c=>LEG[c])}));
+const nearestLeg = h => { const A=toRgb(h); let best="f",bd=1e9;
+  for(const [c,hx] of Object.entries(LEG)){ const B=toRgb(hx), d=A.reduce((s,v,i)=>s+(v-B[i])**2,0); if(d<bd){bd=d;best=c;} } return best; };
+/** Коды /colors для цели: если их ещё нет — берём ближайшие к её HEX-цветам. */
+function legOf(st){
+  if(!Array.isArray(st.legacy)||!st.legacy.every(c=>LEG[c])){
+    const src=(st.mode==="solid"?[st.stops[0]]:st.stops).filter(valid).map(nearestLeg);
+    st.legacy=src.filter((c,i)=>i===0||c!==src[i-1]).slice(0,LEG_MAX);
+    if(!st.legacy.length) st.legacy=["f"];
+  }
+  return st.legacy;
+}
+/** Резкие границы между цветами — так классические цвета и выглядят в игре. */
+const cssHard = codes => codes.length===1 ? "#"+LEG[codes[0]] :
+  "linear-gradient(90deg,"+codes.map((c,i)=>`#${LEG[c]} ${i/codes.length*100}%,#${LEG[c]} ${(i+1)/codes.length*100}%`).join(",")+")";
+function legacyName(st){
+  const cs=legOf(st); if(!cs.length) return "Цвета не выбраны";
+  const p=CLASSIC.find(p=>p.codes.join("")===cs.join(""));
+  return p ? p.name : cs.length===1 ? LEG_NAME[cs[0]] : "Свои цвета";
 }
 /** Соседние символы одного цвета склеиваются — команда короче. */
 function runs(glyphs){
@@ -651,7 +720,7 @@ function runs(glyphs){
 }
 
 /* ================= Состояние ================= */
-const newStyle = (colors,mode) => ({mode:mode||"gradient",stops:[...colors],fmt:{l:false,o:false,n:false,m:false}});
+const newStyle = (colors,mode) => ({mode:mode||"gradient",stops:[...colors],fmt:{l:false,o:false,n:false,m:false,k:false}});
 const DEFAULT_STATE = () => ({
   cmd:"item",font:"normal",cmdName:"",cmdLore:"",tpl:DEFAULT_TPL,
   name:{text:"Пример текста",style:newStyle(PALETTES[0].colors)},
@@ -685,15 +754,16 @@ const save = () => store.set(STATE_KEY,JSON.stringify(S));
 /* ================= Карточки палитр ================= */
 function card(p,onPick,isActive){
   const b=document.createElement("button"); b.type="button"; b.className="pcard"+(isActive?" active":"");
-  const bar=document.createElement("span"); bar.className="bar"; bar.style.background=css(p.colors);
+  const bar=document.createElement("span"); bar.className="bar"; bar.style.background=p.codes?cssHard(p.codes):css(p.colors);
   const nm=document.createElement("span"); nm.className="nm"; nm.textContent=p.name;
-  b.append(bar,nm); b.title=p.name+" — "+p.colors.map(c=>"#"+c).join(" → ");
+  b.append(bar,nm); b.title=p.name+" — "+(p.codes?p.codes.map(c=>"&"+c).join(" "):p.colors.map(c=>"#"+c).join(" → "));
   b.setAttribute("aria-pressed",isActive?"true":"false");
   b.addEventListener("click",()=>onPick(p));
   return b;
 }
-const isOn = (style,p) => style.mode==="gradient"&&p.colors.length===style.stops.length&&p.colors.every((c,i)=>c===style.stops[i]);
-function applyPalette(t,p){ const st=targetObj(t).style; st.mode="gradient"; st.stops=[...p.colors]; }
+const isOn = (style,p) => p.codes ? legOf(style).join("")===p.codes.join("")
+  : style.mode==="gradient"&&p.colors.length===style.stops.length&&p.colors.every((c,i)=>c===style.stops[i]);
+function applyPalette(t,p){ const st=targetObj(t).style; if(p.codes){ st.legacy=[...p.codes]; return; } st.mode="gradient"; st.stops=[...p.colors]; }
 
 let palCat="all", palQuery="", palOpen=false;
 function renderCats(){
@@ -710,6 +780,14 @@ function renderCats(){
 }
 function renderPalettes(){
   const st=cur(), q=palQuery.trim().toLowerCase(), box=$("palettes"); box.innerHTML="";
+  const cl=isClassic();
+  $("palBar").hidden=cl; $("classicPalNote").hidden=!cl;
+  if(cl){
+    $("palCount").textContent=CLASSIC.length+" палитр /colors";
+    $("paneReady").hidden=false; $("paneMine").hidden=true; $("palMore").hidden=true; $("palNone").hidden=true;
+    CLASSIC.forEach(p=>box.appendChild(card(p,p=>{applyPalette(active,p);refresh();},isOn(st,p))));
+    return;
+  }
   renderCats();
   $("palCount").textContent=(PALETTES.length+mine.length)+" палитр";
   const isMine=palCat==="mine";
@@ -756,8 +834,9 @@ function palButton(t){
   const b=document.createElement("button"); b.type="button"; b.className="pal-btn small"; b.setAttribute("aria-expanded","false");
   b.setAttribute("aria-haspopup","true"); b.title="Палитра строки";
   b.innerHTML='<span class="sw"></span><span class="nm"></span><span class="ar">▼</span>';
-  b.querySelector(".sw").style.background=css(st.mode==="solid"?[st.stops[0]]:st.stops);
-  b.querySelector(".nm").textContent=st.mode==="solid"?"#"+st.stops[0]:paletteName(st);
+  if(isClassic()){ const cs=legOf(st); b.querySelector(".sw").style.background=cs.length?cssHard(cs):"transparent"; b.querySelector(".nm").textContent=legacyName(st); }
+  else { b.querySelector(".sw").style.background=css(st.mode==="solid"?[st.stops[0]]:st.stops);
+    b.querySelector(".nm").textContent=st.mode==="solid"?"#"+st.stops[0]:paletteName(st); }
   b.addEventListener("click",e=>{
     e.stopPropagation();
     const was=openPop&&openPop.btn===b; closePop(); if(was) return;
@@ -769,6 +848,11 @@ function palButton(t){
     const body=document.createElement("div"); pop.appendChild(body);
     const fill=()=>{
       chips.innerHTML=""; body.innerHTML="";
+      if(isClassic()){
+        const g=document.createElement("div"); g.className="mini-grid";
+        CLASSIC.forEach(p=>g.appendChild(card(p,p=>{applyPalette(t,p);closePop();refresh();},isOn(targetObj(t).style,p))));
+        body.appendChild(g); return;
+      }
       CATS.concat(mine.length?[["mine","★ Мои"]]:[]).forEach(([id,label])=>{
         const c=document.createElement("button"); c.type="button"; c.className="chip"; c.textContent=label;
         c.setAttribute("aria-selected",popCat===id); c.addEventListener("click",()=>{ popCat=id; fill(); });
@@ -785,6 +869,7 @@ function palButton(t){
     solid.addEventListener("click",()=>{ const s=targetObj(t).style; s.mode="solid"; closePop(); refresh(); $("stops").querySelector("input[type=text]")?.focus(); });
     const more=document.createElement("button"); more.type="button"; more.className="small"; more.textContent="Настроить цвета…";
     more.addEventListener("click",()=>{ closePop(); $("modeGrad").scrollIntoView({behavior:"smooth",block:"center"}); });
+    if(isClassic()){ solid.hidden=true; more.onclick=null; more.addEventListener("click",()=>{ closePop(); $("legGrid").scrollIntoView({behavior:"smooth",block:"center"}); }); }
     foot.append(solid,more); pop.appendChild(foot);
     pop.addEventListener("click",e=>e.stopPropagation());
     wrap.appendChild(pop); b.setAttribute("aria-expanded","true"); openPop={pop,btn:b};
@@ -844,7 +929,38 @@ $("addLore").addEventListener("click",()=>{
 
 /* ================= Редактор цветов активной цели ================= */
 function roleOf(i,n){ return i===0?"Начало":i===n-1?"Конец":"Середина"; }
+function renderClassic(){
+  const st=cur(), cs=legOf(st), seq=$("legSeq"); seq.innerHTML="";
+  if(!cs.length){ const e=document.createElement("span"); e.className="empty-seq"; e.textContent="Нажмите на цвет ниже, чтобы добавить"; seq.appendChild(e); }
+  cs.forEach((c,i)=>{
+    const ch=document.createElement("span"); ch.className="leg-chip"; ch.title=LEG_NAME[c];
+    ch.innerHTML=`<span class="sq"></span><span></span><button type="button" aria-label="Убрать цвет">✕</button>`;
+    ch.children[0].style.background="#"+LEG[c]; ch.children[1].textContent=(i+1)+". &"+c;
+    ch.children[2].addEventListener("click",()=>{ cs.splice(i,1); refresh(); });
+    seq.appendChild(ch);
+  });
+  const g=$("legGrid"); if(!g.children.length) Object.keys(LEG).forEach(c=>{
+    const b=document.createElement("button"); b.type="button"; b.className="leg-sw"; b.style.background="#"+LEG[c];
+    b.title=LEG_NAME[c]+" — &"+c; b.innerHTML=`<span>&amp;${c}</span>`;
+    b.addEventListener("click",()=>{ const s=legOf(cur()); if(s.length>=LEG_MAX) return; s.push(c); refresh(); });
+    g.appendChild(b);
+  });
+  [...g.children].forEach(b=>b.disabled=cs.length>=LEG_MAX);
+  $("legRev").disabled=cs.length<2; $("legClear").disabled=!cs.length;
+  document.querySelectorAll("#fmt button").forEach(b=>b.setAttribute("aria-pressed",!!st.fmt[b.dataset.c]));
+}
+$("legRev").addEventListener("click",()=>{ legOf(cur()).reverse(); refresh(); });
+$("legClear").addEventListener("click",()=>{ cur().legacy=[]; refresh(); });
+$("legRnd").addEventListener("click",()=>{
+  const all=Object.keys(LEG).filter(c=>c!=="0"), n=2+Math.floor(Math.random()*3), out=[];
+  while(out.length<n){ const c=all[Math.floor(Math.random()*all.length)]; if(c!==out[out.length-1]) out.push(c); }
+  cur().legacy=out; refresh();
+});
 function renderStops(){
+  const cl=isClassic();
+  ["seg","chain","chainName","stopsLabel","stops","stopTools"].forEach(id=>$(id).hidden=cl||(id==="seg"&&isSponsor()));
+  $("classicBlock").hidden=!cl; $("fmtK").hidden=!cl;
+  if(cl) return renderClassic();
   const st=cur(), solid=st.mode==="solid";
   $("modeSolid").setAttribute("aria-pressed",solid); $("modeGrad").setAttribute("aria-pressed",!solid);
   $("stopsLabel").textContent = solid ? "Цвет" : isSponsor() ? "Цвета префикса (1–7)" : "Цвета ("+minStops()+"–"+maxStops()+")";
@@ -985,7 +1101,11 @@ function makeGlyph(ch,hex,f){
 
 /* ================= Предпросмотр ================= */
 /** Один символ цветом hex (без «#») с форматированием f. */
+const OBF="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghkmnopqrstuvwxyz0123456789#$%&?@";
+setInterval(()=>document.querySelectorAll(".obf").forEach(e=>{ e.textContent=OBF[Math.floor(Math.random()*OBF.length)]; }),70);
 function glyphEl(c,hex,f){
+  if(f.k&&isClassic()&&c!==" "){ const sp=document.createElement("span"); sp.className="obf"; sp.textContent=OBF[0];
+    sp.style.color="#"+hex; sp.style.textShadow=`${U()}px ${U()}px 0 ${shade(hex)}`; if(f.l) sp.style.fontWeight="700"; return sp; }
   const g=makeGlyph(c,hex,f); if(g) return g;
   const u=U(), col="#"+hex, sh=shade(hex), sp=document.createElement("span");
   sp.textContent=c; sp.style.color=col;
@@ -1037,7 +1157,7 @@ function renderPreview(){
 const LIMITS={"/itemname":64,"/itemlore":65};   // AgeMagic: лимит на текст после команды
 const BB={l:"B",o:"I",n:"U",m:"S"}, MM={l:"b",o:"i",n:"u",m:"st"};
 const mmEscape=c=>c.replace(/\\/g,"\\\\").replace(/</g,"\\<");
-const onFmt = style => Object.keys(style.fmt).filter(k=>style.fmt[k]);
+const onFmt = style => Object.keys(style.fmt).filter(k=>style.fmt[k]&&(k!=="k"||isClassic()));
 /** AgeMagic: {#HEX>}текст{#HEX<>}текст{#HEX<} — как в генераторе. */
 function ageMagic(text,style){
   const codes=onFmt(style).map(k=>"&"+k).join("");
@@ -1073,14 +1193,22 @@ function formatOther(kind,text,style){
   return out;
 }
 const withCmd = (cmd,body) => cmd ? cmd.trim()+" "+body : body;
+/** Классические цвета: &c текст &6 текст … — после каждого цвета повторяются коды формата (цвет их сбрасывает). */
+function classicBody(text,style){
+  const cs=legOf(style), codes=onFmt(style).map(k=>"&"+k).join(""), chars=[...text];
+  if(!cs.length) return codes+text;
+  const segs = cs.length===1 ? [chars] : segments(chars,cs.length+1);
+  return segs.map((seg,i)=>seg.length?"&"+cs[i]+codes+seg.join(""):"").join("");
+}
 /** Команда для названия или строки описания. Пустая строка описания — пропуск строки: &k. */
 function buildLine(isName,t){
-  const other=otherKind(), text=convert(t.text), empty=!t.text.trim();
+  const other=otherKind(), text=convert(t.text), empty=!t.text.trim(), b=base();
   let cmd, limit=256;
-  if(S.cmd==="item"||S.cmd==="/itemname"||S.cmd==="/itemlore"){ cmd=isName?"/itemname":"/itemlore"; limit=LIMITS[cmd]; }
+  if(b==="item"||b==="/itemname"||b==="/itemlore"){ cmd=isName?"/itemname":"/itemlore"; limit=LIMITS[cmd]; }
   else if(other) cmd=(isName?S.cmdName:S.cmdLore)||"";
   else cmd="";
-  const body = empty ? (other==="console"?"§k":"&k") : other ? formatOther(other,text,t.style) : ageMagic(text,t.style);
+  const body = empty ? (other==="console"?"§k":"&k") : isClassic() ? classicBody(text,t.style)
+    : other ? formatOther(other,text,t.style) : ageMagic(text,t.style);
   const full=withCmd(cmd,body);
   // Для /itemname и /itemlore лимит считается по тексту после команды, как в генераторе.
   return {full,len:cmd in LIMITS?body.length:full.length,limit};
@@ -1119,7 +1247,7 @@ function renderCommands(){
   if(isSponsor()){ h("Префикс:"); add("",sponsorLine()); }
   else if(isSponsorEdit()){ h("Префикс:"); if(S.name.text.trim()) add("",sponsorEditLine()); else none("Введите текст префикса."); }
   else {
-    if(showName()){ h(S.cmd==="item"||S.cmd==="/itemname"?"Название:":"Текст:");
+    if(showName()){ h(base()==="item"||base()==="/itemname"?"Название:":"Текст:");
       if(S.name.text.trim()) add("",buildLine(true,S.name)); else none("Текст не задан."); }
     if(showLore()){ h("Описание:");
       if(!S.lore.length) none("Строк нет.");
@@ -1131,6 +1259,7 @@ function renderCommands(){
   $("outNote").textContent =
       isSponsor() ? "Префикс sponsor из 7 букв: каждая буква получает свой цвет из градиента, в конце через пробел идёт цвет ника."
     : isSponsorEdit() ? "В команду попадает только префикс, а градиент сервер растягивает на префикс вместе с ником — как в предпросмотре."
+    : isClassic() ? "Только цвета из /colors (&0–&f) и коды формата — доступно обычным игрокам. "+(base()==="am-raw"?"Пустая строка описания — &k.":"Вводите по очереди, держа предмет в руке; пустая строка описания — /itemlore &k.")
     : S.cmd==="item" ? "Вводите по очереди, держа предмет в руке: сначала /itemname, потом строки описания по порядку. Пустая строка описания — /itemlore &k (пропуск строки)."
     : S.cmd==="/itemlore" ? "Каждая строка — отдельная команда /itemlore, по порядку. Пустая строка — /itemlore &k (пропуск строки)."
     : other==="minimessage" ? "MiniMessage сам распределяет градиент по тексту — результат получается короче."
@@ -1155,14 +1284,14 @@ function applyMode(){
   $("sponsorNote").hidden=!sp;
   $("nameBlock").hidden=!showName(); $("loreBlock").hidden=!showLore();
   $("fontBlock").hidden=sp; $("symWrap").hidden=sp; $("fmtBlock").hidden=sp; $("seg").hidden=sp;
-  $("nameLabel").textContent = spe ? "Префикс" : (S.cmd==="item"||S.cmd==="/itemname") ? "Название" : "Текст";
-  $("loreLabel").textContent = S.cmd==="/itemlore" ? "Строки описания (/itemlore)" : "Описание (lore)";
-  $("cmdMeta").textContent = sp||spe ? "/sponsor" : other ? "формат "+other : "AgeMagic";
+  $("nameLabel").textContent = spe ? "Префикс" : (base()==="item"||base()==="/itemname") ? "Название" : "Текст";
+  $("loreLabel").textContent = base()==="/itemlore" ? "Строки описания (/itemlore)" : "Описание (lore)";
+  $("cmdMeta").textContent = sp||spe ? "/sponsor" : isClassic() ? "цвета /colors" : other ? "формат "+other : "AgeMagic";
   // Выбор цели под формат.
   if(sp) active="sponsor";
   else {
     if(active==="sponsor") active="name";
-    if(S.cmd==="/itemlore"){
+    if(base()==="/itemlore"){
       if(!S.lore.length) S.lore.push({text:"",style:JSON.parse(JSON.stringify(S.name.style))});
       if(active==="name") active=0;
     }
@@ -1239,10 +1368,11 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("symPop").hidde
 
 function update(){
   const all = isSponsor() ? [S.sponsor] : isSponsorEdit() ? [S.name] : [...(showName()?[S.name]:[]),...(showLore()?S.lore:[])];
-  const allOk=all.every(t=>t.style.stops.every(valid));
+  const allOk=isClassic() ? true : all.every(t=>t.style.stops.every(valid));
   const nickOk=!isSponsor()||valid(nickColor());
   if(isSponsor()) syncNickToEnd(false);
-  $("warn").textContent = !cur().stops.every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
+  $("warn").textContent = isClassic() ? (legOf(cur()).length ? "" : "Выберите хотя бы один цвет.")
+    : !cur().stops.every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !nickOk ? "Цвет ника должен состоять из 6 символов HEX, например FD2177." : "";
   renderPreview();
   if(!allOk||!nickOk){ $("cmds").innerHTML='<p class="none">Исправьте цвета выше — команды появятся здесь.</p>'; lastAll=""; $("copyAll").disabled=true; $("outNote").textContent=""; }
