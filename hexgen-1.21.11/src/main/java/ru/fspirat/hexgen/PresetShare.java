@@ -15,6 +15,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.contents.PlainTextContents;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import ru.fspirat.hexgen.fslog.ChatBuffer;
 import ru.fspirat.hexgen.fslog.FsLog;
 
@@ -88,11 +90,34 @@ public final class PresetShare {
         return c;
     }
 
-    private record Part(String text, Style style) {}
+    /** Кусок сообщения: текст со стилем или нетекстовый элемент (иконка головы, спрайт…) — он переносится как есть. */
+    private record Part(String text, Style style, Component opaque) {}
+
+    /** Раскладывает сообщение на куски по порядку. Текст для поиска кода собирается из этих же кусков,
+     *  поэтому позиции совпадают, даже если в сообщении есть иконки и другие нетекстовые элементы. */
+    private static void flatten(Component c, Style parent, List<Part> out) {
+        Style style = c.getStyle().applyTo(parent);
+        var contents = c.getContents();
+        if (contents instanceof PlainTextContents || contents instanceof TranslatableContents) {
+            contents.visit((st, text) -> {
+                if (!text.isEmpty()) out.add(new Part(text, st, null));
+                return Optional.empty();
+            }, style);
+        } else {
+            out.add(new Part("", style, MutableComponent.create(contents).withStyle(style)));
+        }
+        for (Component sibling : c.getSiblings()) flatten(sibling, style, out);
+    }
 
     /** Заменяет каждый код пресета в сообщении компактной строкой, сохраняя остальное оформление. */
     static Component linkify(Component message) {
-        String full = message.getString();
+        if (HexCore.findPreset(message.getString()) == null) return message;
+        List<Part> parts = new ArrayList<>();
+        flatten(message, Style.EMPTY, parts);
+        StringBuilder sb = new StringBuilder();
+        for (Part part : parts) sb.append(part.text());
+        String full = sb.toString();
+
         Matcher m = HexCore.PRESET_CODE.matcher(full);
         List<int[]> ranges = new ArrayList<>();
         List<HexCore.Preset> presets = new ArrayList<>();
@@ -102,15 +127,13 @@ public final class PresetShare {
         }
         if (ranges.isEmpty()) return message;
 
-        List<Part> parts = new ArrayList<>();
-        message.visit((style, text) -> {
-            parts.add(new Part(text, style));
-            return Optional.empty();
-        }, Style.EMPTY);
-
         MutableComponent out = Component.empty();
         int pos = 0, next = 0;   // next — номер следующего ещё не вставленного кода
         for (Part part : parts) {
+            if (part.opaque() != null) {
+                out.append(part.opaque());
+                continue;
+            }
             String t = part.text();
             int i = 0;
             while (i < t.length()) {
