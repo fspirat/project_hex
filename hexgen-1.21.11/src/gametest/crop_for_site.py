@@ -27,5 +27,4 @@ for f in sorted(glob.glob(SRC+'/*.png')):
     c=im.crop(box)
     if c.width>1600: c=c.resize((1600,round(c.height*1600/c.width)),Image.LANCZOS)
     c.save(f'{DST}/{name}.webp',quality=88,method=6)
-    t=c.copy(); t.thumbnail((236,148),Image.LANCZOS); t.save(f'{DST}/{name}-s.webp',quality=82)
     print(name,box,c.size,os.path.getsize(f'{DST}/{name}.webp'))

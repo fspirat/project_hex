@@ -305,15 +305,27 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin
 
 /* галерея */
 .gallery{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
-.g-main{margin:0;position:relative;background:#050705;border:1px solid var(--line);border-radius:2px;overflow:hidden;cursor:zoom-in}
-.g-main img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain;image-rendering:auto}
-.g-main figcaption{font-size:15px;color:var(--text);padding:10px 12px;border-top:1px dashed var(--line)}
+.g-main{margin:0;background:#050705;border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.g-view{position:relative;cursor:zoom-in;touch-action:pan-y}
+.g-view img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain;image-rendering:auto;transition:opacity .18s}
+.g-view img.fade{opacity:.25}
+.g-main figcaption{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;font-size:15px;color:var(--text);padding:10px 12px;border-top:1px dashed var(--line)}
 .g-main figcaption small{display:block;font-family:var(--sans);color:var(--muted);font-size:13px;margin-top:3px}
-.thumbs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
-.thumb{flex:none;width:118px;padding:0;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:2px;overflow:hidden;opacity:.6;transition:opacity .2s,border-color .2s}
-.thumb img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}
-.thumb span{display:block;font-size:12px;color:var(--soft);padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
-.thumb:hover,.thumb[aria-current="true"]{opacity:1;border-color:var(--green)}
+.g-count{flex:none;font-size:14px;color:var(--green)}
+/* стрелки поверх скриншота */
+.arr{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:46px;height:46px;display:grid;place-items:center;padding:0;cursor:pointer;
+  font:inherit;font-size:22px;line-height:1;color:#d4ff9a;background:rgba(10,40,12,.55);border:1px solid rgba(127,191,58,.45);border-radius:3px;
+  backdrop-filter:blur(2px);box-shadow:0 0 14px rgba(0,0,0,.4);opacity:.75;transition:opacity .2s,background .2s,border-color .2s}
+.arr:hover{opacity:1;background:rgba(18,64,20,.78);border-color:var(--green-hi)}
+.arr:focus-visible{outline:2px solid var(--green-hi);outline-offset:2px;opacity:1}
+.arr.prev{left:10px}.arr.next{right:10px}
+@media(max-width:560px){.arr{width:38px;height:38px;font-size:18px}.arr.prev{left:6px}.arr.next{right:6px}}
+.dots{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+.dot{width:10px;height:10px;padding:0;cursor:pointer;background:var(--line-hi);border:none;border-radius:1px;transition:background .2s,transform .2s}
+.dot:hover{background:var(--green)}
+.dot[aria-current="true"]{background:var(--green-hi);transform:scale(1.25);box-shadow:0 0 8px rgba(155,224,82,.6)}
+.lightbox .arr{position:fixed}
+.lightbox .arr.prev{left:16px}.lightbox .arr.next{right:16px}
 
 /* /log */
 .log-grid{display:grid;grid-template-columns:1fr;gap:12px}
@@ -443,21 +455,19 @@ body.locked{overflow:hidden}
     </div>
   </section>
 
-  <!-- 02 — скриншоты: одна большая картинка и лента превью -->
+  <!-- 02 — скриншоты: одна большая картинка, стрелки и точки -->
   <section class="panel reveal" style="animation-delay:.28s" id="screens">
     <div class="sec-head"><h2><span>01</span>Скриншоты</h2><span class="muted" style="font-size:14px">версия 1.2</span></div>
     <div class="gallery">
-      <figure class="g-main" id="gMain"><img src="img/main.webp" alt="Главное окно HEX GENERATOR" width="1600" height="1000"><figcaption><span id="gTitle">Главное окно</span><small id="gText">Текст, цвета, формат и готовая команда</small></figcaption></figure>
-      <div class="thumbs" id="thumbs">
-        <button class="thumb" type="button" aria-current="true" data-src="img/main.webp" data-title="Главное окно" data-text="Текст, цвета, формат и готовая команда"><img src="img/main-s.webp" alt="" loading="lazy" width="236" height="148"><span>Главное окно</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/presets.webp" data-title="Пресеты" data-text="87 палитр по категориям и свои пресеты"><img src="img/presets-s.webp" alt="" loading="lazy" width="236" height="148"><span>Пресеты</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/palette.webp" data-title="Палитра" data-text="Ползунки HSV, быстрые и недавние цвета"><img src="img/palette-s.webp" alt="" loading="lazy" width="236" height="148"><span>Палитра</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/symbols.webp" data-title="Символы" data-text="19 тем, избранные и недавние"><img src="img/symbols-s.webp" alt="" loading="lazy" width="236" height="148"><span>Символы</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/format.webp" data-title="Формат" data-text="Команды AgeMagic и все RGB-форматы"><img src="img/format-s.webp" alt="" loading="lazy" width="236" height="148"><span>Формат</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/chat.webp" data-title="Чат" data-text="Пресет с кнопкой [+] и команда /log"><img src="img/chat-s.webp" alt="" loading="lazy" width="236" height="148"><span>Чат</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/inventory.webp" data-title="Кнопка в инвентаре" data-text="Перетаскивается с Ctrl"><img src="img/inventory-s.webp" alt="" loading="lazy" width="236" height="148"><span>Кнопка в инвентаре</span></button>
-        <button class="thumb" type="button" aria-current="false" data-src="img/settings.webp" data-title="Настройки" data-text="Темы, подсказки, кнопка"><img src="img/settings-s.webp" alt="" loading="lazy" width="236" height="148"><span>Настройки</span></button>
-      </div>
+      <figure class="g-main" id="gMain">
+        <div class="g-view" id="gView">
+          <img src="img/main.webp" alt="Главное окно" width="1600" height="1000">
+          <button class="arr prev" type="button" id="gPrev" aria-label="Предыдущий скриншот">◀</button>
+          <button class="arr next" type="button" id="gNext" aria-label="Следующий скриншот">▶</button>
+        </div>
+        <figcaption><div><span id="gTitle">Главное окно</span><small id="gText">Текст, цвета, формат и готовая команда</small></div><span class="g-count" id="gCount">1 / 8</span></figcaption>
+      </figure>
+      <div class="dots" id="gDots"></div>
     </div>
   </section>
 
@@ -673,7 +683,7 @@ body.locked{overflow:hidden}
   </div>
 </dialog>
 
-<div class="lightbox" id="lightbox" hidden><img alt=""></div>
+<div class="lightbox" id="lightbox" hidden><img alt=""><button class="arr prev" type="button" data-step="-1" aria-label="Предыдущий скриншот">◀</button><button class="arr next" type="button" data-step="1" aria-label="Следующий скриншот">▶</button></div>
 
 <script>
 // Демо: название переливается градиентом, как предпросмотр в моде.
@@ -691,21 +701,44 @@ body.locked{overflow:hidden}
   requestAnimationFrame(frame);
 })();
 
-// Галерея: превью переключают большую картинку, клик по ней — крупно.
+// Галерея: стрелки, точки, клавиши ← → и свайп; клик по скриншоту — крупно.
 (function(){
-  var main=document.getElementById('gMain'), img=main.querySelector('img'),
+  var SHOTS=[{"src": "img/main.webp", "t": "Главное окно", "d": "Текст, цвета, формат и готовая команда"}, {"src": "img/presets.webp", "t": "Пресеты", "d": "87 палитр по категориям и свои пресеты"}, {"src": "img/palette.webp", "t": "Палитра", "d": "Ползунки HSV, быстрые и недавние цвета"}, {"src": "img/symbols.webp", "t": "Символы", "d": "19 тем, избранные и недавние"}, {"src": "img/format.webp", "t": "Формат", "d": "Команды AgeMagic и все RGB-форматы"}, {"src": "img/chat.webp", "t": "Чат", "d": "Пресет с кнопкой [+] и команда /log"}, {"src": "img/inventory.webp", "t": "Кнопка в инвентаре", "d": "Перетаскивается с Ctrl"}, {"src": "img/settings.webp", "t": "Настройки", "d": "Темы, подсказки, кнопка"}];
+  var view=document.getElementById('gView'), img=view.querySelector('img'),
       title=document.getElementById('gTitle'), text=document.getElementById('gText'),
-      lb=document.getElementById('lightbox'), lbImg=lb.querySelector('img');
-  document.querySelectorAll('.thumb').forEach(function(t){
-    t.addEventListener('click',function(){
-      document.querySelectorAll('.thumb').forEach(function(o){o.setAttribute('aria-current','false')});
-      t.setAttribute('aria-current','true');
-      img.src=t.dataset.src;img.alt=t.dataset.title;title.textContent=t.dataset.title;text.textContent=t.dataset.text;
-    });
+      count=document.getElementById('gCount'), dots=document.getElementById('gDots'),
+      lb=document.getElementById('lightbox'), lbImg=lb.querySelector('img'), cur=0;
+  SHOTS.forEach(function(s,i){
+    var d=document.createElement('button');d.type='button';d.className='dot';d.setAttribute('aria-label',s.t);
+    d.addEventListener('click',function(){show(i)});dots.appendChild(d);
+    if(i)(new Image()).src=s.src;   // заранее, чтобы переключение было мгновенным
   });
-  main.addEventListener('click',function(){lbImg.src=img.src;lbImg.alt=img.alt;lb.hidden=false;});
+  function show(i){
+    cur=(i+SHOTS.length)%SHOTS.length;var s=SHOTS[cur];
+    img.classList.add('fade');
+    setTimeout(function(){img.src=s.src;img.alt=s.t;img.classList.remove('fade')},120);
+    title.textContent=s.t;text.textContent=s.d;count.textContent=(cur+1)+' / '+SHOTS.length;
+    Array.prototype.forEach.call(dots.children,function(d,k){d.setAttribute('aria-current',k===cur?'true':'false')});
+    if(!lb.hidden){lbImg.src=s.src;lbImg.alt=s.t}
+  }
+  document.getElementById('gPrev').addEventListener('click',function(e){e.stopPropagation();show(cur-1)});
+  document.getElementById('gNext').addEventListener('click',function(e){e.stopPropagation();show(cur+1)});
+  lb.querySelectorAll('.arr').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();show(cur+(+b.dataset.step))})});
+  view.addEventListener('click',function(){lbImg.src=SHOTS[cur].src;lbImg.alt=SHOTS[cur].t;lb.hidden=false;});
   lb.addEventListener('click',function(){lb.hidden=true});
-  document.addEventListener('keydown',function(e){if(e.key==='Escape')lb.hidden=true});
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){lb.hidden=true;return}
+    if(document.querySelector('dialog[open]'))return;
+    var r=view.getBoundingClientRect(), seen=!lb.hidden||(r.bottom>0&&r.top<innerHeight);
+    if(!seen||/^(INPUT|TEXTAREA)$/.test((document.activeElement||{}).tagName||''))return;
+    if(e.key==='ArrowLeft'){show(cur-1);e.preventDefault()}
+    if(e.key==='ArrowRight'){show(cur+1);e.preventDefault()}
+  });
+  var x0=null;
+  function down(e){x0=e.touches?e.touches[0].clientX:null}
+  function up(e){if(x0===null)return;var dx=e.changedTouches[0].clientX-x0;x0=null;if(Math.abs(dx)>40)show(cur+(dx<0?1:-1))}
+  [view,lb].forEach(function(el){el.addEventListener('touchstart',down,{passive:true});el.addEventListener('touchend',up)});
+  show(0);
 })();
 
 // Окна (+).
