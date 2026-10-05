@@ -38,6 +38,10 @@ public final class HexConfig {
     public static final List<HexCore.Preset> USER_PRESETS = new ArrayList<>();
     /** Последние скопированные/выполненные команды, новые сверху. */
     public static final List<String> HISTORY = new ArrayList<>();
+    /** Избранные и недавние символы (строки из символов; недавние — новые первыми). */
+    public static String favSymbols = "";
+    public static String recentSymbols = "";
+    public static final int MAX_RECENT_SYMBOLS = 28;
 
     private static Path dir() {
         return FabricLoader.getInstance().getConfigDir();
@@ -77,6 +81,8 @@ public final class HexConfig {
             for (String c : colors) ok &= HexCore.valid(c);
             if (ok) USER_PRESETS.add(new HexCore.Preset(v.substring(0, bar), colors));
         }
+        favSymbols = p.getProperty("favSymbols", "");
+        recentSymbols = p.getProperty("recentSymbols", "");
         HISTORY.clear();
         for (int i = 0; i < MAX_HISTORY; i++) {
             String v = p.getProperty("history." + i);
@@ -106,6 +112,8 @@ public final class HexConfig {
             p.setProperty("preset." + i, pr.name() + "|" + String.join(",", pr.colors()));
         }
         for (int i = 0; i < HISTORY.size(); i++) p.setProperty("history." + i, HISTORY.get(i));
+        p.setProperty("favSymbols", favSymbols);
+        p.setProperty("recentSymbols", recentSymbols);
         try {
             Files.createDirectories(dir());
             try (Writer w = Files.newBufferedWriter(file(), StandardCharsets.UTF_8)) {

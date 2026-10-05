@@ -26,7 +26,7 @@
   "fstweak.format.strike": "&m Strikethrough",
   "fstweak.format.hint": "Format — click to choose",
   "fstweak.symbols": "✦ Symbols",
-  "fstweak.symbols.hint": "Insert a symbol at the cursor",
+  "fstweak.symbols.hint": "Shift + click — favorites",
   "fstweak.part_color": "Part color",
   "fstweak.part_color.hint": "Own color or gradient for the selected part of the text",
   "fstweak.color_n": "Color %s",
@@ -311,5 +311,12 @@
   "fstweak.sym.16": "Latin with accents",
   "fstweak.sym.17": "Greek & Cyrillic",
   "fstweak.sym.18": "Other alphabets",
-  "fstweak.font.hint": "Click — next font, Shift + click — previous. Unicode styles change Latin letters only."
+  "fstweak.font.hint": "Click — next font, Shift + click — previous. Unicode styles change Latin letters only.",
+  "fstweak.symbols.fav": "Favorites",
+  "fstweak.symbols.recent": "Recent",
+  "fstweak.symbols.theme.hint": "Next symbol theme",
+  "fstweak.symbols.insert_add": "Insert «%s» · Shift + click — add to favorites",
+  "fstweak.symbols.insert_fav": "Insert «%s» · Shift + click — remove from favorites",
+  "fstweak.symbols.fav.empty": "Shift + click a symbol to add it here",
+  "fstweak.symbols.recent.empty": "Symbols you insert will appear here"
 }

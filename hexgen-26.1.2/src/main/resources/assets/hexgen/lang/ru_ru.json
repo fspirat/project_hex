@@ -26,7 +26,7 @@
   "fstweak.format.strike": "&m Зачёркнутый",
   "fstweak.format.hint": "Формат — нажмите, чтобы выбрать",
   "fstweak.symbols": "✦ Символы",
-  "fstweak.symbols.hint": "Вставить символ в позицию курсора",
+  "fstweak.symbols.hint": "Shift + клик — в избранное",
   "fstweak.part_color": "Цвет части",
   "fstweak.part_color.hint": "Свой цвет или градиент для выделенной части текста",
   "fstweak.color_n": "Цвет %s",
@@ -311,5 +311,12 @@
   "fstweak.sym.16": "Латиница с акцентами",
   "fstweak.sym.17": "Греческий и кириллица",
   "fstweak.sym.18": "Другие алфавиты",
-  "fstweak.font.hint": "Клик — следующий шрифт, Shift + клик — предыдущий. Стили из Unicode меняют только латиницу."
+  "fstweak.font.hint": "Клик — следующий шрифт, Shift + клик — предыдущий. Стили из Unicode меняют только латиницу.",
+  "fstweak.symbols.fav": "Избранные",
+  "fstweak.symbols.recent": "Недавние",
+  "fstweak.symbols.theme.hint": "Следующая тема символов",
+  "fstweak.symbols.insert_add": "Вставить «%s» · Shift + клик — в избранное",
+  "fstweak.symbols.insert_fav": "Вставить «%s» · Shift + клик — убрать из избранного",
+  "fstweak.symbols.fav.empty": "Shift + клик по символу добавит его сюда",
+  "fstweak.symbols.recent.empty": "Здесь появятся символы, которые вы вставляли"
 }

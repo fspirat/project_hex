@@ -26,7 +26,7 @@
   "fstweak.format.strike": "&m Закреслений",
   "fstweak.format.hint": "Формат — натисніть, щоб обрати",
   "fstweak.symbols": "✦ Символи",
-  "fstweak.symbols.hint": "Вставити символ у позицію курсора",
+  "fstweak.symbols.hint": "Shift + клік — до обраних",
   "fstweak.part_color": "Колір частини",
   "fstweak.part_color.hint": "Власний колір або градієнт для виділеної частини тексту",
   "fstweak.color_n": "Колір %s",
@@ -311,5 +311,12 @@
   "fstweak.sym.16": "Латиниця з акцентами",
   "fstweak.sym.17": "Грецька й кирилиця",
   "fstweak.sym.18": "Інші абетки",
-  "fstweak.font.hint": "Клік — наступний шрифт, Shift + клік — попередній. Стилі з Unicode змінюють лише латиницю."
+  "fstweak.font.hint": "Клік — наступний шрифт, Shift + клік — попередній. Стилі з Unicode змінюють лише латиницю.",
+  "fstweak.symbols.fav": "Обрані",
+  "fstweak.symbols.recent": "Нещодавні",
+  "fstweak.symbols.theme.hint": "Наступна тема символів",
+  "fstweak.symbols.insert_add": "Вставити «%s» · Shift + клік — до обраних",
+  "fstweak.symbols.insert_fav": "Вставити «%s» · Shift + клік — прибрати з обраних",
+  "fstweak.symbols.fav.empty": "Shift + клік по символу додасть його сюди",
+  "fstweak.symbols.recent.empty": "Тут з'являться символи, які ви вставляли"
 }
