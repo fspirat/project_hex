@@ -23,6 +23,9 @@ public class HexGenClient implements ClientModInitializer {
     public void onInitializeClient() {
         HexConfig.load();
         PresetShare.register();
+        UpdateCheck.register();
+        // Логгер чата /log. Если отдельно стоит мод FSLOG — работает он, встроенный не включаем.
+        if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("fslog")) ru.fspirat.hexgen.fslog.FsLog.init();
 
         OPEN_KEY = KeyMappingHelper.registerKeyMapping(
                 new KeyMapping("key.fstweak.open_hexgen", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));

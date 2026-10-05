@@ -162,5 +162,22 @@
   "fstweak.preset.saved_short": "збережено в пресети FSTWEAK",
   "fstweak.preset.chat.save": "[Зберегти пресет]",
   "fstweak.preset.chat.hover": "Натисніть, щоб зберегти пресет «%s» у FSTWEAK",
-  "fstweak.preset.imported": "Пресет «%s» з буфера збережено"
+  "fstweak.preset.imported": "Пресет «%s» з буфера збережено",
+  "fstweak.update.available": "Вийшла версія %s (у вас %s).",
+  "fstweak.update.download": "завантажити",
+  "fstweak.update.notes": "що нового",
+  "fslog.cleared": "Накопичений чат очищено.",
+  "fslog.empty": "Чат поки порожній — нічого зберігати.",
+  "fslog.wait": "Зачекайте %s с перед наступним завантаженням.",
+  "fslog.uploading": "Зберігаю %s повід. …",
+  "fslog.done": "Збережено %s повід.:",
+  "fslog.failed": "Не вдалося зберегти: %s",
+  "fslog.error.network": "немає зв'язку з fspirat.online",
+  "fslog.error.rate": "забагато завантажень, зачекайте %s с",
+  "fslog.error.size": "завеликий лог, спробуйте /log 1000",
+  "fslog.error.server": "помилка сервера",
+  "fslog.open": "Відкрити лог у браузері",
+  "fslog.copy": "[копіювати]",
+  "fslog.copy.hover": "Скопіювати посилання",
+  "fslog.error.offline": "сервер логів зараз недоступний, спробуйте пізніше"
 }

@@ -162,5 +162,22 @@
   "fstweak.preset.saved_short": "saved to FSTWEAK presets",
   "fstweak.preset.chat.save": "[Save preset]",
   "fstweak.preset.chat.hover": "Click to save the \"%s\" preset to FSTWEAK",
-  "fstweak.preset.imported": "Preset \"%s\" saved from clipboard"
+  "fstweak.preset.imported": "Preset \"%s\" saved from clipboard",
+  "fstweak.update.available": "Version %s is out (you have %s).",
+  "fstweak.update.download": "download",
+  "fstweak.update.notes": "what's new",
+  "fslog.cleared": "Stored chat cleared.",
+  "fslog.empty": "Chat is empty — nothing to save.",
+  "fslog.wait": "Wait %s s before the next upload.",
+  "fslog.uploading": "Saving %s messages…",
+  "fslog.done": "Saved %s messages:",
+  "fslog.failed": "Could not save: %s",
+  "fslog.error.network": "cannot reach fspirat.online",
+  "fslog.error.rate": "too many uploads, wait %s s",
+  "fslog.error.size": "log is too big, try /log 1000",
+  "fslog.error.server": "server error",
+  "fslog.open": "Open the log in your browser",
+  "fslog.copy": "[copy]",
+  "fslog.copy.hover": "Copy the link",
+  "fslog.error.offline": "the log server is unavailable right now, try later"
 }

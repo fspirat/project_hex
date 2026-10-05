@@ -1,4 +1,4 @@
-package ru.fspirat.fslog;
+package ru.fspirat.hexgen.fslog;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
