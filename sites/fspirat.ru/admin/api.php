@@ -47,6 +47,14 @@ if ($method === 'POST' && $q === 'login') {
 }
 if (!admin_logged_in($db)) { json_out(['error' => 'auth'], 401); exit; }
 if ($method === 'POST' && $q === 'logout') { audit($db, 'logout', from_site()); token_revoke($db); json_out(['ok' => 1]); exit; }
+if ($method === 'POST' && $q === 'chatlog_delete') {
+    $in = json_decode((string)file_get_contents('php://input', false, null, 0, 512), true);
+    $id = is_array($in) && is_string($in['id'] ?? null) && preg_match('/^[A-Za-z0-9]{10}$/', $in['id']) ? $in['id'] : '';
+    chatlog_table($db);
+    $st = $db->prepare('DELETE FROM chatlogs WHERE id = ?'); $st->execute([$id]);
+    if ($st->rowCount()) audit($db, 'chatlog_deleted', $id);
+    json_out(['ok' => $st->rowCount()]); exit;
+}
 if ($method !== 'GET') { json_out(['error' => 'method'], 405); exit; }
 
 $off = (int)date('Z');   // смещение часового пояса (Москва) для группировки по дням
@@ -205,6 +213,13 @@ try {
             'uptime' => $up, 'os' => $os, 'php' => PHP_VERSION,
             'db' => (@filesize($dbFile) ?: 0) + (@filesize($dbFile . '-wal') ?: 0),
         ]);
+        break;
+    }
+    case 'chatlogs': {
+        chatlog_table($db);
+        $list = rows($db, 'SELECT id, created, player, server, mc, mod, n, bytes, views FROM chatlogs WHERE created >= ? ORDER BY created DESC LIMIT 300', [time() - 30 * 86400]);
+        $total = rows($db, 'SELECT COUNT(*) c, IFNULL(SUM(bytes), 0) b FROM chatlogs WHERE created >= ?', [time() - 30 * 86400])[0];
+        json_out(['list' => $list, 'count' => (int)$total['c'], 'bytes' => (int)$total['b']]);
         break;
     }
     case 'audit':

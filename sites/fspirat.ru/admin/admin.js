@@ -95,7 +95,7 @@
     'gen.copy': 'Генератор: копирование', 'gen.random': 'Генератор: случайный градиент', 'gen.pal_save': 'Генератор: сохранил палитру',
     'gen.shot_load': 'Генератор: загрузил скриншот', 'gen.shot_apply': 'Генератор: цвета со скриншота'
   };
-  var AUDIT = { login_ok: 'Вход', login_fail: 'Неверный пароль', login_blocked: 'Вход заблокирован', logout: 'Выход', setup: 'Первая настройка', password_changed: 'Пароль изменён' };
+  var AUDIT = { chatlog_deleted: 'Удалён чат-лог', login_ok: 'Вход', login_fail: 'Неверный пароль', login_blocked: 'Вход заблокирован', logout: 'Выход', setup: 'Первая настройка', password_changed: 'Пароль изменён' };
   var pageName = function (p) { return PAGES[p] || p; };
   var fmtName = function (f) { return FMT[f] || f; };
   var evName = function (e) { return EV_NAME[e] || e; };
@@ -154,7 +154,7 @@
   function load() {
     clearTimeout(timer);
     var next = { overview: 60000, live: 15000 }[current];
-    var p = current === 'overview' ? loadOverview() : current === 'live' ? loadLive() : current === 'journal' ? loadJournal(false) : current === 'audit' ? loadAudit() : null;
+    var p = current === 'overview' ? loadOverview() : current === 'live' ? loadLive() : current === 'journal' ? loadJournal(false) : current === 'audit' ? loadAudit() : current === 'chatlogs' ? loadChatlogs() : null;
     if (next && p) p.then(function () { timer = setTimeout(function () { if (!document.hidden) load(); else timer = setTimeout(load, next); }, next); }, function () {});
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && (current === 'overview' || current === 'live')) load(); });
@@ -402,6 +402,34 @@
     }).catch(function () { box.textContent = 'Посетитель не найден (данные хранятся 90 дней).'; });
   }
   $('vBack').addEventListener('click', function () { show(backTo); });
+
+  // ---------- чат-логи FSLOG ----------
+  var LOG_VIEW = 'https://fspirat.online/log/?id=';
+  function loadChatlogs() {
+    return api({ q: 'chatlogs' }).then(function (r) {
+      $('clN').textContent = r.count ? '· ' + r.count : '';
+      var box = $('chatlogs'); box.textContent = '';
+      if (!r.list.length) { box.appendChild(h('p', { class: 'empty', text: 'Пока никто не загружал логи. Команда в игре: /log' })); return; }
+      var tb = h('tbody');
+      r.list.forEach(function (x) {
+        var del = h('button', { type: 'button', class: 'small', text: 'Удалить', onclick: function () {
+          if (!confirm('Удалить чат-лог ' + x.id + '? Ссылка перестанет открываться.')) return;
+          del.disabled = true;
+          api({ q: 'chatlog_delete' }, { id: x.id }).then(function () { loadChatlogs(); }, function () { del.disabled = false; });
+        } });
+        tb.appendChild(h('tr', null,
+          h('td', { class: 't', text: date(x.created) + ' ' + time(x.created) }),
+          h('td', null, h('a', { href: LOG_VIEW + x.id, target: '_blank', rel: 'noopener noreferrer', text: x.id })),
+          h('td', null, h('div', { class: 'ev', text: x.player || '—' }), h('small', { class: 'muted', text: x.server || '' })),
+          h('td', { class: 't' }, num(x.n) + ' сообщ.', h('br'), h('small', { class: 'muted', text: bytes(x.bytes) + ' · MC ' + (x.mc || '?') })),
+          h('td', { class: 't', text: num(x.views) }),
+          h('td', null, del)));
+      });
+      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }),
+        h('th', { text: 'Игрок · сервер' }), h('th', { text: 'Размер' }), h('th', { text: 'Просмотры' }), h('th', { text: '' }))), tb));
+      box.appendChild(h('p', { class: 'muted', text: 'Всего ' + num(r.count) + ' логов, ' + bytes(r.bytes) + ' текста. Старше 30 дней удаляются сами.' }));
+    });
+  }
 
   // ---------- журнал входов ----------
   function loadAudit() {

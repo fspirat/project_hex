@@ -29,6 +29,7 @@
     <button role="tab" data-tab="overview" aria-selected="true">Обзор</button>
     <button role="tab" data-tab="live" aria-selected="false">Сейчас</button>
     <button role="tab" data-tab="journal" aria-selected="false">Журнал</button>
+    <button role="tab" data-tab="chatlogs" aria-selected="false">Чатлоги</button>
     <button role="tab" data-tab="audit" aria-selected="false">Входы</button>
   </nav>
   <div class="logout"><button type="button" class="small" id="logout">Выйти</button></div>
@@ -79,6 +80,12 @@
   <section data-pane="visitor" hidden>
     <button type="button" class="small" id="vBack">← Назад</button>
     <div class="panel" id="visitor"></div>
+  </section>
+  <section data-pane="chatlogs" hidden>
+    <div class="panel">
+      <div class="ph"><h2>Чат-логи FSLOG <b id="clN"></b></h2><span class="muted">загружены командой /log из мода · хранятся 30 дней</span></div>
+      <div id="chatlogs"></div>
+    </div>
   </section>
   <section data-pane="audit" hidden>
     <div class="panel">

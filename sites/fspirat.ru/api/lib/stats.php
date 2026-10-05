@@ -87,6 +87,15 @@ CREATE TABLE IF NOT EXISTS rl(k TEXT PRIMARY KEY, win INTEGER NOT NULL, n INTEGE
 SQL);
 }
 
+/** Таблица чат-логов мода FSLOG (api/chatlog.php, вкладка «Чатлоги» в админке). */
+function chatlog_table(PDO $db): void
+{
+    $db->exec('CREATE TABLE IF NOT EXISTS chatlogs(
+      id TEXT PRIMARY KEY, created INTEGER NOT NULL, ip TEXT, player TEXT, server TEXT, mc TEXT, mod TEXT,
+      n INTEGER NOT NULL, bytes INTEGER NOT NULL, data BLOB NOT NULL, views INTEGER NOT NULL DEFAULT 0)');
+    $db->exec('CREATE INDEX IF NOT EXISTS cl_created ON chatlogs(created)');
+}
+
 /** Удаление данных старше 90 дней. */
 function stats_cleanup(PDO $db): void
 {
