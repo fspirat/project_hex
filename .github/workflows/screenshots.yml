@@ -35,7 +35,13 @@ jobs:
         working-directory: hexgen-1.21.11
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
-        run: xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace
+        # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток.
+        run: |
+          for i in 1 2 3; do
+            xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace && exit 0
+            echo "Attempt $i failed"
+          done
+          exit 1
 
       - uses: actions/upload-artifact@v4
         if: always()

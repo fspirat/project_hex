@@ -37,6 +37,7 @@ public class ShotsTest implements FabricClientGameTest {
         ctx.runOnClient(mc -> {
             mc.options.renderDistance().set(2);
             mc.options.simulationDistance().set(5);
+            mc.options.framerateLimit().set(10);   // меньше кадров — больше процессора серверу мира
         });
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
             sp.getClientWorld().waitForChunksRender();
@@ -47,6 +48,7 @@ public class ShotsTest implements FabricClientGameTest {
             });
             ctx.runOnClient(Minecraft::reloadResourcePacks);
             ctx.waitFor(mc -> mc.getOverlay() == null, 20 * 300);
+            ctx.runOnClient(mc -> mc.options.framerateLimit().set(60));
             ctx.getInput().resizeWindow(1920, 1200);
             ctx.waitTicks(20);
             sp.getServer().runCommand("gamemode survival @a");
