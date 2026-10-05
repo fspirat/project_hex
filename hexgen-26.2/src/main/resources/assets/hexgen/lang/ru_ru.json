@@ -328,5 +328,21 @@
   "fstweak.legacy.pick": "Выбрать цвет из /colors",
   "fstweak.format.colors.hex": "Цвета: HEX (спонсоры)",
   "fstweak.format.colors.classic": "Цвета: /colors (обычные)",
-  "fstweak.format.colors.hint": "Для /itemname, /itemlore и «без команды»: HEX-градиент (для спонсоров) или классические цвета /colors (&a, &c…) для обычных игроков"
+  "fstweak.format.colors.hint": "Для /itemname, /itemlore и «без команды»: HEX-градиент (для спонсоров) или классические цвета /colors (&a, &c…) для обычных игроков",
+  "fstweak.shot.title": "Градиент со скриншота",
+  "fstweak.shot.button.hint": "Узнать градиент по скриншоту (F2)",
+  "fstweak.shot.older": "Предыдущий (более старый) скриншот",
+  "fstweak.shot.newer": "Следующий (более новый) скриншот",
+  "fstweak.shot.apply": "Применить",
+  "fstweak.shot.simple": "Без повторов",
+  "fstweak.shot.simple.hint": "Часть текста одного цвета — генератор повторяет цвет. Без повторов (примерно): %s",
+  "fstweak.shot.refresh": "Обновить",
+  "fstweak.shot.refresh.hint": "Заново найти скриншоты (только что сделанный на F2)",
+  "fstweak.shot.none": "Скриншотов пока нет",
+  "fstweak.shot.read_error": "Не удалось открыть скриншот",
+  "fstweak.shot.no_text": "Цветной текст на скриншоте не найден",
+  "fstweak.shot.hint": "Нажмите F2, когда на экране виден текст с градиентом, и откройте это окно",
+  "fstweak.shot.loading": "Разбираю скриншот…",
+  "fstweak.shot.colors": "%s цв.",
+  "fstweak.shot.inexact": "Скриншот сжат или уменьшен — цвета примерные"
 }
