@@ -57,6 +57,7 @@ public class HexGenScreen extends Screen {
     public HexGenScreen(Screen parent) {
         super(Component.literal(HexUi.TITLE));
         this.parent = parent;
+        Usage.inc("open");
         if (!sampleSet) {
             sampleSet = true;
             if (HexState.S.text.isEmpty()) {
@@ -250,7 +251,7 @@ public class HexGenScreen extends Screen {
             refreshFormatButtons();
 
             this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("symbols")),
-                    b -> open(new SymbolsScreen(this, this::insertSymbol)))
+                    b -> open(Usage.counted("symbols", new SymbolsScreen(this, this::insertSymbol))))
                     .bounds(left + 190, y2, 72, 20).tooltip(HexUi.tip(HexUi.tr("symbols.hint"))).build());
 
             if (sponsorEdit()) {
@@ -337,19 +338,20 @@ public class HexGenScreen extends Screen {
                     if (!s().stops.contains(c)) s().stops.add(c);
                 }
             } else s().stops.addAll(HexCore.randomGradient());
+            Usage.inc("random");
             normalizeStops();
             if (sponsor()) syncNick(false);
         })).bounds(left + 129, y4, 66, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("presets")),
-                b -> open(classic() ? new LegacyPickerScreen(this, null, set -> change(() -> { s().stops.clear(); s().stops.addAll(set); }))
-                        : new PresetsScreen(this, this::applyPreset)))
+                b -> open(Usage.counted("presets", classic() ? new LegacyPickerScreen(this, null, set -> change(() -> { s().stops.clear(); s().stops.addAll(set); }))
+                        : new PresetsScreen(this, this::applyPreset))))
                 .bounds(left + 198, y4, 70, 20).tooltip(HexUi.tip(HexUi.tr("presets.hint"))).build());
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("save_preset")), b -> {
             if (!stopsValid()) { flash(HexUi.tr("fix_colors"), 0xFFFF5555); return; }
             String[] colors = s().stops.toArray(new String[0]);
-            open(new NamePresetScreen(this, colors, name -> flash(HexUi.tr("saved_as", name))));
+            open(new NamePresetScreen(this, colors, name -> { Usage.inc("preset_save"); flash(HexUi.tr("saved_as", name)); }));
         }).bounds(left + 271, y4, 69, 20).tooltip(HexUi.tip(HexUi.tr("save_preset.hint"))).build());
 
         // --- Нижние кнопки ---
@@ -359,6 +361,8 @@ public class HexGenScreen extends Screen {
             if (out.isEmpty()) { flash(HexUi.tr("fix_colors"), 0xFFFF5555); return; }
             this.minecraft.keyboardHandler.setClipboard(out);
             HexConfig.addHistory(out);
+            Usage.inc("copy");
+            Usage.inc("fmt." + s().command);
             int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
             if (len > limit) flash(HexUi.tr("copied_over", overLimitMessage(len, limit)), 0xFFFFD24D);
             else flash(HexUi.tr("copied"));
@@ -373,6 +377,8 @@ public class HexGenScreen extends Screen {
             if (this.minecraft.player != null) {
                 this.minecraft.player.connection.sendCommand(out.substring(1));
                 HexConfig.addHistory(out);
+                Usage.inc("run");
+                Usage.inc("fmt." + s().command);
                 flash(HexUi.tr("sent"));
             }
         }).bounds(left + step, y6, bw, 20).tooltip(HexUi.tip(HexUi.tr("run.hint"))).build();
@@ -383,6 +389,7 @@ public class HexGenScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("import")), b -> {
             String clip = this.minecraft.keyboardHandler.getClipboard();
+            Usage.inc("import");
             HexCore.Preset shared = HexCore.findPreset(clip);
             if (shared != null) {
                 HexConfig.addPreset(shared.name(), shared.colors());
@@ -393,7 +400,7 @@ public class HexGenScreen extends Screen {
                 .tooltip(HexUi.tip(HexUi.tr("import.hint"))).build());
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("history")),
-                b -> open(new HistoryScreen(this, this::applyCommand)))
+                b -> open(Usage.counted("history", new HistoryScreen(this, this::applyCommand))))
                 .bounds(left + step * 3, y6, bw, 20).tooltip(HexUi.tip(HexUi.tr("history.hint"))).build());
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())

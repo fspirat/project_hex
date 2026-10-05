@@ -4,7 +4,8 @@
  * страница админки (admin/index.html) открывается и с fspirat.ru, и с fspirat.online и ходит сюда.
  *   POST ?q=login   {"password": "..."}  → {"token": "..."}
  *   POST ?q=logout  (с токеном)
- *   GET  ?q=summary|live|events|visitor|audit  (с токеном: Authorization: Bearer ...)
+ *   GET  ?q=summary|live|events|visitor|modplayers|player|downloads|chatlogs|service|audit|backup  (с токеном: Authorization: Bearer ...)
+ *   POST ?q=chatlog_delete|chatlog_pin|backup_now|notify_save|notify_test|notify_chats  (с токеном)
  */
 
 declare(strict_types=1);
@@ -36,14 +37,22 @@ if ($method === 'POST' && $q === 'login') {
     }
     if ($pw !== '' && password_verify($pw, stats_config()['password_hash'])) {
         audit($db, 'login_ok', from_site() . ' · ' . $ua);
-        json_out(['token' => token_issue($db)]); exit;
+        json_out(['token' => token_issue($db)]);
+        finish_response();
+        notify('login_ok', '🔑 Вход в админку: ' . from_site() . ' · IP ' . client_ip());
+        exit;
     }
     audit($db, 'login_fail', from_site() . ' · ' . $ua);
     usleep(random_int(300000, 700000));   // замедляем подбор
     $st = $db->prepare("SELECT COUNT(*) FROM audit WHERE action = 'login_fail' AND ip = ? AND ts > ?");
     $st->execute([client_ip(), time() - LOGIN_LOCK_SEC]);
     $left = LOGIN_MAX_FAILS - (int)$st->fetchColumn();
-    json_out($left > 0 ? ['error' => 'password', 'left' => $left] : ['error' => 'locked', 'wait' => LOGIN_LOCK_SEC], $left > 0 ? 403 : 429); exit;
+    json_out($left > 0 ? ['error' => 'password', 'left' => $left] : ['error' => 'locked', 'wait' => LOGIN_LOCK_SEC], $left > 0 ? 403 : 429);
+    if ($left <= 0) {
+        finish_response();
+        notify('login', '⚠️ Вход в админку заблокирован на ' . intdiv(LOGIN_LOCK_SEC, 60) . ' мин: ' . LOGIN_MAX_FAILS . ' неверных паролей подряд. IP ' . client_ip() . ' · ' . from_site());
+    }
+    exit;
 }
 if (!admin_logged_in($db)) { json_out(['error' => 'auth'], 401); exit; }
 if ($method === 'POST' && $q === 'logout') { audit($db, 'logout', from_site()); token_revoke($db); json_out(['ok' => 1]); exit; }
@@ -55,7 +64,87 @@ if ($method === 'POST' && $q === 'chatlog_delete') {
     if ($st->rowCount()) audit($db, 'chatlog_deleted', $id);
     json_out(['ok' => $st->rowCount()]); exit;
 }
+if ($method === 'POST' && $q === 'chatlog_pin') {
+    $in = json_decode((string)file_get_contents('php://input', false, null, 0, 512), true);
+    $id = is_array($in) && is_string($in['id'] ?? null) && preg_match('/^[A-Za-z0-9]{10}$/', $in['id']) ? $in['id'] : '';
+    $pin = !empty($in['pinned']) ? 1 : 0;
+    chatlog_table($db);
+    $st = $db->prepare('UPDATE chatlogs SET pinned = ? WHERE id = ?'); $st->execute([$pin, $id]);
+    if ($st->rowCount()) audit($db, $pin ? 'chatlog_pinned' : 'chatlog_unpinned', $id);
+    json_out(['ok' => $st->rowCount()]); exit;
+}
+if ($method === 'POST' && $q === 'backup_now') {
+    try {
+        $path = backup_make($db, 'stats-' . date('Y-m-d-His') . '.sqlite');
+        if ($path) audit($db, 'backup_made', basename($path));
+        json_out($path ? ['ok' => 1, 'name' => basename($path)] : ['error' => 'dir'], $path ? 200 : 500);
+    } catch (Throwable $e) {
+        error_log('fspirat backup: ' . $e->getMessage());
+        json_out(['error' => 'server'], 500);
+    }
+    exit;
+}
+if ($method === 'POST' && in_array($q, ['notify_save', 'notify_test', 'notify_chats'], true)) {
+    $in = json_decode((string)file_get_contents('php://input', false, null, 0, 2048), true);
+    $in = is_array($in) ? $in : [];
+    $c = notify_cfg();
+    if ($q === 'notify_save') {
+        if (array_key_exists('token', $in)) {
+            $t = trim((string)$in['token']);
+            if ($t !== '' && !preg_match('/^\d{5,15}:[A-Za-z0-9_-]{30,60}$/', $t)) { json_out(['error' => 'token'], 400); exit; }
+            if ($t === '') { unset($c['token'], $c['chat'], $c['bot']); }
+            else {
+                $me = tg_call($t, 'getMe');
+                if (!($me['ok'] ?? false)) { json_out(['error' => $me === null ? 'network' : 'token'], 400); exit; }
+                $c['token'] = $t; $c['bot'] = (string)($me['result']['username'] ?? '');
+            }
+        }
+        if (array_key_exists('chat', $in)) {
+            $ch = trim((string)$in['chat']);
+            if ($ch !== '' && !preg_match('/^-?\d{1,20}$/', $ch)) { json_out(['error' => 'chat'], 400); exit; }
+            if ($ch === '') unset($c['chat']); else $c['chat'] = $ch;
+        }
+        if (is_array($in['events'] ?? null)) {
+            foreach (array_keys(NOTIFY_EVENTS) as $k) if (array_key_exists($k, $in['events'])) $c['events'][$k] = (bool)$in['events'][$k];
+        }
+        if (!notify_store($c)) { json_out(['error' => 'write'], 500); exit; }
+        audit($db, 'notify_changed', isset($in['token']) ? 'бот' : 'события');
+        json_out(['ok' => 1]); exit;
+    }
+    if (empty($c['token'])) { json_out(['error' => 'token'], 400); exit; }
+    if ($q === 'notify_test') {
+        if (empty($c['chat'])) { json_out(['error' => 'chat'], 400); exit; }
+        $r = tg_call($c['token'], 'sendMessage', ['chat_id' => $c['chat'], 'text' => '✅ Проверка: уведомления админ-панели FSPIRAT работают.']);
+        json_out(($r['ok'] ?? false) ? ['ok' => 1] : ['error' => $r === null ? 'network' : 'send', 'detail' => (string)($r['description'] ?? '')], ($r['ok'] ?? false) ? 200 : 502);
+        exit;
+    }
+    // notify_chats: кто писал боту — чтобы выбрать чат без поиска chat_id вручную
+    $r = tg_call($c['token'], 'getUpdates', ['limit' => 50, 'timeout' => 0]);
+    if (!($r['ok'] ?? false)) { json_out(['error' => $r === null ? 'network' : 'send', 'detail' => (string)($r['description'] ?? '')], 502); exit; }
+    $chats = [];
+    foreach ($r['result'] as $u) {
+        $m = $u['message'] ?? $u['channel_post'] ?? $u['my_chat_member'] ?? null;
+        $chat = $m['chat'] ?? null;
+        if (!is_array($chat) || !isset($chat['id'])) continue;
+        $name = trim(($chat['title'] ?? '') ?: (($chat['first_name'] ?? '') . ' ' . ($chat['last_name'] ?? '')));
+        $chats[(string)$chat['id']] = ['id' => (string)$chat['id'], 'name' => $name, 'user' => (string)($chat['username'] ?? ''), 'type' => (string)($chat['type'] ?? '')];
+    }
+    json_out(['chats' => array_values($chats)]); exit;
+}
 if ($method !== 'GET') { json_out(['error' => 'method'], 405); exit; }
+
+// Скачать резервную копию базы (файл, а не JSON).
+if ($q === 'backup') {
+    $name = (string)($_GET['name'] ?? '');
+    $path = backup_dir() . '/' . $name;
+    if (!preg_match('/^stats-[0-9-]{10,17}\.sqlite$/', $name) || !is_file($path)) { json_out(['error' => 'notfound'], 404); exit; }
+    audit($db, 'backup_downloaded', $name);
+    header('Content-Type: application/vnd.sqlite3');
+    header('Content-Disposition: attachment; filename="fspirat-' . $name . '"');
+    header('Content-Length: ' . filesize($path));
+    readfile($path);
+    exit;
+}
 
 $off = (int)date('Z');   // смещение часового пояса (Москва) для группировки по дням
 
@@ -127,10 +216,7 @@ try {
             'tables' => [
                 'pages'     => $group('path', 'events', "AND ev = 'pageview'"),
                 'sources'   => $group('source'),
-                'devices'   => $group('device'),
-                'browsers'  => $group('browser'),
-                'os'        => $group('os'),
-                'hosts'     => $group('host'),
+                'devices'   => $group("device || ' · ' || os || ' · ' || browser"),
                 'actions'   => $group('ev', 'events', "AND ev NOT IN ('pageview')", 20),
                 'formats'   => $group("json_extract(data, '$.fmt')", 'events', "AND ev = 'gen.copy'"),
                 'palettes'  => $group("json_extract(data, '$.name')", 'events', "AND ev = 'gen.palette'"),
@@ -216,9 +302,7 @@ try {
         break;
     }
     case 'modplayers': {
-        $db->exec('CREATE TABLE IF NOT EXISTS mod_players(
-          nick TEXT PRIMARY KEY, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL, joins INTEGER NOT NULL DEFAULT 0,
-          mod TEXT, mc TEXT, server TEXT, lang TEXT)');
+        mod_tables($db);
         $latest = json_decode((string)@file_get_contents(__DIR__ . '/../api/fstweak-version.json'), true) ?: [];
         $now = time();
         $c = rows($db, 'SELECT COUNT(*) total, SUM(last_seen >= ?) online, SUM(last_seen >= ?) day, SUM(last_seen >= ?) week, SUM(first_seen >= ?) fresh
@@ -229,13 +313,105 @@ try {
             'versions' => rows($db, 'SELECT mod k, COUNT(*) n FROM mod_players GROUP BY mod ORDER BY n DESC'),
             'mc' => rows($db, 'SELECT mc k, COUNT(*) n FROM mod_players GROUP BY mc ORDER BY n DESC'),
             'list' => rows($db, 'SELECT nick, first_seen, last_seen, joins, mod, mc, server, lang FROM mod_players ORDER BY last_seen DESC LIMIT 1000'),
+            'usage' => rows($db, 'SELECT k, SUM(n) n FROM mod_usage WHERE day >= ? GROUP BY k ORDER BY n DESC', [date('Y-m-d', $now - 29 * 86400)]),
+        ]);
+        break;
+    }
+    case 'player': {
+        $nick = (string)($_GET['nick'] ?? '');
+        if (!preg_match('/^[A-Za-z0-9_]{1,16}$/', $nick)) { json_out(['error' => 'bad'], 400); break; }
+        mod_tables($db); chatlog_table($db);
+        $p = rows($db, 'SELECT * FROM mod_players WHERE nick = ?', [$nick])[0] ?? null;
+        if (!$p) { json_out(['error' => 'notfound'], 404); break; }
+        json_out([
+            'player' => $p,
+            'seen' => rows($db, 'SELECT mod, mc, server, first_seen, last_seen FROM mod_seen WHERE nick = ? ORDER BY last_seen DESC LIMIT 100', [$nick]),
+            'chatlogs' => rows($db, 'SELECT id, created, server, n, views, pinned FROM chatlogs WHERE player = ? AND (created >= ? OR pinned = 1) ORDER BY created DESC LIMIT 100',
+                [$nick, time() - 30 * 86400]),
+        ]);
+        break;
+    }
+    case 'downloads': {
+        // Скачивания файлов мода с GitHub (кэш на час — GitHub ограничивает число запросов).
+        $cache = stats_dir() . '/gh-releases.json';
+        $data = json_decode((string)@file_get_contents($cache), true);
+        if (!is_array($data) || ($data['at'] ?? 0) < time() - 3600 || isset($_GET['fresh'])) {
+            $raw = @file_get_contents('https://api.github.com/repos/fspirat/project_hex/releases?per_page=30', false, stream_context_create(['http' => [
+                'timeout' => 8, 'ignore_errors' => true,
+                'header' => "User-Agent: fspirat-admin\r\nAccept: application/vnd.github+json\r\n"]]));
+            $rel = is_string($raw) ? json_decode($raw, true) : null;
+            if (is_array($rel) && array_is_list($rel)) {
+                $list = [];
+                foreach ($rel as $r) {
+                    $assets = [];
+                    foreach ($r['assets'] ?? [] as $a) $assets[] = ['name' => (string)$a['name'], 'n' => (int)$a['download_count']];
+                    $list[] = ['tag' => (string)($r['tag_name'] ?? ''), 'date' => strtotime((string)($r['published_at'] ?? '')) ?: 0, 'assets' => $assets];
+                }
+                $data = ['at' => time(), 'releases' => $list];
+                @file_put_contents($cache, json_encode($data, JSON_UNESCAPED_UNICODE));
+            } elseif (!is_array($data)) {
+                json_out(['error' => 'github'], 502); break;
+            }
+        }
+        json_out($data);
+        break;
+    }
+    case 'service': {
+        $now = time();
+        // SSL-сертификаты: сколько дней до окончания
+        $ssl = [];
+        foreach (['fspirat.ru', 'fspirat.online'] as $host) {
+            $ctx = stream_context_create(['ssl' => ['capture_peer_cert' => true, 'verify_peer' => false, 'verify_peer_name' => false, 'SNI_enabled' => true, 'peer_name' => $host]]);
+            $sock = @stream_socket_client('ssl://' . $host . ':443', $errno, $errstr, 6, STREAM_CLIENT_CONNECT, $ctx);
+            $info = null;
+            if ($sock) {
+                $cert = stream_context_get_params($sock)['options']['ssl']['peer_certificate'] ?? null;
+                $info = $cert ? openssl_x509_parse($cert) : null;
+                fclose($sock);
+            }
+            $ssl[] = ['host' => $host, 'until' => $info ? (int)$info['validTo_time_t'] : null, 'issuer' => (string)($info['issuer']['O'] ?? $info['issuer']['CN'] ?? '')];
+        }
+        // последняя выкладка: build.json пишут сценарии деплоя
+        $read = function (string $src) {
+            $raw = str_starts_with($src, 'https://')
+                ? @file_get_contents($src, false, stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]))
+                : @file_get_contents($src);
+            $j = is_string($raw) ? json_decode($raw, true) : null;
+            return is_array($j) ? ['sha' => substr((string)($j['sha'] ?? ''), 0, 40), 'time' => (int)($j['time'] ?? 0), 'run' => (string)($j['run'] ?? '')] : null;
+        };
+        $deploys = [
+            ['site' => 'fspirat.online (VPS)', 'build' => $read(__DIR__ . '/../api/build.json')],
+            ['site' => 'fspirat.ru (reg.ru)', 'build' => $read('https://fspirat.ru/api/build.json?' . $now)],
+        ];
+        // ошибки PHP: последние строки своего журнала
+        $errFile = stats_dir() . '/php-errors.log';
+        $errors = [];
+        if (is_file($errFile) && ($fh = @fopen($errFile, 'rb'))) {
+            $size = filesize($errFile);
+            fseek($fh, max(0, $size - 16384));
+            $tail = (string)stream_get_contents($fh); fclose($fh);
+            $errors = array_slice(array_values(array_filter(explode("\n", $tail), 'strlen')), -30);
+            if ($size > 16384) array_shift($errors);   // первая строка может быть обрезана
+        }
+        $backups = [];
+        foreach (glob(backup_dir() . '/stats-*.sqlite') ?: [] as $f) $backups[] = ['name' => basename($f), 'size' => filesize($f), 'time' => filemtime($f)];
+        usort($backups, fn($a, $b) => $b['time'] <=> $a['time']);
+        $c = notify_cfg();
+        $events = [];
+        foreach (NOTIFY_EVENTS as $k => $label) $events[] = ['k' => $k, 'label' => $label, 'on' => (bool)($c['events'][$k] ?? NOTIFY_DEFAULT[$k])];
+        $dbFile = stats_dir() . '/stats.sqlite';
+        json_out([
+            'ssl' => $ssl, 'deploys' => $deploys, 'errors' => $errors, 'errors_size' => is_file($errFile) ? filesize($errFile) : 0,
+            'backups' => $backups, 'backup_keep' => BACKUP_KEEP,
+            'db' => (@filesize($dbFile) ?: 0) + (@filesize($dbFile . '-wal') ?: 0),
+            'notify' => ['token' => !empty($c['token']), 'bot' => (string)($c['bot'] ?? ''), 'chat' => (string)($c['chat'] ?? ''), 'events' => $events],
         ]);
         break;
     }
     case 'chatlogs': {
         chatlog_table($db);
-        $list = rows($db, 'SELECT id, created, player, server, mc, mod, n, bytes, views FROM chatlogs WHERE created >= ? ORDER BY created DESC LIMIT 300', [time() - 30 * 86400]);
-        $total = rows($db, 'SELECT COUNT(*) c, IFNULL(SUM(bytes), 0) b FROM chatlogs WHERE created >= ?', [time() - 30 * 86400])[0];
+        $list = rows($db, 'SELECT id, created, player, server, mc, mod, n, bytes, views, pinned FROM chatlogs WHERE created >= ? OR pinned = 1 ORDER BY pinned DESC, created DESC LIMIT 300', [time() - 30 * 86400]);
+        $total = rows($db, 'SELECT COUNT(*) c, IFNULL(SUM(bytes), 0) b FROM chatlogs WHERE created >= ? OR pinned = 1', [time() - 30 * 86400])[0];
         json_out(['list' => $list, 'count' => (int)$total['c'], 'bytes' => (int)$total['b']]);
         break;
     }

@@ -12,6 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Отметка о выкладке: её показывает вкладка «Сервис» админ-панели.
+      - name: Write build stamp
+        run: printf '{"sha":"%s","time":%s,"run":"%s"}\n' "$GITHUB_SHA" "$(date +%s)" "$GITHUB_RUN_ID" > sites/fspirat.ru/api/build.json
+
       - name: Upload to server
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}

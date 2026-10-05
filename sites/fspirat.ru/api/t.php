@@ -121,4 +121,7 @@ try {
     if ($db->inTransaction()) $db->rollBack();
     error_log('fspirat-stats: ' . $e->getMessage());
 }
-done();
+http_response_code(204);
+finish_response();
+stats_housekeeping($db);   // раз в час: проверка диска и резервная копия базы
+exit;

@@ -148,3 +148,34 @@ h2 b{color:var(--green-hi);font-weight:400}
   .card .v{font-size:24px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* две колонки панелей (FSTWEAK, Сервис) */
+.grid.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));margin-bottom:14px}
+#cards .card.live{cursor:pointer}
+#cards .card.live:hover{border-color:rgba(127,191,58,.55)}
+#cards .card.live .d::after{content:" · показать";color:var(--green)}
+#cards .card.live.open .d::after{content:" · скрыть"}
+#pBack{margin-bottom:12px}
+/* строки «ключ — значение» */
+.kv{display:flex;flex-direction:column;gap:6px}
+.kv>div{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:7px 10px;background:var(--surface);border:1px solid var(--line);border-radius:2px;font-size:14px}
+.kv>div>span:first-child{color:var(--text-2)}
+.kv b{font-weight:400}
+.ok{color:var(--green-hi)}.warn{color:#ffd24d}.bad{color:var(--bad)}
+.sub-h{font-family:var(--pixel);font-size:14px;color:var(--green);margin:14px 0 8px}
+.sub-h:first-child{margin-top:0}
+/* форма уведомлений */
+.field{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.field input{flex:1 1 220px}
+.checks{display:flex;flex-direction:column;gap:6px;margin:4px 0 12px}
+.checks label{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
+.checks input{accent-color:var(--green)}
+.note{font-size:13px;color:var(--muted);margin:0 0 10px;line-height:1.5}
+.note b{color:var(--text-2);font-weight:400}
+.msg{font-size:13px;margin:6px 0 0}
+.chats{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.errlog{margin:0;max-height:320px;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:10px;
+  font:12px/1.5 ui-monospace,Consolas,monospace;color:var(--text-2);white-space:pre-wrap;word-break:break-word}
+.pin{box-shadow:none;padding:3px 8px;font-size:14px;margin-right:6px}
+.pin[aria-pressed="true"]{border-color:var(--green);background:rgba(127,191,58,.15)}
+tr.pinned td:first-child{box-shadow:inset 3px 0 0 var(--green)}

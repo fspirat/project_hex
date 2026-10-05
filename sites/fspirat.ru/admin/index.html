@@ -27,11 +27,10 @@
   <div class="brand"><span class="dot"></span>FSPIRAT <span>admin</span></div>
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="overview" aria-selected="true">Обзор</button>
-    <button role="tab" data-tab="live" aria-selected="false">Сейчас</button>
     <button role="tab" data-tab="journal" aria-selected="false">Журнал</button>
     <button role="tab" data-tab="mod" aria-selected="false">FSTWEAK</button>
     <button role="tab" data-tab="chatlogs" aria-selected="false">Чатлоги</button>
-    <button role="tab" data-tab="audit" aria-selected="false">Входы</button>
+    <button role="tab" data-tab="service" aria-selected="false">Сервис</button>
   </nav>
   <div class="logout"><button type="button" class="small" id="logout">Выйти</button></div>
 </header>
@@ -56,17 +55,15 @@
       <div class="srv-grid" id="srv"></div>
     </div>
     <div class="cards" id="cards"></div>
+    <div class="panel" id="livePanel" hidden>
+      <div class="ph"><h2>Сейчас на сайте <b id="liveN"></b></h2><span class="muted">активность за последние 5 минут · обновляется сама</span></div>
+      <div id="live"></div>
+    </div>
     <div class="panel">
       <div class="ph"><h2>Посещаемость</h2><div class="legend" id="legend"></div></div>
       <div class="chart" id="chart"></div>
     </div>
     <div class="grid" id="tables"></div>
-  </section>
-  <section data-pane="live" hidden>
-    <div class="panel">
-      <div class="ph"><h2>Сейчас на сайте <b id="liveN"></b></h2><span class="muted">активность за последние 5 минут · обновляется сама</span></div>
-      <div id="live"></div>
-    </div>
   </section>
   <section data-pane="journal" hidden>
     <div class="bar filters">
@@ -88,14 +85,46 @@
       <div class="ph"><h2>Игроки с FSTWEAK <b id="modN"></b></h2><input type="search" id="modQ" placeholder="Поиск по нику или серверу" aria-label="Поиск игрока"></div>
       <div id="modList"></div>
     </div>
+    <div class="grid two">
+      <div class="panel">
+        <div class="ph"><h2>Что используют в моде</h2><span class="muted">за 30 дней · только счётчики</span></div>
+        <div id="modUsage"></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h2>Скачивания с GitHub</h2><span class="muted" id="dlInfo"></span></div>
+        <div id="downloads"></div>
+      </div>
+    </div>
+  </section>
+  <section data-pane="player" hidden>
+    <button type="button" class="small" id="pBack">← Назад</button>
+    <div class="panel" id="player"></div>
   </section>
   <section data-pane="chatlogs" hidden>
     <div class="panel">
-      <div class="ph"><h2>Чат-логи FSLOG <b id="clN"></b></h2><span class="muted">загружены командой /log из мода · хранятся 30 дней</span></div>
+      <div class="ph"><h2>Чат-логи <b id="clN"></b></h2><span class="muted">загружены командой /log · хранятся 30 дней, 📌 — бессрочно</span></div>
       <div id="chatlogs"></div>
     </div>
   </section>
-  <section data-pane="audit" hidden>
+  <section data-pane="service" hidden>
+    <div class="grid two">
+      <div class="panel">
+        <div class="ph"><h2>Здоровье сайтов</h2><span class="muted" id="svcUpd"></span></div>
+        <div id="health"></div>
+      </div>
+      <div class="panel">
+        <div class="ph"><h2>Уведомления в Telegram</h2><span class="muted" id="tgState"></span></div>
+        <div id="notify"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Резервные копии базы</h2><span class="muted" id="bkInfo"></span></div>
+      <div id="backups"></div>
+    </div>
+    <div class="panel">
+      <div class="ph"><h2>Ошибки PHP</h2><span class="muted">последние строки журнала ошибок скриптов сайта</span></div>
+      <div id="errors"></div>
+    </div>
     <div class="panel">
       <div class="ph"><h2>Журнал входов в админку</h2><span class="muted">хранится 90 дней</span></div>
       <div id="audit"></div>

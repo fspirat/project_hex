@@ -25,6 +25,9 @@ const ADMIN_HOSTS = ['fspirat.online', 'www.fspirat.online'];
 
 date_default_timezone_set(STATS_TZ);
 
+// Ошибки PHP наших скриптов — в свой файл рядом с базой (его показывает вкладка «Сервис» в админке).
+if (is_dir(stats_dir()) && is_writable(stats_dir())) ini_set('error_log', stats_dir() . '/php-errors.log');
+
 function stats_dir(): string
 {
     return rtrim(getenv('FSPIRAT_STATS_DIR') ?: '/var/lib/fspirat-stats', '/');
@@ -84,6 +87,7 @@ CREATE INDEX IF NOT EXISTS v_first ON visitors(first_seen);
 CREATE TABLE IF NOT EXISTS audit(id INTEGER PRIMARY KEY, ts INTEGER NOT NULL, ip TEXT, action TEXT NOT NULL, detail TEXT);
 CREATE INDEX IF NOT EXISTS a_ts ON audit(ts);
 CREATE TABLE IF NOT EXISTS rl(k TEXT PRIMARY KEY, win INTEGER NOT NULL, n INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
 SQL);
 }
 
@@ -94,6 +98,33 @@ function chatlog_table(PDO $db): void
       id TEXT PRIMARY KEY, created INTEGER NOT NULL, ip TEXT, player TEXT, server TEXT, mc TEXT, mod TEXT,
       n INTEGER NOT NULL, bytes INTEGER NOT NULL, data BLOB NOT NULL, views INTEGER NOT NULL DEFAULT 0)');
     $db->exec('CREATE INDEX IF NOT EXISTS cl_created ON chatlogs(created)');
+    // «Закреплённый» лог не удаляется через 30 дней (для жалоб и споров) — колонка добавлена позже.
+    $cols = array_column($db->query('PRAGMA table_info(chatlogs)')->fetchAll(), 'name');
+    if (!in_array('pinned', $cols, true)) $db->exec('ALTER TABLE chatlogs ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0');
+}
+
+/** Игроки FSTWEAK (api/mod.php): последнее состояние, история версий и серверов, счётчики функций. */
+function mod_tables(PDO $db): void
+{
+    $db->exec('CREATE TABLE IF NOT EXISTS mod_players(
+      nick TEXT PRIMARY KEY, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL, joins INTEGER NOT NULL DEFAULT 0,
+      mod TEXT, mc TEXT, server TEXT, lang TEXT)');
+    $db->exec('CREATE TABLE IF NOT EXISTS mod_seen(
+      nick TEXT NOT NULL, mod TEXT NOT NULL, mc TEXT NOT NULL, server TEXT NOT NULL,
+      first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL, PRIMARY KEY(nick, mod, mc, server))');
+    $db->exec('CREATE TABLE IF NOT EXISTS mod_usage(day TEXT NOT NULL, k TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY(day, k))');
+}
+
+function meta_get(PDO $db, string $k): ?string
+{
+    $st = $db->prepare('SELECT v FROM meta WHERE k = ?'); $st->execute([$k]);
+    $v = $st->fetchColumn();
+    return $v === false ? null : (string)$v;
+}
+
+function meta_set(PDO $db, string $k, string $v): void
+{
+    $db->prepare('INSERT INTO meta(k, v) VALUES(?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v')->execute([$k, $v]);
 }
 
 /** Удаление данных старше 90 дней. */
@@ -105,6 +136,116 @@ function stats_cleanup(PDO $db): void
     $db->prepare('DELETE FROM visitors WHERE last_seen < ?')->execute([$cut]);
     $db->prepare('DELETE FROM audit WHERE ts < ?')->execute([$cut]);
     $db->prepare('DELETE FROM rl WHERE win < ?')->execute([time() - 3600]);
+    $db->prepare('DELETE FROM mod_usage WHERE day < ?')->execute([date('Y-m-d', $cut)]);
+}
+
+// ---------------------------------------------------------------------------
+// Уведомления в Telegram. Настройки — в notify.json рядом с базой (токен бота наружу не отдаётся).
+
+const NOTIFY_EVENTS = [
+    'player'   => 'Новый игрок поставил FSTWEAK',
+    'log'      => 'Кто-то сохранил чат командой /log',
+    'disk'     => 'Диск VPS заполнен больше чем на 90%',
+    'login'    => 'Вход в админку заблокирован (5 неверных паролей)',
+    'login_ok' => 'Успешный вход в админку',
+];
+const NOTIFY_DEFAULT = ['player' => true, 'log' => true, 'disk' => true, 'login' => true, 'login_ok' => false];
+
+function notify_cfg(): array
+{
+    $c = json_decode((string)@file_get_contents(stats_dir() . '/notify.json'), true);
+    return is_array($c) ? $c : [];
+}
+
+function notify_store(array $c): bool
+{
+    $file = stats_dir() . '/notify.json';
+    $tmp = $file . '.tmp';
+    if (@file_put_contents($tmp, json_encode($c, JSON_UNESCAPED_UNICODE), LOCK_EX) === false) return false;
+    @chmod($tmp, 0600);
+    return @rename($tmp, $file);
+}
+
+/** Вызов Bot API. Null — нет связи или ответ не разобрать. */
+function tg_call(string $token, string $method, array $params = [], int $timeout = 5): ?array
+{
+    $url = 'https://api.telegram.org/bot' . $token . '/' . $method;
+    $body = http_build_query($params);
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => $body, CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => $timeout, CURLOPT_TIMEOUT => $timeout]);
+        $raw = curl_exec($ch);
+        curl_close($ch);
+    } else {
+        $raw = @file_get_contents($url, false, stream_context_create(['http' => [
+            'method' => 'POST', 'header' => 'Content-Type: application/x-www-form-urlencoded', 'content' => $body,
+            'timeout' => $timeout, 'ignore_errors' => true]]));
+    }
+    $j = is_string($raw) ? json_decode($raw, true) : null;
+    return is_array($j) ? $j : null;
+}
+
+/** Отправить уведомление, если оно включено. Ответ клиенту лучше отдать до вызова (fastcgi_finish_request). */
+function notify(string $event, string $text): bool
+{
+    $c = notify_cfg();
+    if (empty($c['token']) || empty($c['chat']) || !($c['events'][$event] ?? NOTIFY_DEFAULT[$event] ?? false)) return false;
+    $r = tg_call($c['token'], 'sendMessage', ['chat_id' => $c['chat'], 'text' => $text, 'disable_web_page_preview' => 'true']);
+    if (!($r['ok'] ?? false)) error_log('fspirat notify ' . $event . ': ' . ($r['description'] ?? 'нет связи с api.telegram.org'));
+    return (bool)($r['ok'] ?? false);
+}
+
+/** Отдать ответ и продолжить работу без ожидания клиента (php-fpm). */
+function finish_response(): void
+{
+    if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+}
+
+// ---------------------------------------------------------------------------
+// Фоновые задачи раз в час: проверка диска и ежедневная резервная копия базы (хранится 7 штук).
+
+const BACKUP_KEEP = 7;
+
+function backup_dir(): string
+{
+    return stats_dir() . '/backups';
+}
+
+/** Копия базы целиком (VACUUM INTO — согласованный снимок без остановки записи). */
+function backup_make(PDO $db, ?string $name = null): ?string
+{
+    $dir = backup_dir();
+    if (!is_dir($dir) && !@mkdir($dir, 0700)) return null;
+    $name = $name ?? 'stats-' . date('Y-m-d') . '.sqlite';
+    $path = $dir . '/' . $name;
+    if (is_file($path)) @unlink($path);
+    $db->exec('VACUUM INTO ' . $db->quote($path));
+    @chmod($path, 0600);
+    $all = glob($dir . '/stats-*.sqlite') ?: [];
+    rsort($all);
+    foreach (array_slice($all, BACKUP_KEEP) as $old) @unlink($old);
+    return $path;
+}
+
+function stats_housekeeping(PDO $db): void
+{
+    $now = time();
+    try {
+        if ((int)meta_get($db, 'hk_last') > $now - 3600) return;
+        meta_set($db, 'hk_last', (string)$now);
+        $t = @disk_total_space('/'); $f = @disk_free_space('/');
+        if ($t && $f !== false) {
+            $pct = 100 * (1 - $f / $t);
+            if ($pct >= 90 && (int)meta_get($db, 'disk_alert') < $now - 86400) {
+                meta_set($db, 'disk_alert', (string)$now);
+                notify('disk', sprintf("💾 Диск VPS заполнен на %d%%: свободно %.1f ГБ из %.1f ГБ.", $pct, $f / 1073741824, $t / 1073741824));
+            }
+        }
+        if (!is_file(backup_dir() . '/stats-' . date('Y-m-d') . '.sqlite')) backup_make($db);
+    } catch (Throwable $e) {
+        error_log('fspirat housekeeping: ' . $e->getMessage());
+    }
 }
 
 /** Ограничение частоты: не больше $max событий за $window секунд по ключу. */
