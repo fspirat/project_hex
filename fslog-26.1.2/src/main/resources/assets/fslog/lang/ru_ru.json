@@ -1,0 +1,16 @@
+{
+  "fslog.cleared": "Накопленный чат очищен.",
+  "fslog.empty": "Чат пока пуст — сохранять нечего.",
+  "fslog.wait": "Подождите %s с. перед следующей загрузкой.",
+  "fslog.uploading": "Сохраняю %s сообщ. …",
+  "fslog.done": "Сохранено %s сообщ.:",
+  "fslog.failed": "Не удалось сохранить: %s",
+  "fslog.error.network": "нет связи с fspirat.online",
+  "fslog.error.rate": "слишком много загрузок, подождите %s с.",
+  "fslog.error.size": "слишком большой лог, попробуйте /log 1000",
+  "fslog.error.server": "ошибка сервера",
+  "fslog.open": "Открыть лог в браузере",
+  "fslog.copy": "[копировать]",
+  "fslog.copy.hover": "Скопировать ссылку",
+  "fslog.error.offline": "сервер логов сейчас недоступен, попробуйте позже"
+}

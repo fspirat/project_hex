@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://fspirat.online; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>FSLOG · Чат-лог</title>
+<link rel="stylesheet" href="log.css">
+</head>
+<body>
+<!-- Просмотр чат-логов мода FSLOG. Лог берётся с fspirat.online/api/chatlog.php?id=… -->
+<header class="top">
+  <a class="brand" href="/"><span class="dot"></span>FSLOG <span>chat log</span></a>
+  <span class="muted" id="state">загрузка…</span>
+</header>
+<main>
+  <section class="panel head" id="head" hidden>
+    <h1 id="title">Чат-лог</h1>
+    <div class="meta" id="meta"></div>
+  </section>
+  <div class="bar" id="bar" hidden>
+    <input type="search" id="q" placeholder="Поиск по сообщениям…" aria-label="Поиск по сообщениям">
+    <div class="seg" role="group" aria-label="Какие сообщения показывать">
+      <button type="button" data-kind="all" aria-pressed="true">Все</button>
+      <button type="button" data-kind="player" aria-pressed="false">Игроки</button>
+      <button type="button" data-kind="system" aria-pressed="false">Система</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="showTime" checked> время</label>
+    <label class="chk"><input type="checkbox" id="mcFont" checked> шрифт Minecraft</label>
+    <span class="sp"></span>
+    <button type="button" class="small" id="copyAll">Копировать всё</button>
+    <button type="button" class="small accent" id="download">Скачать .txt</button>
+  </div>
+  <p class="found muted" id="found" hidden></p>
+  <section class="chat mc" id="chat" aria-live="polite"></section>
+  <section class="panel empty" id="error" hidden></section>
+</main>
+<footer class="foot muted">Логи хранятся 30 дней · сделано модом FSLOG · <a href="/">fspirat</a></footer>
+<script src="log.js"></script>
+<script src="/js/stats.js" defer></script>
+</body>
+</html>

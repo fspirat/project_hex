@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "fslog",
+  "version": "${version}",
+  "name": "FSLOG",
+  "description": "Логгер чата: запоминает весь чат и по команде /log (или /chatlog) сохраняет его на fspirat.online — в чат приходит готовая ссылка. /log 200 — последние 200 сообщений, /log clear — очистить.",
+  "authors": [
+    "fspirat"
+  ],
+  "contact": {
+    "homepage": "https://fspirat.online/"
+  },
+  "license": "MIT",
+  "icon": "assets/fslog/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "ru.fspirat.fslog.FsLogClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

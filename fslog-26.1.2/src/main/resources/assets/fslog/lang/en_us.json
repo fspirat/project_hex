@@ -1,0 +1,16 @@
+{
+  "fslog.cleared": "Stored chat cleared.",
+  "fslog.empty": "Chat is empty — nothing to save.",
+  "fslog.wait": "Wait %s s before the next upload.",
+  "fslog.uploading": "Saving %s messages…",
+  "fslog.done": "Saved %s messages:",
+  "fslog.failed": "Could not save: %s",
+  "fslog.error.network": "cannot reach fspirat.online",
+  "fslog.error.rate": "too many uploads, wait %s s",
+  "fslog.error.size": "log is too big, try /log 1000",
+  "fslog.error.server": "server error",
+  "fslog.open": "Open the log in your browser",
+  "fslog.copy": "[copy]",
+  "fslog.copy.hover": "Copy the link",
+  "fslog.error.offline": "the log server is unavailable right now, try later"
+}
