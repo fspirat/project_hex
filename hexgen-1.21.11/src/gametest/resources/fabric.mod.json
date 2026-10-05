@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "fstweak-shots",
+  "version": "1.0.0",
+  "name": "FSTWEAK screenshots",
+  "environment": "client",
+  "entrypoints": {
+    "fabric-client-gametest": ["ru.fspirat.hexgen.shots.ShotsTest"]
+  },
+  "depends": {"hexgen": "*"}
+}
