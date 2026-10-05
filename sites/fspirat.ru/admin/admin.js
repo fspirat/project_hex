@@ -153,8 +153,8 @@
   document.querySelectorAll('.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-tab')); }); });
   function load() {
     clearTimeout(timer);
-    var next = { overview: 60000, live: 15000 }[current];
-    var p = current === 'overview' ? loadOverview() : current === 'live' ? loadLive() : current === 'journal' ? loadJournal(false) : current === 'audit' ? loadAudit() : current === 'chatlogs' ? loadChatlogs() : null;
+    var next = { overview: 60000, live: 15000, mod: 60000 }[current];
+    var p = current === 'overview' ? loadOverview() : current === 'live' ? loadLive() : current === 'journal' ? loadJournal(false) : current === 'audit' ? loadAudit() : current === 'chatlogs' ? loadChatlogs() : current === 'mod' ? loadMod() : null;
     if (next && p) p.then(function () { timer = setTimeout(function () { if (!document.hidden) load(); else timer = setTimeout(load, next); }, next); }, function () {});
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && (current === 'overview' || current === 'live')) load(); });
@@ -402,6 +402,46 @@
     }).catch(function () { box.textContent = 'Посетитель не найден (данные хранятся 90 дней).'; });
   }
   $('vBack').addEventListener('click', function () { show(backTo); });
+
+  // ---------- игроки с модом FSTWEAK ----------
+  var modData = null;
+  function cmpVer(a, b) {
+    var x = String(a || '').split('.'), y = String(b || '').split('.');
+    for (var i = 0; i < Math.max(x.length, y.length); i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d; }
+    return 0;
+  }
+  function loadMod() {
+    return api({ q: 'modplayers' }).then(function (r) {
+      modData = r;
+      var c = r.counts, old = r.list.filter(function (p) { return r.latest && cmpVer(p.mod, r.latest) < 0; }).length;
+      var cards = $('modCards'); cards.textContent = '';
+      cards.append(card('Сейчас в игре', num(c.online), 'активность за 15 минут', 'live'), card('Всего игроков', num(c.total), null),
+        card('За сутки', num(c.day), null), card('За 7 дней', num(c.week), 'новых: ' + num(c.fresh)),
+        card('Последняя версия', r.latest || '—', old ? old + ' на старой версии' : 'все обновлены'));
+      renderMod();
+    });
+  }
+  function renderMod() {
+    var r = modData; if (!r) return;
+    var q = $('modQ').value.trim().toLowerCase(), now = Date.now() / 1000;
+    var list = r.list.filter(function (p) { return !q || (p.nick + ' ' + (p.server || '')).toLowerCase().indexOf(q) >= 0; });
+    $('modN').textContent = '· ' + list.length;
+    var box = $('modList'); box.textContent = '';
+    if (!list.length) { box.appendChild(h('p', { class: 'empty', text: r.list.length ? 'Никого не нашлось.' : 'Пока никто не заходил в игру с FSTWEAK 1.2.' })); return; }
+    var tb = h('tbody');
+    list.forEach(function (p) {
+      var online = now - p.last_seen < 900, outdated = r.latest && cmpVer(p.mod, r.latest) < 0;
+      tb.appendChild(h('tr', null,
+        h('td', { class: 'who' }, h('span', { class: 'ev', text: p.nick }), online ? h('span', { class: 'tag new', text: 'в игре', style: 'margin-left:6px' }) : null),
+        h('td', null, h('span', { class: 'tag' + (outdated ? ' bad' : ''), text: 'FSTWEAK ' + (p.mod || '?') }), h('span', { class: 'tag', text: 'MC ' + (p.mc || '?') })),
+        h('td', null, h('small', { class: 'muted', text: p.server === 'singleplayer' ? 'одиночная игра' : p.server || '—' })),
+        h('td', { class: 't' }, online ? 'сейчас' : date(p.last_seen) + ' ' + time(p.last_seen), h('br'), h('small', { class: 'muted', text: 'впервые ' + date(p.first_seen) })),
+        h('td', { class: 't', text: num(p.joins) + ' заходов' })));
+    });
+    box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Ник' }), h('th', { text: 'Версии' }),
+      h('th', { text: 'Сервер' }), h('th', { text: 'Последний раз' }), h('th', { text: 'Заходы' }))), tb));
+  }
+  $('modQ').addEventListener('input', renderMod);
 
   // ---------- чат-логи FSLOG ----------
   var LOG_VIEW = 'https://fspirat.online/log/?id=';

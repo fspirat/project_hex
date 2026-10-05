@@ -78,8 +78,18 @@ public class HexGenScreen extends Screen {
         return "sponsor".equals(HexCore.COMMANDS[s().command]);
     }
 
-    private int minStops() { return sponsor() ? 1 : 2; }
-    private int maxStops() { return sponsor() ? 7 : 6; }
+    /** /sponsor editprefix: свой текст префикса + цвет ника. */
+    private boolean sponsorEdit() {
+        return s().command == HexCore.SPONSOR_EDIT;
+    }
+
+    /** Цвета /colors (обычные игроки) — только для /itemname, /itemlore и «без команды». */
+    private boolean classic() {
+        return s().classic && s().command <= 2;
+    }
+
+    private int minStops() { return sponsor() || classic() || sponsorEdit() ? 1 : 2; }
+    private int maxStops() { return sponsor() ? 7 : classic() ? 8 : 6; }
 
     private boolean stopsValid() {
         for (String c : s().stops) if (!HexCore.valid(c)) return false;
@@ -90,6 +100,16 @@ public class HexGenScreen extends Screen {
         List<String> st = s().stops;
         while (st.size() < minStops()) st.add(st.isEmpty() ? "FFFFFF" : st.get(st.size() - 1));
         while (st.size() > maxStops()) st.remove(st.size() - 2);
+        if (classic()) {
+            // только 16 классических цветов; одинаковые соседние сливаются, как на сайте
+            List<String> out = new ArrayList<>();
+            for (String c : st) {
+                String l = HexCore.nearestLegacyHex(c);
+                if (out.isEmpty() || !out.get(out.size() - 1).equals(l)) out.add(l);
+            }
+            st.clear();
+            st.addAll(out);
+        }
     }
 
     /** Цвет ника повторяет конечный цвет, пока его не поменяли вручную. */
@@ -213,8 +233,10 @@ public class HexGenScreen extends Screen {
 
         // --- Строка 2: шрифт, форматирование, символы, цвет части ---
         if (!sponsor()) {
-            this.addRenderableWidget(Button.builder(Component.literal(s().smallCaps ? "ꜱᴍᴀʟʟ ᴄᴀᴘꜱ" : HexUi.tr("font.normal")),
-                    b -> change(() -> s().smallCaps = !s().smallCaps)).bounds(left, y2, 96, 20).build());
+            // Шрифт: клик — следующий, Shift + клик — предыдущий (12 шрифтов, как на сайте)
+            this.addRenderableWidget(Button.builder(Component.literal(HexCore.fontLabel(s().font)),
+                    b -> change(() -> s().font = Math.floorMod(s().font + (HexUi.shiftDown() ? -1 : 1), HexCore.FONTS.length)))
+                    .bounds(left, y2, 96, 20).tooltip(HexUi.tip(HexUi.tr("font.hint"))).build());
 
             String[] tips = {HexUi.tr("format.bold"), HexUi.tr("format.italic"), HexUi.tr("format.underline"), HexUi.tr("format.strike")};
             for (int i = 0; i < 4; i++) {
@@ -231,9 +253,21 @@ public class HexGenScreen extends Screen {
                     b -> open(new SymbolsScreen(this, this::insertSymbol)))
                     .bounds(left + 190, y2, 72, 20).tooltip(HexUi.tip(HexUi.tr("symbols.hint"))).build());
 
-            this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("part_color")), b -> openPartColor())
-                    .bounds(left + 266, y2, 74, 20)
-                    .tooltip(HexUi.tip(HexUi.tr("part_color.hint"))).build());
+            if (sponsorEdit()) {
+                nickColorBox = new EditBox(this.font, left + 266, y2 + 1, 74, 12, Component.literal(HexUi.tr("nick_color")));
+                nickColorBox.setMaxLength(7);
+                nickColorBox.setValue(s().nickHex);
+                nickColorBox.setResponder(v -> s().nickHex = HexCore.clean(v));
+                nickColorBox.setTooltip(HexUi.tip(HexUi.tr("edit.nick_color.hint")));
+                this.addRenderableWidget(nickColorBox);
+                addSwatchButton(left + 266, y2 + 14, 74, () -> s().nickHex, v -> s().nickHex = v);
+            } else {
+                Button part = Button.builder(Component.literal(HexUi.tr("part_color")), b -> openPartColor())
+                        .bounds(left + 266, y2, 74, 20)
+                        .tooltip(HexUi.tip(HexUi.tr(classic() ? "part_color.classic" : "part_color.hint"))).build();
+                part.active = !classic();
+                this.addRenderableWidget(part);
+            }
         }
 
         // --- Строка 3: цвета (поле HEX + полоска-кнопка палитры под ним) ---
@@ -243,7 +277,13 @@ public class HexGenScreen extends Screen {
             final int idx = i;
             EditBox hex = new EditBox(this.font, left + i * stride, y3, boxW, 16, Component.literal(HexUi.tr("color_n", (i + 1))));
             hex.setMaxLength(7);
-            hex.setValue(stops.get(i));
+            hex.setValue(classic() ? "&" + HexCore.legacyCode(stops.get(i)) : stops.get(i));
+            if (classic()) {
+                hex.setEditable(false);
+                this.addRenderableWidget(hex);
+                addLegacyButton(left + i * stride, y3 + 18, boxW, idx);
+                continue;
+            }
             hex.setResponder(v -> {
                 String c = HexCore.clean(v);
                 if (c.equals(s().stops.get(idx))) return;
@@ -289,13 +329,21 @@ public class HexGenScreen extends Screen {
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("random")), b -> change(() -> {
             s().stops.clear();
-            s().stops.addAll(HexCore.randomGradient());
+            if (classic()) {
+                java.util.Random r = new java.util.Random();
+                int n = 2 + r.nextInt(3);
+                while (s().stops.size() < n) {
+                    String c = SiteData.LEGACY_HEX[1 + r.nextInt(15)];
+                    if (!s().stops.contains(c)) s().stops.add(c);
+                }
+            } else s().stops.addAll(HexCore.randomGradient());
             normalizeStops();
             if (sponsor()) syncNick(false);
         })).bounds(left + 129, y4, 66, 20).build());
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("presets")),
-                b -> open(new PresetsScreen(this, this::applyPreset)))
+                b -> open(classic() ? new LegacyPickerScreen(this, null, set -> change(() -> { s().stops.clear(); s().stops.addAll(set); }))
+                        : new PresetsScreen(this, this::applyPreset)))
                 .bounds(left + 198, y4, 70, 20).tooltip(HexUi.tip(HexUi.tr("presets.hint"))).build());
 
         this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("save_preset")), b -> {
@@ -306,7 +354,7 @@ public class HexGenScreen extends Screen {
 
         // --- Нижние кнопки ---
         int bw = 64, step = 69;
-        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("copy")), b -> {
+        this.addRenderableWidget(HexUi.accent(Button.builder(Component.literal(HexUi.tr("copy")), b -> {
             String out = output();
             if (out.isEmpty()) { flash(HexUi.tr("fix_colors"), 0xFFFF5555); return; }
             this.minecraft.keyboardHandler.setClipboard(out);
@@ -314,7 +362,7 @@ public class HexGenScreen extends Screen {
             int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
             if (len > limit) flash(HexUi.tr("copied_over", overLimitMessage(len, limit)), 0xFFFFD24D);
             else flash(HexUi.tr("copied"));
-        }).bounds(left, y6, bw, 20).build());
+        }).bounds(left, y6, bw, 20).build()));
 
         Button run = Button.builder(Component.literal(HexUi.tr("run")), b -> {
             String out = output();
@@ -401,7 +449,7 @@ public class HexGenScreen extends Screen {
             st.text = p.text();
             st.mask = p.mask();
             st.colors = p.colors();
-            st.smallCaps = false;
+            st.font = 0;
             st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
             cursor = highlight = st.text.length();
         }
@@ -444,7 +492,7 @@ public class HexGenScreen extends Screen {
         boolean anyColor = colors.stream().anyMatch(c -> c >= 0);
         st.colors = anyColor ? p.colors() : HexCore.spliceMask("", st.text, null, -1);
         if (anyColor) st.stops = new ArrayList<>(p.stops());
-        st.smallCaps = false;
+        st.font = 0;
         st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
         cursor = highlight = st.text.length();
         textBox = null;
@@ -547,6 +595,19 @@ public class HexGenScreen extends Screen {
         return (W + 4) / maxStops();
     }
 
+    /** В режиме /colors полоска открывает выбор из 16 классических цветов. */
+    private void addLegacyButton(int x, int y, int w, int idx) {
+        Button b = Button.builder(Component.empty(), btn -> open(new LegacyPickerScreen(this, hex -> {
+                    HexState.push();
+                    s().stops.set(idx, hex);
+                }, null)))
+                .bounds(x, y, w, 8)
+                .tooltip(HexUi.tip(HexUi.tr("legacy.pick")))
+                .build();
+        swatchButtons.add(b);
+        this.addRenderableWidget(b);
+    }
+
     /** Цветная полоска, по нажатию открывающая палитру. */
     private void addSwatchButton(int x, int y, int w, Supplier<String> get, Consumer<String> set) {
         Button b = Button.builder(Component.empty(), btn -> open(new ColorPickerScreen(this, get.get(), set)))
@@ -558,7 +619,7 @@ public class HexGenScreen extends Screen {
     }
 
     private String shownText() {
-        return s().smallCaps ? HexCore.toSmallCaps(s().text) : s().text;
+        return HexCore.applyFont(s().text, s().font);
     }
 
     /** Готовая команда или пустая строка, если цвета некорректны. */
@@ -568,6 +629,13 @@ public class HexGenScreen extends Screen {
         if (sponsor()) {
             if (!HexCore.valid(st.nickHex)) return "";
             return HexCore.sponsorCommand(st.stops, st.nickHex);
+        }
+        if (sponsorEdit()) {
+            if (!HexCore.valid(st.nickHex)) return "";
+            return HexCore.editPrefixCommand(shownText(), st.stops, HexCore.commonBits(st.mask, st.defaultBits), st.nickHex);
+        }
+        if (classic()) {
+            return HexCore.COMMANDS[st.command] + HexCore.classicBody(shownText(), st.stops, HexCore.commonBits(st.mask, st.defaultBits));
         }
         if (!HexCore.isAgeMagic(st.command)) {
             return HexConfig.formatPrefix + HexCore.formatText(st.command, shownText(), st.stops, st.mask, st.colors,
@@ -593,8 +661,13 @@ public class HexGenScreen extends Screen {
             root.append(Component.literal(st.nickName.isEmpty() ? "nickname" : st.nickName).withStyle(Style.EMPTY.withColor(nc)));
             return root;
         }
+        if (classic()) return HexUi.styled(HexCore.classicGlyphs(shownText(), st.stops, st.mask, st.defaultBits));
         List<HexCore.StyledGlyph> glyphs = HexCore.styled(shownText(), st.stops, st.mask, st.colors, st.defaultBits);
         if (HexConfig.animatePreview) glyphs = HexCore.animate(glyphs, st.stops, st.colors, HexCore.animationPhase());
+        if (sponsorEdit()) {
+            int nc = HexCore.valid(st.nickHex) ? HexCore.rgb(st.nickHex) : 0xFFFFFF;
+            return HexUi.styled(glyphs).append(Component.literal(" " + (st.nickName.isEmpty() ? "nickname" : st.nickName)).withStyle(Style.EMPTY.withColor(nc)));
+        }
         return HexUi.styled(glyphs);
     }
 
@@ -625,6 +698,7 @@ public class HexGenScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
+        HexUi.skin(this, g, mouseX, mouseY);
 
         MutableComponent title = HexUi.gradientTitle(HexUi.TITLE);
         g.text(this.font, title, (this.width - this.font.width(title)) / 2, top + 1, 0xFFFFFFFF, true);
@@ -647,21 +721,24 @@ public class HexGenScreen extends Screen {
         int area = px + pw - textLeft, tw = this.font.width(pv);
         g.text(this.font, pv, textLeft + Math.max(4, (area - tw) / 2), py + 7, 0xFFFFFFFF, true);
 
-        String colorsLabel = (sponsor() ? HexUi.tr("colors_sponsor") : HexUi.tr("colors")) + HexUi.tr("colors.hint");
+        String colorsLabel = sponsor() ? HexUi.tr("colors_sponsor") + HexUi.tr("colors.hint")
+                : classic() ? HexUi.tr("colors_classic") : sponsorEdit() ? HexUi.tr("colors_edit") + HexUi.tr("colors.hint")
+                : HexUi.tr("colors") + HexUi.tr("colors.hint");
         g.text(this.font, Component.literal(fit(colorsLabel, W)), left, top + Y_COLORS_LABEL, 0xFFA0A0A0, false);
 
         // Полоски-кнопки палитры: цвет поля (или тёмно-красный, если HEX неверный).
         HexState st = s();
-        int n = sponsor() ? 1 : 0;
+        int n = sponsor() || sponsorEdit() ? 1 : 0;   // первая полоска — цвет ника
         for (int i = 0; i < swatchButtons.size(); i++) {
             Button b = swatchButtons.get(i);
-            String c = sponsor() ? (i == 0 ? st.nickHex : st.stops.get(i - n)) : st.stops.get(i);
+            String c = n == 1 ? (i == 0 ? st.nickHex : st.stops.get(i - n)) : st.stops.get(i);
             int col = HexCore.valid(c) ? HexCore.rgb(c) : 0x550000;
             HexUi.drawSwatch(g, b.getX(), b.getY(), b.getWidth(), b.getHeight(), col, b.isHovered(), false);
         }
 
         // Весь градиент одной полосой.
-        HexUi.drawGradient(g, left, top + Y_GRADIENT, W, 4, st.stops);
+        if (classic()) HexUi.drawParts(g, left, top + Y_GRADIENT, W, 4, st.stops);
+        else HexUi.drawGradient(g, left, top + Y_GRADIENT, W, 4, st.stops);
 
         // Результат и счётчик длины.
         int ry = top + Y_RESULT;
@@ -673,7 +750,12 @@ public class HexGenScreen extends Screen {
             String counter = st.command <= 1 ? HexUi.tr("text_length", len, limit) : len + " / " + limit;
             g.text(this.font, Component.literal(counter), left + W - this.font.width(counter), ry, cc, false);
         }
-        g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
+        if (HexUi.fspirat()) {
+            g.fill(left, ry + 10, left + W, ry + 26, HexUi.C_LINE);
+            g.fill(left + 1, ry + 11, left + W - 1, ry + 25, HexUi.C_SURFACE);
+        } else {
+            g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
+        }
         String shown = out.isEmpty() ? HexUi.tr("hex_help") : out;
         g.text(this.font, Component.literal(fit(HexUi.visible(shown), W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
 

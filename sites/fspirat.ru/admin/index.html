@@ -29,6 +29,7 @@
     <button role="tab" data-tab="overview" aria-selected="true">Обзор</button>
     <button role="tab" data-tab="live" aria-selected="false">Сейчас</button>
     <button role="tab" data-tab="journal" aria-selected="false">Журнал</button>
+    <button role="tab" data-tab="mod" aria-selected="false">FSTWEAK</button>
     <button role="tab" data-tab="chatlogs" aria-selected="false">Чатлоги</button>
     <button role="tab" data-tab="audit" aria-selected="false">Входы</button>
   </nav>
@@ -80,6 +81,13 @@
   <section data-pane="visitor" hidden>
     <button type="button" class="small" id="vBack">← Назад</button>
     <div class="panel" id="visitor"></div>
+  </section>
+  <section data-pane="mod" hidden>
+    <div class="cards" id="modCards"></div>
+    <div class="panel">
+      <div class="ph"><h2>Игроки с FSTWEAK <b id="modN"></b></h2><input type="search" id="modQ" placeholder="Поиск по нику или серверу" aria-label="Поиск игрока"></div>
+      <div id="modList"></div>
+    </div>
   </section>
   <section data-pane="chatlogs" hidden>
     <div class="panel">

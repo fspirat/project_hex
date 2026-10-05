@@ -13,11 +13,12 @@ import net.minecraft.network.chat.Component;
 /** Выбор формата: команды AgeMagic и другие RGB-форматы. */
 public class FormatScreen extends Screen {
     private static final int W = 300;
-    private static final int H = 226;
+    private static final int H = 250;
     private static final int COL = 148;
 
     private final Screen parent;
     private final IntConsumer select;
+    private static final int[] ORDER_AGEMAGIC = {0, 1, 3, HexCore.SPONSOR_EDIT, 2};
     private final List<Button> buttons = new ArrayList<>();
     private int left;
     private int top;
@@ -34,17 +35,25 @@ public class FormatScreen extends Screen {
         top = Math.max(8, (this.height - H) / 2);
         buttons.clear();
 
-        // AgeMagic: /itemname, /itemlore, /sponsor prefix, no command.
-        int[] ageMagic = {0, 1, 3, 2};
-        for (int i = 0; i < ageMagic.length; i++) {
-            addFormat(ageMagic[i], left + (i % 2) * (COL + 4), top + 24 + (i / 2) * 22);
+        // AgeMagic: /itemname, /itemlore, /sponsor prefix, /sponsor editprefix, no command + выбор цветов (HEX или /colors).
+        for (int i = 0; i < ORDER_AGEMAGIC.length; i++) {
+            addFormat(ORDER_AGEMAGIC[i], left + (i % 2) * (COL + 4), top + 24 + (i / 2) * 22);
         }
-        for (int f = HexCore.FIRST_OTHER; f < HexCore.FORMAT_NAMES.length; f++) {
-            int i = f - HexCore.FIRST_OTHER;
-            addFormat(f, left + (i % 2) * (COL + 4), top + 80 + (i / 2) * 22);
+        Button colors = Button.builder(Component.literal(HexUi.tr(HexState.S.classic ? "format.colors.classic" : "format.colors.hex")), b -> {
+            HexState.push();
+            HexState.S.classic = !HexState.S.classic;
+            this.clearWidgets();
+            this.init();
+        }).bounds(left + COL + 4, top + 24 + 2 * 22, COL, 20).tooltip(HexUi.tip(HexUi.tr("format.colors.hint"))).build();
+        if (HexState.S.classic) HexUi.accent(colors);
+        this.addRenderableWidget(colors);
+        for (int f = HexCore.FIRST_OTHER, i = 0; f < HexCore.FORMAT_NAMES.length; f++) {
+            if (f == HexCore.SPONSOR_EDIT) continue;
+            addFormat(f, left + (i % 2) * (COL + 4), top + 102 + (i / 2) * 22);
+            i++;
         }
 
-        EditBox prefix = new SelectableEditBox(this.font, left, top + 182, COL, 18, Component.literal(HexUi.tr("format.prefix")));
+        EditBox prefix = new SelectableEditBox(this.font, left, top + 204, COL, 18, Component.literal(HexUi.tr("format.prefix")));
         prefix.setMaxLength(64);
         prefix.setValue(HexConfig.formatPrefix);
         prefix.setResponder(v -> {
@@ -54,7 +63,7 @@ public class FormatScreen extends Screen {
         prefix.setTooltip(HexUi.tip(HexUi.tr("format.prefix.hint")));
         this.addRenderableWidget(prefix);
 
-        EditBox template = new SelectableEditBox(this.font, left + COL + 4, top + 182, COL, 18, Component.literal(HexUi.tr("format.template")));
+        EditBox template = new SelectableEditBox(this.font, left + COL + 4, top + 204, COL, 18, Component.literal(HexUi.tr("format.template")));
         template.setMaxLength(128);
         template.setValue(HexConfig.birdflopTemplate);
         template.setResponder(v -> {
@@ -81,17 +90,18 @@ public class FormatScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         HexUi.drawPanel(g, left, top, W, H);
         super.render(g, mouseX, mouseY, delta);
+        HexUi.skin(this, g, mouseX, mouseY);
 
         Component t = HexUi.gradientTitle(HexUi.tr("format.title"));
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
         g.drawString(this.font, Component.literal("AgeMagic"), left, top + 14, 0xFFA0A0A0, false);
-        g.drawString(this.font, Component.literal(HexUi.tr("format.other")), left, top + 70, 0xFFA0A0A0, false);
-        g.drawString(this.font, Component.literal(HexUi.tr("format.prefix")), left, top + 172, 0xFFA0A0A0, false);
-        g.drawString(this.font, Component.literal(HexUi.tr("format.template")), left + COL + 4, top + 172, 0xFFA0A0A0, false);
+        g.drawString(this.font, Component.literal(HexUi.tr("format.other")), left, top + 92, 0xFFA0A0A0, false);
+        g.drawString(this.font, Component.literal(HexUi.tr("format.prefix")), left, top + 194, 0xFFA0A0A0, false);
+        g.drawString(this.font, Component.literal(HexUi.tr("format.template")), left + COL + 4, top + 194, 0xFFA0A0A0, false);
 
         // Текущий формат — в жёлтой рамке.
         int current = HexState.S.command;
-        int[] order = {0, 1, 3, 2, 4, 5, 6, 7, 8, 9, 10};
+        int[] order = {0, 1, 3, HexCore.SPONSOR_EDIT, 2, 4, 5, 6, 7, 8, 9, 10};
         for (int i = 0; i < buttons.size(); i++) {
             if (order[i] != current) continue;
             Button b = buttons.get(i);

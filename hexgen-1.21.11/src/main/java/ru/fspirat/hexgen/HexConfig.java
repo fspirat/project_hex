@@ -23,6 +23,11 @@ public final class HexConfig {
     /** Положение кнопки относительно левого верхнего угла инвентаря. */
     public static int buttonOffsetX = DEFAULT_OFFSET_X;
     public static int buttonOffsetY = DEFAULT_OFFSET_Y;
+    /** В творческом инвентаре — своё место кнопки (по умолчанию слева от окна). */
+    public static final int DEFAULT_CREATIVE_X = -22;
+    public static final int DEFAULT_CREATIVE_Y = 4;
+    public static int creativeOffsetX = DEFAULT_CREATIVE_X;
+    public static int creativeOffsetY = DEFAULT_CREATIVE_Y;
     /** Показывать всплывающие подсказки на кнопках. */
     public static boolean showHints = true;
     /** Анимированный градиент в предпросмотре и заголовке. */
@@ -34,10 +39,14 @@ public final class HexConfig {
     /** Шаблон формата BirdFlop. */
     public static String birdflopTemplate = HexCore.DEFAULT_BIRDFLOP;
     /** Ключи перевода тем. */
-    public static final String[] THEMES = {"theme.purple", "theme.dark", "theme.gradient"};
+    public static final String[] THEMES = {"theme.fspirat", "theme.purple", "theme.dark", "theme.gradient"};
     public static final List<HexCore.Preset> USER_PRESETS = new ArrayList<>();
     /** Последние скопированные/выполненные команды, новые сверху. */
     public static final List<String> HISTORY = new ArrayList<>();
+    /** Избранные и недавние символы (строки из символов; недавние — новые первыми). */
+    public static String favSymbols = "";
+    public static String recentSymbols = "";
+    public static final int MAX_RECENT_SYMBOLS = 28;
 
     private static Path dir() {
         return FabricLoader.getInstance().getConfigDir();
@@ -60,9 +69,12 @@ public final class HexConfig {
         }
         buttonOffsetX = intProp(p, "buttonOffsetX", DEFAULT_OFFSET_X);
         buttonOffsetY = intProp(p, "buttonOffsetY", DEFAULT_OFFSET_Y);
+        creativeOffsetX = intProp(p, "creativeOffsetX", DEFAULT_CREATIVE_X);
+        creativeOffsetY = intProp(p, "creativeOffsetY", DEFAULT_CREATIVE_Y);
         showHints = !"false".equals(p.getProperty("showHints"));
         animatePreview = !"false".equals(p.getProperty("animatePreview"));
-        theme = Math.floorMod(intProp(p, "theme", 0), THEMES.length);
+        // 1.2: появилась тема FSPIRAT (первая, по умолчанию); старый ключ «theme» сдвигаем на одну
+        theme = p.getProperty("theme2") != null ? Math.floorMod(intProp(p, "theme2", 0), THEMES.length) : 0;
         formatPrefix = p.getProperty("formatPrefix", "");
         birdflopTemplate = p.getProperty("birdflopTemplate", HexCore.DEFAULT_BIRDFLOP);
         USER_PRESETS.clear();
@@ -76,6 +88,8 @@ public final class HexConfig {
             for (String c : colors) ok &= HexCore.valid(c);
             if (ok) USER_PRESETS.add(new HexCore.Preset(v.substring(0, bar), colors));
         }
+        favSymbols = p.getProperty("favSymbols", "");
+        recentSymbols = p.getProperty("recentSymbols", "");
         HISTORY.clear();
         for (int i = 0; i < MAX_HISTORY; i++) {
             String v = p.getProperty("history." + i);
@@ -95,9 +109,11 @@ public final class HexConfig {
         Properties p = new Properties();
         p.setProperty("buttonOffsetX", String.valueOf(buttonOffsetX));
         p.setProperty("buttonOffsetY", String.valueOf(buttonOffsetY));
+        p.setProperty("creativeOffsetX", String.valueOf(creativeOffsetX));
+        p.setProperty("creativeOffsetY", String.valueOf(creativeOffsetY));
         p.setProperty("showHints", String.valueOf(showHints));
         p.setProperty("animatePreview", String.valueOf(animatePreview));
-        p.setProperty("theme", String.valueOf(theme));
+        p.setProperty("theme2", String.valueOf(theme));
         p.setProperty("formatPrefix", formatPrefix);
         p.setProperty("birdflopTemplate", birdflopTemplate);
         for (int i = 0; i < USER_PRESETS.size(); i++) {
@@ -105,6 +121,8 @@ public final class HexConfig {
             p.setProperty("preset." + i, pr.name() + "|" + String.join(",", pr.colors()));
         }
         for (int i = 0; i < HISTORY.size(); i++) p.setProperty("history." + i, HISTORY.get(i));
+        p.setProperty("favSymbols", favSymbols);
+        p.setProperty("recentSymbols", recentSymbols);
         try {
             Files.createDirectories(dir());
             try (Writer w = Files.newBufferedWriter(file(), StandardCharsets.UTF_8)) {

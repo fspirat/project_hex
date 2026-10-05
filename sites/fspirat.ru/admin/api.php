@@ -215,6 +215,23 @@ try {
         ]);
         break;
     }
+    case 'modplayers': {
+        $db->exec('CREATE TABLE IF NOT EXISTS mod_players(
+          nick TEXT PRIMARY KEY, first_seen INTEGER NOT NULL, last_seen INTEGER NOT NULL, joins INTEGER NOT NULL DEFAULT 0,
+          mod TEXT, mc TEXT, server TEXT, lang TEXT)');
+        $latest = json_decode((string)@file_get_contents(__DIR__ . '/../api/fstweak-version.json'), true) ?: [];
+        $now = time();
+        $c = rows($db, 'SELECT COUNT(*) total, SUM(last_seen >= ?) online, SUM(last_seen >= ?) day, SUM(last_seen >= ?) week, SUM(first_seen >= ?) fresh
+                        FROM mod_players', [$now - 900, $now - 86400, $now - 7 * 86400, $now - 7 * 86400])[0];
+        json_out([
+            'latest' => (string)($latest['version'] ?? ''),
+            'counts' => array_map('intval', $c),
+            'versions' => rows($db, 'SELECT mod k, COUNT(*) n FROM mod_players GROUP BY mod ORDER BY n DESC'),
+            'mc' => rows($db, 'SELECT mc k, COUNT(*) n FROM mod_players GROUP BY mc ORDER BY n DESC'),
+            'list' => rows($db, 'SELECT nick, first_seen, last_seen, joins, mod, mc, server, lang FROM mod_players ORDER BY last_seen DESC LIMIT 1000'),
+        ]);
+        break;
+    }
     case 'chatlogs': {
         chatlog_table($db);
         $list = rows($db, 'SELECT id, created, player, server, mc, mod, n, bytes, views FROM chatlogs WHERE created >= ? ORDER BY created DESC LIMIT 300', [time() - 30 * 86400]);

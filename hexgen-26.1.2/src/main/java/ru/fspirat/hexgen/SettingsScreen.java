@@ -95,6 +95,7 @@ public class SettingsScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
+        HexUi.skin(this, g, mouseX, mouseY);
 
         Component t = HexUi.gradientTitle(HexUi.tr("settings"));
         g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);

@@ -12,7 +12,10 @@ public final class HexState {
     /** Пусто до первого открытия окна — тогда подставляется пример на языке игры. */
     public String text = "";
     public int command = 0;
-    public boolean smallCaps = false;
+    /** Шрифт текста: индекс в HexCore.FONTS (0 — обычный, 1 — Small Caps, дальше — стили из Unicode). */
+    public int font = 0;
+    /** Цвета /colors (обычные игроки): вместо HEX — классические &-коды, текст делится на равные части. */
+    public boolean classic = false;
     public List<String> stops = new ArrayList<>(List.of("B04DFF", "FF8FE0"));
     /** Формат каждого символа (биты HexCore.BOLD…STRIKE). */
     public int[] mask = HexCore.spliceMask("", text, null, 0);
@@ -28,7 +31,8 @@ public final class HexState {
         HexState c = new HexState();
         c.text = text;
         c.command = command;
-        c.smallCaps = smallCaps;
+        c.font = font;
+        c.classic = classic;
         c.stops = new ArrayList<>(stops);
         c.mask = mask.clone();
         c.colors = colors.clone();
@@ -47,7 +51,7 @@ public final class HexState {
     }
 
     public boolean sameAs(HexState o) {
-        return text.equals(o.text) && command == o.command && smallCaps == o.smallCaps && stops.equals(o.stops)
+        return text.equals(o.text) && command == o.command && font == o.font && classic == o.classic && stops.equals(o.stops)
                 && java.util.Arrays.equals(mask, o.mask) && java.util.Arrays.equals(colors, o.colors)
                 && defaultBits == o.defaultBits && nickName.equals(o.nickName) && nickHex.equals(o.nickHex);
     }

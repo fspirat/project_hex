@@ -38,7 +38,7 @@ public final class ChatBuffer {
         });
     }
 
-    static void add(Component message, boolean player) {
+    public static void add(Component message, boolean player) {
         List<Seg> segs = segments(message);
         if (segs.isEmpty()) return;
         Entry e = new Entry(System.currentTimeMillis(), player, currentServer(), segs);

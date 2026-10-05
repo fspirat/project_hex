@@ -14,21 +14,23 @@ public final class HexCore {
     // Форматы: 0–3 — AgeMagic (как раньше), 4–10 — другие RGB-форматы.
     public static final int NICKNAME = 4, CHAT = 5, LEGACY = 6, CONSOLE = 7, BBCODE = 8, MINIMESSAGE = 9, BIRDFLOP = 10;
     public static final int FIRST_OTHER = NICKNAME;
-    public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor", "", "", "", "", "", "", ""};
+    public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor", "", "", "", "", "", "", "", "/sponsor editprefix "};
     /** Короткие подписи для кнопки в главном окне. */
     public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", "no command", "/sponsor prefix",
-        "Nickname &#", "Chat <#>", "Legacy &x", "Console §x", "BBCode", "MiniMessage", "BirdFlop"};
+        "Nickname &#", "Chat <#>", "Legacy &x", "Console §x", "BBCode", "MiniMessage", "BirdFlop", "/sponsor editprefix"};
     /** Полные названия в окне выбора формата. */
     public static final String[] FORMAT_NAMES = {"/itemname (AgeMagic)", "/itemlore (AgeMagic)", "no command (AgeMagic)",
         "/sponsor prefix (AgeMagic)", "Nickname &#rrggbb", "Chat <#rrggbb>", "Legacy &x&r&r&g&g&b&b",
-        "Console §x§r§r§g§g§b§b", "BBCode [COLOR=#rrggbb]", "MiniMessage", "BirdFlop"};
+        "Console §x§r§r§g§g§b§b", "BBCode [COLOR=#rrggbb]", "MiniMessage", "BirdFlop", "/sponsor editprefix (AgeMagic)"};
     /** Лимит длины: для /itemname и /itemlore считается только текст после команды, остальное — лимит чата. */
-    public static final int[] LIMITS = {64, 65, 256, 256, 256, 256, 256, 256, 256, 256, 256};
+    public static final int[] LIMITS = {64, 65, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256};
+    /** /sponsor editprefix: свой текст префикса градиентом и цвет ника (MiniMessage). */
+    public static final int SPONSOR_EDIT = 11;
     /** Шаблон BirdFlop по умолчанию: $1…$6 — цифры цвета, $f — коды формата, $c — символ. */
     public static final String DEFAULT_BIRDFLOP = "&#$1$2$3$4$5$6$f$c";
 
     public static boolean isAgeMagic(int format) {
-        return format < FIRST_OTHER;
+        return format < FIRST_OTHER || format == SPONSOR_EDIT;
     }
 
     /** Длина, которую сервер сравнивает с лимитом. */
@@ -75,24 +77,9 @@ public final class HexCore {
 
     public record Preset(String name, String[] colors) {}
 
-    public static final List<Preset> PRESETS = List.of(
-        new Preset("preset.special", new String[]{"B04DFF", "FF8FE0"}),
-        new Preset("preset.sunset", new String[]{"FAE8F3", "FF8F5A"}),
-        new Preset("preset.flame", new String[]{"FFE259", "FF7A00", "D10000"}),
-        new Preset("preset.ocean", new String[]{"00F0FF", "0066FF"}),
-        new Preset("preset.emerald", new String[]{"C6FF8A", "1FAA59"}),
-        new Preset("preset.ice", new String[]{"FFFFFF", "9BE7FF", "4A9BFF"}),
-        new Preset("preset.ender", new String[]{"1B0033", "8A2BE2", "E0B0FF"}),
-        new Preset("preset.gold", new String[]{"FFF6B7", "FFC300", "B8860B"}),
-        new Preset("preset.rainbow", new String[]{"FF4D4D", "FFD24D", "4DFF88", "4DB8FF", "B84DFF"}),
-        new Preset("preset.legendary", new String[]{"FFB000", "FF6A00"}),
-        new Preset("preset.mythic", new String[]{"FF3CAC", "784BA0", "2B86C5"}),
-        new Preset("preset.sakura", new String[]{"FFD1E8", "FF7EB9"}),
-        new Preset("preset.aurora", new String[]{"43E97B", "38F9D7", "7F7FFF"}),
-        new Preset("preset.nether", new String[]{"FF4E00", "7A0000"}),
-        new Preset("preset.neon", new String[]{"00FFF0", "FF00E5"}),
-        new Preset("preset.cyberpunk", new String[]{"FCEE09", "FF2A6D", "05D9E8"})
-    );
+    /** Готовые палитры — те же, что на сайте (SiteData), имя — ключ перевода preset.<key>. */
+    public static final List<Preset> PRESETS = SiteData.PALETTES.stream()
+            .map(p -> new Preset("preset." + p.key(), p.colors())).toList();
 
     private static final Map<Integer, String> SMALL = new HashMap<>();
     static {
@@ -102,6 +89,54 @@ public final class HexCore {
         String ru = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
         String ruSc = "ᴀбʙгдᴇᴇжзийᴋлᴍʜᴏпᴘᴄтуȹxцчшщъыьэюя";
         for (int i = 0; i < ru.length(); i++) SMALL.put((int) ru.charAt(i), String.valueOf(ruSc.charAt(i)));
+    }
+
+    /** Шрифты, как на сайте: 0 обычный, 1 Small Caps, дальше — стили из Unicode (меняется только латиница). */
+    public static final String[] FONTS = {"normal", "small", "fraktur", "frakturBold", "scriptBold", "script", "double",
+        "currency", "asian", "sansItalic", "mono", "sansBold"};
+    private static final String[] FONT_LABELS = {null, "ꜱᴍᴀʟʟ ᴄᴀᴘꜱ", "𝔉𝔯𝔞𝔨𝔱𝔲𝔯", "𝕱𝖗𝖆𝖐𝖙𝖚𝖗", "𝓢𝓬𝓻𝓲𝓹𝓽", "𝒮𝒸𝓇𝒾𝓅𝓉", "𝔻𝕠𝕦𝕓𝕝𝕖",
+        "₵ɄⱤⱤɆ₦₵Ɏ", "卂丂丨卂几", "𝘐𝘵𝘢𝘭𝘪𝘤", "𝙼𝚘𝚗𝚘", "𝗕𝗼𝗹𝗱"};
+    /** Математические буквы: код заглавной A, строчной a, цифры 0 (0 — нет); исключения — буквы из «Буквоподобных символов». */
+    private static final int[][] MATH = {
+        null, null,
+        {0x1D504, 0x1D51E, 0}, {0x1D56C, 0x1D586, 0}, {0x1D4D0, 0x1D4EA, 0}, {0x1D49C, 0x1D4B6, 0}, {0x1D538, 0x1D552, 0x1D7D8},
+        null, null,
+        {0x1D608, 0x1D622, 0}, {0x1D670, 0x1D68A, 0x1D7F6}, {0x1D5D4, 0x1D5EE, 0x1D7EC}};
+    private static final String[] MATH_EX = {null, null, "CℭHℌIℑRℜZℨ", null, null, "BℬEℰFℱHℋIℐLℒMℳRℛe𝑒g𝑔o𝑜", "CℂHℍNℕPℙQℚRℝZℤ",
+        null, null, null, null, null};
+    private static final String[] MAP_FONT = {null, null, null, null, null, null, null,
+        "₳฿₵ĐɆ₣₲ⱧłJ₭Ⱡ₥₦Ø₱QⱤ₴₮ɄV₩ӾɎⱫ", "卂乃匚ᗪ乇千Ꮆ卄丨ﾌҜㄥ爪几ㄖ卩Ɋ尺丂ㄒㄩᐯ山乂ㄚ乙", null, null, null};
+
+    public static String fontLabel(int font) {
+        return font <= 0 || font >= FONTS.length ? I18nHolder.normal() : FONT_LABELS[font];
+    }
+
+    /** Переводит текст в шрифт; буквы, которых в шрифте нет, остаются как есть (по одному символу на символ). */
+    public static String applyFont(String text, int font) {
+        if (font <= 0 || font >= FONTS.length) return text;
+        if (font == 1) return toSmallCaps(text);
+        StringBuilder out = new StringBuilder();
+        int[] mapped = MAP_FONT[font] == null ? null : MAP_FONT[font].codePoints().toArray();
+        int[] ex = MATH_EX[font] == null ? null : MATH_EX[font].codePoints().toArray();
+        text.codePoints().forEach(c -> {
+            if (mapped != null) {
+                int lc = Character.toLowerCase(c);
+                out.appendCodePoint(lc >= 'a' && lc <= 'z' ? mapped[lc - 'a'] : c);
+                return;
+            }
+            if (ex != null) for (int i = 0; i + 1 < ex.length; i += 2) if (ex[i] == c) { out.appendCodePoint(ex[i + 1]); return; }
+            int[] m = MATH[font];
+            if (c >= 'A' && c <= 'Z') out.appendCodePoint(m[0] + c - 'A');
+            else if (c >= 'a' && c <= 'z') out.appendCodePoint(m[1] + c - 'a');
+            else if (m[2] != 0 && c >= '0' && c <= '9') out.appendCodePoint(m[2] + c - '0');
+            else out.appendCodePoint(c);
+        });
+        return out.toString();
+    }
+
+    /** Подпись «Обычный шрифт» на языке игры (HexCore не зависит от интерфейса — берём через HexUi). */
+    private static final class I18nHolder {
+        static String normal() { return HexUi.tr("font.normal"); }
     }
 
     public static String toSmallCaps(String text) {
@@ -208,6 +243,85 @@ public final class HexCore {
     }
 
     /** Общий формат всех символов или -1, если формат разный. */
+    /** Формат, общий для всех символов (для команд, где формат задаётся на весь текст). */
+    public static int commonBits(int[] mask, int fallback) {
+        if (mask == null || mask.length == 0) return fallback;
+        int b = 0xF;
+        for (int m : mask) b &= m;
+        return b;
+    }
+
+    // --- /sponsor editprefix ---
+    private static String mmColorTag(List<String> stops) {
+        if (stops.size() == 1) return "<#" + stops.get(0) + ">";
+        StringBuilder sb = new StringBuilder("<gradient");
+        for (String s : stops) sb.append(":#").append(s);
+        return sb.append('>').toString();
+    }
+
+    /** /sponsor editprefix <gradient:#A:#B>префикс<#ник>: формат префикса на ник не переходит. */
+    public static String editPrefixCommand(String text, List<String> stops, int bits, String nickHex) {
+        StringBuilder sb = new StringBuilder(COMMANDS[SPONSOR_EDIT]).append(mmColorTag(stops));
+        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append('<').append(MM_TAGS[i]).append('>');
+        text.codePoints().forEach(c -> sb.append(mmEscape(new String(Character.toChars(c)))));
+        for (int i = 3; i >= 0; i--) if ((bits & (1 << i)) != 0) sb.append("</").append(MM_TAGS[i]).append('>');
+        return sb.append("<#").append(nickHex).append('>').toString();
+    }
+
+    // --- Цвета /colors (обычные игроки): текст делится на равные части, у каждой свой &-код ---
+    public static int legacyIndex(String hex) {
+        int best = 15;
+        long bd = Long.MAX_VALUE;
+        int c = valid(hex) ? rgb(hex) : 0xFFFFFF;
+        for (int i = 0; i < 16; i++) {
+            int l = rgb(SiteData.LEGACY_HEX[i]);
+            long dr = ((c >> 16) & 255) - ((l >> 16) & 255), dg = ((c >> 8) & 255) - ((l >> 8) & 255), db = (c & 255) - (l & 255);
+            long d = dr * dr + dg * dg + db * db;
+            if (d < bd) { bd = d; best = i; }
+        }
+        return best;
+    }
+
+    public static String nearestLegacyHex(String hex) {
+        return SiteData.LEGACY_HEX[legacyIndex(hex)];
+    }
+
+    public static char legacyCode(String hex) {
+        return SiteData.LEGACY_CODES.charAt(legacyIndex(hex));
+    }
+
+    private static List<String> classicParts(String text, int n) {
+        return n <= 1 ? List.of(text) : segments(text, n + 1);
+    }
+
+    /** &c&lТек&6&lст — как на сайте в режиме «цвета /colors». */
+    public static String classicBody(String text, List<String> stops, int bits) {
+        String fmt = formatCodes(bits);
+        List<String> parts = classicParts(text, stops.size());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.size(); i++) {
+            if (parts.get(i).isEmpty()) continue;
+            sb.append('&').append(legacyCode(stops.get(i))).append(fmt).append(parts.get(i));
+        }
+        return sb.toString();
+    }
+
+    public static List<StyledGlyph> classicGlyphs(String text, List<String> stops, int[] mask, int fallbackBits) {
+        List<StyledGlyph> out = new ArrayList<>();
+        List<String> parts = classicParts(text, stops.size());
+        int idx = 0;
+        for (int k = 0; k < parts.size(); k++) {
+            int rgb = rgb(nearestLegacyHex(stops.get(k)));
+            int[] cps = parts.get(k).codePoints().toArray();
+            for (int cp : cps) {
+                int bits = mask != null && idx < mask.length ? mask[idx] : fallbackBits;
+                out.add(new StyledGlyph(new String(Character.toChars(cp)), rgb, bits));
+                idx++;
+            }
+        }
+        return out;
+    }
+
     public static int uniformBits(int[] mask, int fallback) {
         if (mask.length == 0) return fallback;
         for (int b : mask) if (b != mask[0]) return -1;
@@ -279,6 +393,7 @@ public final class HexCore {
         int command = 2;
         for (int i = 0; i < COMMANDS.length; i++) {
             String c = COMMANDS[i];
+            if (i == SPONSOR_EDIT) continue;   // editprefix — MiniMessage, разбирается как другой формат
             if (!c.isEmpty() && !c.equals("sponsor") && s.startsWith(c)) {
                 command = i;
                 s = s.substring(c.length());
@@ -535,27 +650,43 @@ public final class HexCore {
 
     // ------------------------------------------------------------ обмен пресетами
 
-    /** Код пресета для чата: FSTWEAK{Имя|B04DFF,FF8FE0}. */
+    /**
+     * Код пресета для чата: ✦Имя[B04DFF,FF8FE0] (короче и понятнее без мода).
+     * Старый формат FSTWEAK{Имя|B04DFF,FF8FE0} тоже распознаётся.
+     */
+    private static final String HEX_LIST = "([0-9A-Fa-f]{6}(?:\\s?,\\s?[0-9A-Fa-f]{6}){0,5})";
+    /**
+     * Метка — ✦ или значок из ресурспака сервера (некоторые серверы подменяют ✦ своим символом из
+     * области U+E000–U+F8FF); после метки и внутри скобок допускаются пробелы.
+     */
+    private static final String MARK = "(?:✦|[\\uE000-\\uF8FF])\\s?";
     public static final java.util.regex.Pattern PRESET_CODE = java.util.regex.Pattern.compile(
-            "FSTWEAK\\{([^{}|]{1,24})\\|([0-9A-Fa-f]{6}(?:,[0-9A-Fa-f]{6}){0,5})\\}");
+            "FSTWEAK\\{([^{}|]{1,24})\\|" + HEX_LIST + "\\}|" + MARK + "([^\\[\\]✦{}|\\n\\uE000-\\uF8FF]{1,24}?)\\s?\\[\\s?" + HEX_LIST + "\\s?\\]");
 
     public static String presetCode(String name, String[] colors) {
-        String n = name.replaceAll("[{}|]", "").strip();
-        if (n.length() > 24) n = n.substring(0, 24);
-        return "FSTWEAK{" + (n.isEmpty() ? "Preset" : n) + "|" + String.join(",", colors) + "}";
+        String n = name.replaceAll("[\\[\\]✦{}|]", "").strip();
+        if (n.length() > 24) n = n.substring(0, 24).strip();
+        return "✦" + (n.isEmpty() ? "Preset" : n) + "[" + String.join(",", colors) + "]";
     }
 
-    /** Разбирает «Имя|HEX,HEX» (тело кода пресета). Null — если формат неверный. */
+    /** Пресет из найденного кода (любого из двух форматов). */
+    public static Preset presetOf(java.util.regex.Matcher m) {
+        String name = m.group(1) != null ? m.group(1) : m.group(3);
+        String colors = m.group(2) != null ? m.group(2) : m.group(4);
+        return new Preset(name.strip(), colors.replaceAll("\\s", "").toUpperCase(Locale.ROOT).split(","));
+    }
+
+    /** Разбирает «Имя|HEX,HEX» (тело кода пресета, команда /fstweak preset). Null — если формат неверный. */
     public static Preset parsePresetBody(String body) {
         java.util.regex.Matcher m = PRESET_CODE.matcher("FSTWEAK{" + body.strip() + "}");
         if (!m.matches()) return null;
-        return new Preset(m.group(1).strip(), m.group(2).toUpperCase(Locale.ROOT).split(","));
+        return presetOf(m);
     }
 
     /** Первый код пресета в тексте или null. */
     public static Preset findPreset(String text) {
         java.util.regex.Matcher m = PRESET_CODE.matcher(text == null ? "" : text);
-        return m.find() ? new Preset(m.group(1).strip(), m.group(2).toUpperCase(Locale.ROOT).split(",")) : null;
+        return m.find() ? presetOf(m) : null;
     }
 
     /** Общий хвост разбора: если градиента нет — крайние цвета становятся его точками, цвета букв остаются как есть. */
