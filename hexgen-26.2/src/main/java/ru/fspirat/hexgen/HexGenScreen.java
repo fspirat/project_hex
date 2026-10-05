@@ -213,8 +213,10 @@ public class HexGenScreen extends Screen {
 
         // --- Строка 2: шрифт, форматирование, символы, цвет части ---
         if (!sponsor()) {
-            this.addRenderableWidget(Button.builder(Component.literal(s().smallCaps ? "ꜱᴍᴀʟʟ ᴄᴀᴘꜱ" : HexUi.tr("font.normal")),
-                    b -> change(() -> s().smallCaps = !s().smallCaps)).bounds(left, y2, 96, 20).build());
+            // Шрифт: клик — следующий, Shift + клик — предыдущий (12 шрифтов, как на сайте)
+            this.addRenderableWidget(Button.builder(Component.literal(HexCore.fontLabel(s().font)),
+                    b -> change(() -> s().font = Math.floorMod(s().font + (HexUi.shiftDown() ? -1 : 1), HexCore.FONTS.length)))
+                    .bounds(left, y2, 96, 20).tooltip(HexUi.tip(HexUi.tr("font.hint"))).build());
 
             String[] tips = {HexUi.tr("format.bold"), HexUi.tr("format.italic"), HexUi.tr("format.underline"), HexUi.tr("format.strike")};
             for (int i = 0; i < 4; i++) {
@@ -401,7 +403,7 @@ public class HexGenScreen extends Screen {
             st.text = p.text();
             st.mask = p.mask();
             st.colors = p.colors();
-            st.smallCaps = false;
+            st.font = 0;
             st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
             cursor = highlight = st.text.length();
         }
@@ -444,7 +446,7 @@ public class HexGenScreen extends Screen {
         boolean anyColor = colors.stream().anyMatch(c -> c >= 0);
         st.colors = anyColor ? p.colors() : HexCore.spliceMask("", st.text, null, -1);
         if (anyColor) st.stops = new ArrayList<>(p.stops());
-        st.smallCaps = false;
+        st.font = 0;
         st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
         cursor = highlight = st.text.length();
         textBox = null;
@@ -558,7 +560,7 @@ public class HexGenScreen extends Screen {
     }
 
     private String shownText() {
-        return s().smallCaps ? HexCore.toSmallCaps(s().text) : s().text;
+        return HexCore.applyFont(s().text, s().font);
     }
 
     /** Готовая команда или пустая строка, если цвета некорректны. */

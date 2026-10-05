@@ -34,6 +34,11 @@ public class PresetsScreen extends Screen {
     private String copied = null;
     private int left;
     private int top;
+    /** Категория палитр (SiteData.CATS) и страница — запоминаются, пока игра запущена. */
+    private static int cat = 0;
+    private static int page = 0;
+    private static final int PER_PAGE = 16;
+    private String pageLabel = "";
 
     public PresetsScreen(Screen parent, Consumer<String[]> apply) {
         super(Component.literal(HexUi.tr("presets")));
@@ -48,10 +53,34 @@ public class PresetsScreen extends Screen {
         buttons.clear();
         presets.clear();
 
-        for (int i = 0; i < HexCore.PRESETS.size(); i++) {
-            HexCore.Preset p = HexCore.PRESETS.get(i);
-            add(p, left + (i % COLS) * STEP, top + 24 + (i / COLS) * 22, false);
+        // Категории, как на сайте: Все · Minecraft · Тёплые · …
+        int cw = (W - (SiteData.CATS.length - 1) * 2) / SiteData.CATS.length;
+        for (int c = 0; c < SiteData.CATS.length; c++) {
+            final int ci = c;
+            String label = HexUi.tr("cat." + SiteData.CATS[c]);
+            Button cb = Button.builder(c == cat ? Component.literal(label).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0x55FF55)) : Component.literal(label), b -> { cat = ci; page = 0; rebuild(); })
+                    .bounds(left + c * (cw + 2), top + 11, cw, 14).build();
+            if (c == cat) HexUi.accent(cb);
+            this.addRenderableWidget(cb);
         }
+        List<HexCore.Preset> shown = new ArrayList<>();
+        for (int i = 0; i < SiteData.PALETTES.size(); i++) {
+            if (cat == 0 || SiteData.PALETTES.get(i).cat().equals(SiteData.CATS[cat])) shown.add(HexCore.PRESETS.get(i));
+        }
+        int pages = Math.max(1, (shown.size() + PER_PAGE - 1) / PER_PAGE);
+        page = Math.max(0, Math.min(page, pages - 1));
+        for (int i = page * PER_PAGE, k = 0; i < Math.min(shown.size(), (page + 1) * PER_PAGE); i++, k++) {
+            add(shown.get(i), left + (k % COLS) * STEP, top + 28 + (k / COLS) * 22, false);
+        }
+        if (pages > 1) {
+            Button prev = Button.builder(Component.literal("◀"), b -> { page--; rebuild(); }).bounds(left + W - 62, top + 115, 16, 12).build();
+            Button next = Button.builder(Component.literal("▶"), b -> { page++; rebuild(); }).bounds(left + W - 16, top + 115, 16, 12).build();
+            prev.active = page > 0;
+            next.active = page < pages - 1;
+            this.addRenderableWidget(prev);
+            this.addRenderableWidget(next);
+        }
+        pageLabel = pages > 1 ? (page + 1) + "/" + pages : "";
         List<HexCore.Preset> own = HexConfig.USER_PRESETS;
         for (int i = 0; i < own.size(); i++) {
             add(own.get(i), left + (i % COLS) * STEP, top + 128 + (i / COLS) * 22, true);
@@ -125,7 +154,9 @@ public class PresetsScreen extends Screen {
 
         Component t = HexUi.gradientTitle(HexUi.tr("presets"));
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
-        g.drawString(this.font, Component.literal(HexUi.tr("presets.builtin")), left, top + 14, 0xFFA0A0A0, false);
+        if (!pageLabel.isEmpty()) {
+            g.drawString(this.font, Component.literal(pageLabel), left + W - 31 - this.font.width(pageLabel) / 2, top + 117, 0xFFA0A0A0, false);
+        }
         String hint = mode == 2 && moving >= 0 ? HexUi.tr("presets.own.move_target")
                 : mode == SHARE && copied != null ? HexUi.tr("presets.share.copied")
                 : HexUi.tr(MODE_HINTS[mode]);

@@ -58,6 +58,13 @@ public final class HexUi {
         return I18n.get("fstweak." + key, args);
     }
 
+    /** Зажат ли Shift (читаем напрямую — так одинаково во всех версиях игры). */
+    public static boolean shiftDown() {
+        long w = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
+        return w != 0 && (org.lwjgl.glfw.GLFW.glfwGetKey(w, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS
+                || org.lwjgl.glfw.GLFW.glfwGetKey(w, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS);
+    }
+
     public static String onOff(boolean on) {
         return tr(on ? "on" : "off");
     }
@@ -172,13 +179,15 @@ public final class HexUi {
                 continue;
             }
             if (!(e instanceof Button b) || !b.visible || b instanceof MovableButton) continue;
-            Component msg = b.getMessage();
+            boolean accentBtn = ACCENT.contains(b);
+            // на зелёной кнопке свои цвета надписи не нужны — тёмный текст читается лучше
+            Component msg = accentBtn ? Component.literal(b.getMessage().getString()) : b.getMessage();
             if (msg.getString().isEmpty()) continue;
             // Стандартную кнопку делаем почти прозрачной (текст новых версий рисуется поверх всего),
             // а сверху рисуем свою. Почти, а не совсем: полностью прозрачный текст игра рисует непрозрачным.
             b.setAlpha(0.03f);
             int x = b.getX(), y = b.getY(), w = b.getWidth(), h = b.getHeight();
-            boolean hover = b.active && b.isHovered(), accent = ACCENT.contains(b);
+            boolean hover = b.active && b.isHovered(), accent = accentBtn;
             int bg = !b.active ? 0xFF0A0D0A : accent ? (hover ? C_GREEN_HI : C_GREEN) : hover ? C_CARD_HI : C_CARD;
             int edge = !b.active ? 0xFF1A2117 : accent ? bg : hover ? C_GREEN : C_LINE;
             g.fill(x, y, x + w, y + h, edge);

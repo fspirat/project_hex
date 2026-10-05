@@ -75,24 +75,9 @@ public final class HexCore {
 
     public record Preset(String name, String[] colors) {}
 
-    public static final List<Preset> PRESETS = List.of(
-        new Preset("preset.special", new String[]{"B04DFF", "FF8FE0"}),
-        new Preset("preset.sunset", new String[]{"FAE8F3", "FF8F5A"}),
-        new Preset("preset.flame", new String[]{"FFE259", "FF7A00", "D10000"}),
-        new Preset("preset.ocean", new String[]{"00F0FF", "0066FF"}),
-        new Preset("preset.emerald", new String[]{"C6FF8A", "1FAA59"}),
-        new Preset("preset.ice", new String[]{"FFFFFF", "9BE7FF", "4A9BFF"}),
-        new Preset("preset.ender", new String[]{"1B0033", "8A2BE2", "E0B0FF"}),
-        new Preset("preset.gold", new String[]{"FFF6B7", "FFC300", "B8860B"}),
-        new Preset("preset.rainbow", new String[]{"FF4D4D", "FFD24D", "4DFF88", "4DB8FF", "B84DFF"}),
-        new Preset("preset.legendary", new String[]{"FFB000", "FF6A00"}),
-        new Preset("preset.mythic", new String[]{"FF3CAC", "784BA0", "2B86C5"}),
-        new Preset("preset.sakura", new String[]{"FFD1E8", "FF7EB9"}),
-        new Preset("preset.aurora", new String[]{"43E97B", "38F9D7", "7F7FFF"}),
-        new Preset("preset.nether", new String[]{"FF4E00", "7A0000"}),
-        new Preset("preset.neon", new String[]{"00FFF0", "FF00E5"}),
-        new Preset("preset.cyberpunk", new String[]{"FCEE09", "FF2A6D", "05D9E8"})
-    );
+    /** Готовые палитры — те же, что на сайте (SiteData), имя — ключ перевода preset.<key>. */
+    public static final List<Preset> PRESETS = SiteData.PALETTES.stream()
+            .map(p -> new Preset("preset." + p.key(), p.colors())).toList();
 
     private static final Map<Integer, String> SMALL = new HashMap<>();
     static {
@@ -102,6 +87,54 @@ public final class HexCore {
         String ru = "абвгдеёжзийклмнопрстуфхцчшщъыьэюя";
         String ruSc = "ᴀбʙгдᴇᴇжзийᴋлᴍʜᴏпᴘᴄтуȹxцчшщъыьэюя";
         for (int i = 0; i < ru.length(); i++) SMALL.put((int) ru.charAt(i), String.valueOf(ruSc.charAt(i)));
+    }
+
+    /** Шрифты, как на сайте: 0 обычный, 1 Small Caps, дальше — стили из Unicode (меняется только латиница). */
+    public static final String[] FONTS = {"normal", "small", "fraktur", "frakturBold", "scriptBold", "script", "double",
+        "currency", "asian", "sansItalic", "mono", "sansBold"};
+    private static final String[] FONT_LABELS = {null, "ꜱᴍᴀʟʟ ᴄᴀᴘꜱ", "𝔉𝔯𝔞𝔨𝔱𝔲𝔯", "𝕱𝖗𝖆𝖐𝖙𝖚𝖗", "𝓢𝓬𝓻𝓲𝓹𝓽", "𝒮𝒸𝓇𝒾𝓅𝓉", "𝔻𝕠𝕦𝕓𝕝𝕖",
+        "₵ɄⱤⱤɆ₦₵Ɏ", "卂丂丨卂几", "𝘐𝘵𝘢𝘭𝘪𝘤", "𝙼𝚘𝚗𝚘", "𝗕𝗼𝗹𝗱"};
+    /** Математические буквы: код заглавной A, строчной a, цифры 0 (0 — нет); исключения — буквы из «Буквоподобных символов». */
+    private static final int[][] MATH = {
+        null, null,
+        {0x1D504, 0x1D51E, 0}, {0x1D56C, 0x1D586, 0}, {0x1D4D0, 0x1D4EA, 0}, {0x1D49C, 0x1D4B6, 0}, {0x1D538, 0x1D552, 0x1D7D8},
+        null, null,
+        {0x1D608, 0x1D622, 0}, {0x1D670, 0x1D68A, 0x1D7F6}, {0x1D5D4, 0x1D5EE, 0x1D7EC}};
+    private static final String[] MATH_EX = {null, null, "CℭHℌIℑRℜZℨ", null, null, "BℬEℰFℱHℋIℐLℒMℳRℛe𝑒g𝑔o𝑜", "CℂHℍNℕPℙQℚRℝZℤ",
+        null, null, null, null, null};
+    private static final String[] MAP_FONT = {null, null, null, null, null, null, null,
+        "₳฿₵ĐɆ₣₲ⱧłJ₭Ⱡ₥₦Ø₱QⱤ₴₮ɄV₩ӾɎⱫ", "卂乃匚ᗪ乇千Ꮆ卄丨ﾌҜㄥ爪几ㄖ卩Ɋ尺丂ㄒㄩᐯ山乂ㄚ乙", null, null, null};
+
+    public static String fontLabel(int font) {
+        return font <= 0 || font >= FONTS.length ? I18nHolder.normal() : FONT_LABELS[font];
+    }
+
+    /** Переводит текст в шрифт; буквы, которых в шрифте нет, остаются как есть (по одному символу на символ). */
+    public static String applyFont(String text, int font) {
+        if (font <= 0 || font >= FONTS.length) return text;
+        if (font == 1) return toSmallCaps(text);
+        StringBuilder out = new StringBuilder();
+        int[] mapped = MAP_FONT[font] == null ? null : MAP_FONT[font].codePoints().toArray();
+        int[] ex = MATH_EX[font] == null ? null : MATH_EX[font].codePoints().toArray();
+        text.codePoints().forEach(c -> {
+            if (mapped != null) {
+                int lc = Character.toLowerCase(c);
+                out.appendCodePoint(lc >= 'a' && lc <= 'z' ? mapped[lc - 'a'] : c);
+                return;
+            }
+            if (ex != null) for (int i = 0; i + 1 < ex.length; i += 2) if (ex[i] == c) { out.appendCodePoint(ex[i + 1]); return; }
+            int[] m = MATH[font];
+            if (c >= 'A' && c <= 'Z') out.appendCodePoint(m[0] + c - 'A');
+            else if (c >= 'a' && c <= 'z') out.appendCodePoint(m[1] + c - 'a');
+            else if (m[2] != 0 && c >= '0' && c <= '9') out.appendCodePoint(m[2] + c - '0');
+            else out.appendCodePoint(c);
+        });
+        return out.toString();
+    }
+
+    /** Подпись «Обычный шрифт» на языке игры (HexCore не зависит от интерфейса — берём через HexUi). */
+    private static final class I18nHolder {
+        static String normal() { return HexUi.tr("font.normal"); }
     }
 
     public static String toSmallCaps(String text) {
