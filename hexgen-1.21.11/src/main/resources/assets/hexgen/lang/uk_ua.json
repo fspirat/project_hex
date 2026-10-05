@@ -131,6 +131,7 @@
   "fstweak.settings.animation.hint": "Градієнт переливається в попередньому перегляді та заголовках (не потрапляє в команду)",
   "fstweak.settings.theme": "Тема вікна: %s",
   "fstweak.settings.theme.hint": "«За градієнтом» — рамка вікна в кольорах поточного градієнта",
+  "fstweak.theme.fspirat": "FSPIRAT",
   "fstweak.theme.purple": "Фіолетова",
   "fstweak.theme.dark": "Темна",
   "fstweak.theme.gradient": "За градієнтом",

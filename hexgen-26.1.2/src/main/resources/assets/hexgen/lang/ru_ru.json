@@ -131,6 +131,7 @@
   "fstweak.settings.animation.hint": "Градиент переливается в предпросмотре и заголовках (в команду не попадает)",
   "fstweak.settings.theme": "Тема окна: %s",
   "fstweak.settings.theme.hint": "«По градиенту» — рамка окна в цветах текущего градиента",
+  "fstweak.theme.fspirat": "FSPIRAT",
   "fstweak.theme.purple": "Фиолетовая",
   "fstweak.theme.dark": "Тёмная",
   "fstweak.theme.gradient": "По градиенту",

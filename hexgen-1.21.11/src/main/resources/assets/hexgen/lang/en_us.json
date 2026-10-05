@@ -131,6 +131,7 @@
   "fstweak.settings.animation.hint": "The gradient shimmers in the preview and titles (not included in the command)",
   "fstweak.settings.theme": "Window theme: %s",
   "fstweak.settings.theme.hint": "\"Gradient\" — the window border uses the current gradient colors",
+  "fstweak.theme.fspirat": "FSPIRAT",
   "fstweak.theme.purple": "Purple",
   "fstweak.theme.dark": "Dark",
   "fstweak.theme.gradient": "Gradient",

@@ -34,7 +34,7 @@ public final class HexConfig {
     /** Шаблон формата BirdFlop. */
     public static String birdflopTemplate = HexCore.DEFAULT_BIRDFLOP;
     /** Ключи перевода тем. */
-    public static final String[] THEMES = {"theme.purple", "theme.dark", "theme.gradient"};
+    public static final String[] THEMES = {"theme.fspirat", "theme.purple", "theme.dark", "theme.gradient"};
     public static final List<HexCore.Preset> USER_PRESETS = new ArrayList<>();
     /** Последние скопированные/выполненные команды, новые сверху. */
     public static final List<String> HISTORY = new ArrayList<>();
@@ -62,7 +62,8 @@ public final class HexConfig {
         buttonOffsetY = intProp(p, "buttonOffsetY", DEFAULT_OFFSET_Y);
         showHints = !"false".equals(p.getProperty("showHints"));
         animatePreview = !"false".equals(p.getProperty("animatePreview"));
-        theme = Math.floorMod(intProp(p, "theme", 0), THEMES.length);
+        // 1.2: появилась тема FSPIRAT (первая, по умолчанию); старый ключ «theme» сдвигаем на одну
+        theme = p.getProperty("theme2") != null ? Math.floorMod(intProp(p, "theme2", 0), THEMES.length) : 0;
         formatPrefix = p.getProperty("formatPrefix", "");
         birdflopTemplate = p.getProperty("birdflopTemplate", HexCore.DEFAULT_BIRDFLOP);
         USER_PRESETS.clear();
@@ -97,7 +98,7 @@ public final class HexConfig {
         p.setProperty("buttonOffsetY", String.valueOf(buttonOffsetY));
         p.setProperty("showHints", String.valueOf(showHints));
         p.setProperty("animatePreview", String.valueOf(animatePreview));
-        p.setProperty("theme", String.valueOf(theme));
+        p.setProperty("theme2", String.valueOf(theme));
         p.setProperty("formatPrefix", formatPrefix);
         p.setProperty("birdflopTemplate", birdflopTemplate);
         for (int i = 0; i < USER_PRESETS.size(); i++) {

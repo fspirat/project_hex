@@ -306,7 +306,7 @@ public class HexGenScreen extends Screen {
 
         // --- Нижние кнопки ---
         int bw = 64, step = 69;
-        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("copy")), b -> {
+        this.addRenderableWidget(HexUi.accent(Button.builder(Component.literal(HexUi.tr("copy")), b -> {
             String out = output();
             if (out.isEmpty()) { flash(HexUi.tr("fix_colors"), 0xFFFF5555); return; }
             this.minecraft.keyboardHandler.setClipboard(out);
@@ -314,7 +314,7 @@ public class HexGenScreen extends Screen {
             int limit = HexCore.LIMITS[s().command], len = HexCore.measuredLength(out, s().command);
             if (len > limit) flash(HexUi.tr("copied_over", overLimitMessage(len, limit)), 0xFFFFD24D);
             else flash(HexUi.tr("copied"));
-        }).bounds(left, y6, bw, 20).build());
+        }).bounds(left, y6, bw, 20).build()));
 
         Button run = Button.builder(Component.literal(HexUi.tr("run")), b -> {
             String out = output();
@@ -625,6 +625,7 @@ public class HexGenScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         HexUi.drawPanel(g, left, top, W, H);
         super.extractRenderState(g, mouseX, mouseY, delta);
+        HexUi.skin(this, g, mouseX, mouseY);
 
         MutableComponent title = HexUi.gradientTitle(HexUi.TITLE);
         g.text(this.font, title, (this.width - this.font.width(title)) / 2, top + 1, 0xFFFFFFFF, true);
@@ -673,7 +674,12 @@ public class HexGenScreen extends Screen {
             String counter = st.command <= 1 ? HexUi.tr("text_length", len, limit) : len + " / " + limit;
             g.text(this.font, Component.literal(counter), left + W - this.font.width(counter), ry, cc, false);
         }
-        g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
+        if (HexUi.fspirat()) {
+            g.fill(left, ry + 10, left + W, ry + 26, HexUi.C_LINE);
+            g.fill(left + 1, ry + 11, left + W - 1, ry + 25, HexUi.C_SURFACE);
+        } else {
+            g.fill(left, ry + 10, left + W, ry + 26, 0xC0000000);
+        }
         String shown = out.isEmpty() ? HexUi.tr("hex_help") : out;
         g.text(this.font, Component.literal(fit(HexUi.visible(shown), W - 8)), left + 4, ry + 14, out.isEmpty() ? 0xFFFF5555 : 0xFFFFFFFF, false);
 

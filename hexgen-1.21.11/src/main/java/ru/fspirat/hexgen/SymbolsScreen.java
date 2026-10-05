@@ -48,6 +48,7 @@ public class SymbolsScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float delta) {
         HexUi.drawPanel(g, left, top, W, h);
         super.render(g, mouseX, mouseY, delta);
+        HexUi.skin(this, g, mouseX, mouseY);
 
         Component t = HexUi.gradientTitle(HexUi.tr("symbols.title"));
         g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, top + 4, 0xFFFFFFFF, true);
