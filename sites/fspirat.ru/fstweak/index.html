@@ -360,6 +360,10 @@ dialog.sheet::backdrop{background:rgba(3,5,3,.82);backdrop-filter:blur(3px)}
 .sheet-body h3:first-child{margin-top:0}
 .sheet-body .features{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 body.locked{overflow:hidden}
+.lock{display:flex;gap:12px;align-items:flex-start;margin:0 0 12px;padding:12px 14px;background:rgba(127,191,58,.07);
+  border:1px solid rgba(127,191,58,.45);border-left-width:3px;border-radius:2px;font-family:var(--sans);font-size:15px;line-height:1.55;color:var(--soft)}
+.lock i{font-style:normal;flex:none;font-size:18px;line-height:1.3}
+.lock b{color:var(--green-hi);font-weight:600}
 .sec-head .badge{white-space:nowrap}
 </style>
 </head>
@@ -462,7 +466,8 @@ body.locked{overflow:hidden}
     <div class="sec-head"><h2><span>02</span>Логгер чата /log</h2><span class="badge">новое в 1.2</span></div>
     <div class="log-grid">
       <div>
-        <p>Мод запоминает чат с начала игры. Команда отправляет его на fspirat.online и присылает ссылку. Удобно для жалоб, сделок и споров: отправляешь ссылку вместо скриншотов.</p>
+        <p>Мод запоминает чат с начала игры. Команда <code>/log</code> отправляет его на fspirat.online и присылает ссылку. Удобно для жалоб, сделок и споров: вместо скриншотов отправляешь одну ссылку.</p>
+        <div class="lock"><i>🔒</i><div><b>Лог видит только тот, у кого есть ссылка.</b> Логи нигде не публикуются и не ищутся, а ссылку из 10 случайных символов невозможно подобрать. Без ссылки к логу не получит доступ никто, и только ты решаешь, кому её отправить.</div></div>
         <div class="cmds">
           <div class="cmd"><code>/log</code><span>сохранить весь накопленный чат</span></div>
           <div class="cmd"><code>/log 200</code><span>только последние 200 сообщений</span></div>
@@ -477,6 +482,7 @@ body.locked{overflow:hidden}
           <div><span class="g"><b>[FSLOG]</b> Сохранено 200 сообщ.:</span> <span class="ln">fspirat.online/log/?id=…</span> <span class="gr">[копировать]</span></div>
         </div>
         <div class="facts">
+          <span>доступ <b>только по ссылке</b></span>
           <span>цвета и время <b>сохраняются</b></span>
           <span>поиск и <b>.txt</b></span>
           <span>до <b>5000</b> сообщений</span>
@@ -528,7 +534,7 @@ body.locked{overflow:hidden}
       </div>
     </div>
     <div class="dl-foot">
-      <p>Нужны Fabric Loader 0.18+ и Fabric API. На сервер ставить ничего не нужно.</p>
+      <p>Нужны Fabric Loader 0.18+ и Fabric API</p>
       <button class="plus" type="button" data-open="m-install">Как установить</button>
     </div>
   </section>
@@ -556,6 +562,8 @@ body.locked{overflow:hidden}
   <div class="sheet-head"><h2 id="m-log-t"><span>✉</span>Логгер чата</h2><button class="x" type="button" data-close aria-label="Закрыть">✕</button></div>
   <div class="sheet-body">
     <p>Логгер встроен в FSTWEAK 1.2 и работает сам: ничего настраивать не нужно. Мод хранит до 5000 последних сообщений текущей игры. Чат никуда не отправляется, пока ты сам не напишешь <code>/log</code>.</p>
+    <h3>Кто увидит лог</h3>
+    <p>Только тот, у кого есть ссылка. Логи нигде не публикуются, их нельзя найти поиском или перебрать: адрес содержит 10 случайных символов. Отправь ссылку тому, кому нужно, и больше её никто не увидит.</p>
     <h3>Что видно по ссылке</h3>
     <p>Чат с цветами, как в игре, время каждого сообщения, поиск по тексту и кнопка скачивания в .txt. Ссылку можно открыть с телефона.</p>
     <h3>Ограничения</h3>
@@ -648,7 +656,7 @@ body.locked{overflow:hidden}
     <details><summary>Где хранятся настройки и пресеты?</summary><p>В файле <code>config/fstweak.properties</code>. Там же положение кнопки, свои пресеты и история команд.</p></details>
     <details><summary>Кнопка перекрывает другой мод</summary><p>Зажми <kbd>Ctrl</kbd> и перетащи её. Вернуть на место можно в настройках генератора (⚙).</p></details>
     <details><summary>Сервер пишет, что текст слишком длинный</summary><p>Следи за счётчиком под результатом. Свой цвет или формат части текста сильно удлиняет команду.</p></details>
-    <details><summary>Кто видит мой чат после /log?</summary><p>Только те, у кого есть ссылка. Без команды <code>/log</code> чат никуда не отправляется, а через 30 дней лог удаляется.</p></details>
+    <details><summary>Кто видит мой чат после /log?</summary><p>Только тот, у кого есть ссылка. Без неё к логу не получит доступ никто: логи не публикуются и не ищутся, а ссылку невозможно подобрать. Без команды <code>/log</code> чат никуда не отправляется, а через 30 дней лог удаляется.</p></details>
     <details><summary>Нужен ли мод на сервере?</summary><p>Нет, FSTWEAK работает только на клиенте и подходит для любого сервера.</p></details>
   </div>
 </dialog>
