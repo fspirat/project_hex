@@ -318,5 +318,15 @@
   "fstweak.symbols.insert_add": "Insert «%s» · Shift + click — add to favorites",
   "fstweak.symbols.insert_fav": "Insert «%s» · Shift + click — remove from favorites",
   "fstweak.symbols.fav.empty": "Shift + click a symbol to add it here",
-  "fstweak.symbols.recent.empty": "Symbols you insert will appear here"
+  "fstweak.symbols.recent.empty": "Symbols you insert will appear here",
+  "fstweak.colors_classic": "/colors colors (1–8) — click a strip to pick a color",
+  "fstweak.colors_edit": "Prefix colors (1–6), nick color on the right",
+  "fstweak.edit.nick_color.hint": "Nick color after the prefix (HEX)",
+  "fstweak.part_color.classic": "Part color is not available with /colors colors",
+  "fstweak.legacy.title": "/colors colors",
+  "fstweak.legacy.sets": "/colors sets",
+  "fstweak.legacy.pick": "Pick a /colors color",
+  "fstweak.format.colors.hex": "Colors: HEX (sponsors)",
+  "fstweak.format.colors.classic": "Colors: /colors (players)",
+  "fstweak.format.colors.hint": "For /itemname, /itemlore and «no command»: HEX gradient (sponsors) or classic /colors codes (&a, &c…) for regular players"
 }

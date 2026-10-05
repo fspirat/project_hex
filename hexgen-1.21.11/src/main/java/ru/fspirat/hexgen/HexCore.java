@@ -14,21 +14,23 @@ public final class HexCore {
     // Форматы: 0–3 — AgeMagic (как раньше), 4–10 — другие RGB-форматы.
     public static final int NICKNAME = 4, CHAT = 5, LEGACY = 6, CONSOLE = 7, BBCODE = 8, MINIMESSAGE = 9, BIRDFLOP = 10;
     public static final int FIRST_OTHER = NICKNAME;
-    public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor", "", "", "", "", "", "", ""};
+    public static final String[] COMMANDS = {"/itemname ", "/itemlore ", "", "sponsor", "", "", "", "", "", "", "", "/sponsor editprefix "};
     /** Короткие подписи для кнопки в главном окне. */
     public static final String[] COMMAND_LABELS = {"/itemname", "/itemlore", "no command", "/sponsor prefix",
-        "Nickname &#", "Chat <#>", "Legacy &x", "Console §x", "BBCode", "MiniMessage", "BirdFlop"};
+        "Nickname &#", "Chat <#>", "Legacy &x", "Console §x", "BBCode", "MiniMessage", "BirdFlop", "/sponsor editprefix"};
     /** Полные названия в окне выбора формата. */
     public static final String[] FORMAT_NAMES = {"/itemname (AgeMagic)", "/itemlore (AgeMagic)", "no command (AgeMagic)",
         "/sponsor prefix (AgeMagic)", "Nickname &#rrggbb", "Chat <#rrggbb>", "Legacy &x&r&r&g&g&b&b",
-        "Console §x§r§r§g§g§b§b", "BBCode [COLOR=#rrggbb]", "MiniMessage", "BirdFlop"};
+        "Console §x§r§r§g§g§b§b", "BBCode [COLOR=#rrggbb]", "MiniMessage", "BirdFlop", "/sponsor editprefix (AgeMagic)"};
     /** Лимит длины: для /itemname и /itemlore считается только текст после команды, остальное — лимит чата. */
-    public static final int[] LIMITS = {64, 65, 256, 256, 256, 256, 256, 256, 256, 256, 256};
+    public static final int[] LIMITS = {64, 65, 256, 256, 256, 256, 256, 256, 256, 256, 256, 256};
+    /** /sponsor editprefix: свой текст префикса градиентом и цвет ника (MiniMessage). */
+    public static final int SPONSOR_EDIT = 11;
     /** Шаблон BirdFlop по умолчанию: $1…$6 — цифры цвета, $f — коды формата, $c — символ. */
     public static final String DEFAULT_BIRDFLOP = "&#$1$2$3$4$5$6$f$c";
 
     public static boolean isAgeMagic(int format) {
-        return format < FIRST_OTHER;
+        return format < FIRST_OTHER || format == SPONSOR_EDIT;
     }
 
     /** Длина, которую сервер сравнивает с лимитом. */
@@ -241,6 +243,85 @@ public final class HexCore {
     }
 
     /** Общий формат всех символов или -1, если формат разный. */
+    /** Формат, общий для всех символов (для команд, где формат задаётся на весь текст). */
+    public static int commonBits(int[] mask, int fallback) {
+        if (mask == null || mask.length == 0) return fallback;
+        int b = 0xF;
+        for (int m : mask) b &= m;
+        return b;
+    }
+
+    // --- /sponsor editprefix ---
+    private static String mmColorTag(List<String> stops) {
+        if (stops.size() == 1) return "<#" + stops.get(0) + ">";
+        StringBuilder sb = new StringBuilder("<gradient");
+        for (String s : stops) sb.append(":#").append(s);
+        return sb.append('>').toString();
+    }
+
+    /** /sponsor editprefix <gradient:#A:#B>префикс<#ник>: формат префикса на ник не переходит. */
+    public static String editPrefixCommand(String text, List<String> stops, int bits, String nickHex) {
+        StringBuilder sb = new StringBuilder(COMMANDS[SPONSOR_EDIT]).append(mmColorTag(stops));
+        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append('<').append(MM_TAGS[i]).append('>');
+        text.codePoints().forEach(c -> sb.append(mmEscape(new String(Character.toChars(c)))));
+        for (int i = 3; i >= 0; i--) if ((bits & (1 << i)) != 0) sb.append("</").append(MM_TAGS[i]).append('>');
+        return sb.append("<#").append(nickHex).append('>').toString();
+    }
+
+    // --- Цвета /colors (обычные игроки): текст делится на равные части, у каждой свой &-код ---
+    public static int legacyIndex(String hex) {
+        int best = 15;
+        long bd = Long.MAX_VALUE;
+        int c = valid(hex) ? rgb(hex) : 0xFFFFFF;
+        for (int i = 0; i < 16; i++) {
+            int l = rgb(SiteData.LEGACY_HEX[i]);
+            long dr = ((c >> 16) & 255) - ((l >> 16) & 255), dg = ((c >> 8) & 255) - ((l >> 8) & 255), db = (c & 255) - (l & 255);
+            long d = dr * dr + dg * dg + db * db;
+            if (d < bd) { bd = d; best = i; }
+        }
+        return best;
+    }
+
+    public static String nearestLegacyHex(String hex) {
+        return SiteData.LEGACY_HEX[legacyIndex(hex)];
+    }
+
+    public static char legacyCode(String hex) {
+        return SiteData.LEGACY_CODES.charAt(legacyIndex(hex));
+    }
+
+    private static List<String> classicParts(String text, int n) {
+        return n <= 1 ? List.of(text) : segments(text, n + 1);
+    }
+
+    /** &c&lТек&6&lст — как на сайте в режиме «цвета /colors». */
+    public static String classicBody(String text, List<String> stops, int bits) {
+        String fmt = formatCodes(bits);
+        List<String> parts = classicParts(text, stops.size());
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.size(); i++) {
+            if (parts.get(i).isEmpty()) continue;
+            sb.append('&').append(legacyCode(stops.get(i))).append(fmt).append(parts.get(i));
+        }
+        return sb.toString();
+    }
+
+    public static List<StyledGlyph> classicGlyphs(String text, List<String> stops, int[] mask, int fallbackBits) {
+        List<StyledGlyph> out = new ArrayList<>();
+        List<String> parts = classicParts(text, stops.size());
+        int idx = 0;
+        for (int k = 0; k < parts.size(); k++) {
+            int rgb = rgb(nearestLegacyHex(stops.get(k)));
+            int[] cps = parts.get(k).codePoints().toArray();
+            for (int cp : cps) {
+                int bits = mask != null && idx < mask.length ? mask[idx] : fallbackBits;
+                out.add(new StyledGlyph(new String(Character.toChars(cp)), rgb, bits));
+                idx++;
+            }
+        }
+        return out;
+    }
+
     public static int uniformBits(int[] mask, int fallback) {
         if (mask.length == 0) return fallback;
         for (int b : mask) if (b != mask[0]) return -1;
@@ -312,6 +393,7 @@ public final class HexCore {
         int command = 2;
         for (int i = 0; i < COMMANDS.length; i++) {
             String c = COMMANDS[i];
+            if (i == SPONSOR_EDIT) continue;   // editprefix — MiniMessage, разбирается как другой формат
             if (!c.isEmpty() && !c.equals("sponsor") && s.startsWith(c)) {
                 command = i;
                 s = s.substring(c.length());

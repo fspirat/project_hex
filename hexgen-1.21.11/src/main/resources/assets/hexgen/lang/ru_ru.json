@@ -318,5 +318,15 @@
   "fstweak.symbols.insert_add": "Вставить «%s» · Shift + клик — в избранное",
   "fstweak.symbols.insert_fav": "Вставить «%s» · Shift + клик — убрать из избранного",
   "fstweak.symbols.fav.empty": "Shift + клик по символу добавит его сюда",
-  "fstweak.symbols.recent.empty": "Здесь появятся символы, которые вы вставляли"
+  "fstweak.symbols.recent.empty": "Здесь появятся символы, которые вы вставляли",
+  "fstweak.colors_classic": "Цвета /colors (1–8) — нажмите на полоску, чтобы выбрать цвет",
+  "fstweak.colors_edit": "Цвета префикса (1–6), справа — цвет ника",
+  "fstweak.edit.nick_color.hint": "Цвет ника после префикса (HEX)",
+  "fstweak.part_color.classic": "В режиме цветов /colors цвет части недоступен",
+  "fstweak.legacy.title": "Цвета /colors",
+  "fstweak.legacy.sets": "Наборы /colors",
+  "fstweak.legacy.pick": "Выбрать цвет из /colors",
+  "fstweak.format.colors.hex": "Цвета: HEX (спонсоры)",
+  "fstweak.format.colors.classic": "Цвета: /colors (обычные)",
+  "fstweak.format.colors.hint": "Для /itemname, /itemlore и «без команды»: HEX-градиент (для спонсоров) или классические цвета /colors (&a, &c…) для обычных игроков"
 }

@@ -261,6 +261,15 @@ public final class HexUi {
         }
     }
 
+    /** Полоса из равных частей (цвета /colors). */
+    public static void drawParts(GuiGraphics g, int x, int y, int w, int h, List<String> stops) {
+        int n = stops.size();
+        for (int k = 0; k < n; k++) {
+            int x0 = x + w * k / n, x1 = x + w * (k + 1) / n;
+            g.fill(x0, y, x1, y + h, 0xFF000000 | HexCore.rgb(HexCore.nearestLegacyHex(stops.get(k))));
+        }
+    }
+
     /** Рамка «как у подсказки предмета». */
     public static void drawTooltipBox(GuiGraphics g, int x, int y, int w, int h) {
         g.fill(x, y, x + w, y + h, 0xF0100010);
