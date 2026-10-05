@@ -182,6 +182,7 @@
   }
 
   function loadOverview() {
+    loadServer();
     return api({ q: 'summary', days: days, host: host() }).then(function (r) {
       var c = r.cur, p = r.prev, per = { 1: 'чем вчера', 7: 'чем 7 дней назад', 30: 'чем прошлые 30 дней', 90: 'чем прошлые 90 дней' }[r.days];
       var cards = $('cards'); cards.textContent = '';
@@ -198,6 +199,39 @@
       tables(r.tables);
       $('upd').textContent = 'обновлено в ' + time(Date.now() / 1000);
     }).catch(function (e) { if (e.message !== 'auth') $('upd').textContent = 'не удалось загрузить данные'; throw e; });
+  }
+
+  // ---------- сервер ----------
+  function bytes(n) {
+    if (n == null) return '—';
+    var u = ['Б', 'КБ', 'МБ', 'ГБ', 'ТБ'], i = 0;
+    while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+    return (n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1).replace('.', ',')) + ' ' + u[i];
+  }
+  function uptime(s) { var d = Math.floor(s / 86400), hh = Math.floor(s % 86400 / 3600); return (d ? d + ' д ' : '') + hh + ' ч ' + Math.floor(s % 3600 / 60) + ' мин'; }
+  function meter(label, pct, value, sub, words) {
+    var lvl = pct == null ? '' : pct >= 90 ? 'crit' : pct >= 75 ? 'warn' : '';
+    var state = lvl ? ' · ' + words[lvl === 'crit' ? 1 : 0] : '';
+    return h('div', { class: 'meter ' + lvl },
+      h('div', { class: 'mtop' }, h('span', null, label, h('span', { class: 'state', text: state })), h('b', { text: pct == null ? '—' : Math.round(pct) + '%' })),
+      h('div', { class: 'track', role: 'meter', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct == null ? 0 : Math.round(pct), 'aria-label': label },
+        h('div', { class: 'fill', style: 'width:' + Math.max(0, Math.min(100, pct || 0)) + '%' })),
+      h('div', { class: 'sub', text: value }), sub ? h('div', { class: 'sub', text: sub }) : null);
+  }
+  function loadServer() {
+    return api({ q: 'server' }).then(function (r) {
+      var box = $('srv'); box.textContent = '';
+      var ramUsed = r.ram.total != null && r.ram.available != null ? r.ram.total - r.ram.available : null;
+      var diskUsed = r.disk.total != null && r.disk.free != null ? r.disk.total - r.disk.free : null;
+      var load = r.cpu.load.map(function (v) { return v.toFixed(2).replace('.', ','); }).join(' / ');
+      box.append(
+        meter('Процессор', r.cpu.usage, r.cpu.cores + ' ' + (r.cpu.cores === 1 ? 'ядро' : r.cpu.cores < 5 ? 'ядра' : 'ядер') + ' · нагрузка ' + load, r.cpu.model || null, ['высокая нагрузка', 'перегружен']),
+        meter('Память (RAM)', ramUsed != null ? ramUsed / r.ram.total * 100 : null, bytes(ramUsed) + ' из ' + bytes(r.ram.total),
+          r.swap.total ? 'подкачка: ' + bytes(r.swap.total - r.swap.free) + ' из ' + bytes(r.swap.total) : 'подкачки нет', ['занято много', 'почти закончилась']),
+        meter('Диск', diskUsed != null ? diskUsed / r.disk.total * 100 : null, bytes(diskUsed) + ' из ' + bytes(r.disk.total), 'свободно ' + bytes(r.disk.free) + ' · база статистики ' + bytes(r.db), ['занято много', 'почти заполнен'])
+      );
+      $('srvInfo').textContent = [r.os, 'PHP ' + r.php, 'работает ' + uptime(r.uptime)].filter(Boolean).join(' · ');
+    }).catch(function (e) { if (e.message !== 'auth') { $('srv').textContent = 'Не удалось получить данные сервера.'; } });
   }
 
   var SERIES = [{ name: 'Посетители', color: 'var(--s-visitors)', i: 1 }, { name: 'Просмотры', color: 'var(--s-views)', i: 2 }];
