@@ -18,7 +18,7 @@ import net.minecraft.client.Minecraft;
 final class Uploader {
     private Uploader() {}
 
-    /** url — ссылка на лог; иначе error — код причины (rate, size, server), waitSec — сколько секунд подождать. */
+    /** url — ссылка на лог; иначе error — код причины (rate, size, server, offline), waitSec — сколько секунд подождать. */
     record Result(String url, String error, int waitSec) {}
 
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -32,6 +32,8 @@ final class Uploader {
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
         return HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(r -> {
+            // сервер логов не настроен или временно недоступен
+            if (r.statusCode() == 404 || r.statusCode() == 502 || r.statusCode() == 503) return new Result(null, "offline", 0);
             JsonObject o;
             try {
                 o = JsonParser.parseString(r.body()).getAsJsonObject();
@@ -40,7 +42,7 @@ final class Uploader {
             }
             if (r.statusCode() == 200 && o.has("url")) return new Result(o.get("url").getAsString(), null, 0);
             String err = o.has("error") ? o.get("error").getAsString() : "server";
-            if (!err.matches("rate|size|server")) err = "server";
+            if (!err.matches("rate|size|server|offline")) err = "server";
             return new Result(null, err, o.has("wait") ? o.get("wait").getAsInt() : 0);
         });
     }

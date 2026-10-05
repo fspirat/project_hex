@@ -11,5 +11,6 @@
   "fslog.error.server": "server error",
   "fslog.open": "Open the log in your browser",
   "fslog.copy": "[copy]",
-  "fslog.copy.hover": "Copy the link"
+  "fslog.copy.hover": "Copy the link",
+  "fslog.error.offline": "the log server is unavailable right now, try later"
 }
