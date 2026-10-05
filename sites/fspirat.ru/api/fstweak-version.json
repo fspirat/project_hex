@@ -1,9 +1,9 @@
 {
-  "version": "1.2",
+  "version": "1.2.1",
   "url": "https://fspirat.ru/fstweak/",
   "notes": {
-    "ru": "Новый интерфейс в стиле FSPIRAT, логгер чата /log, компактные пресеты в чате и функции с сайта.",
-    "en": "New FSPIRAT-style interface, /log chat logger, compact presets in chat and features from the website.",
-    "uk": "Новий інтерфейс у стилі FSPIRAT, логер чату /log, компактні пресети в чаті та функції з сайту."
+    "ru": "Исправлены пресеты в чате: на некоторых серверах код не превращался в строку с кнопкой [+].",
+    "en": "Fixed presets in chat: on some servers the code was not turned into a line with the [+] button.",
+    "uk": "Виправлено пресети в чаті: на деяких серверах код не перетворювався на рядок з кнопкою [+]."
   }
 }
