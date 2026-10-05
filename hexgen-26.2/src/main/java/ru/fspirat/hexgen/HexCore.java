@@ -535,27 +535,38 @@ public final class HexCore {
 
     // ------------------------------------------------------------ обмен пресетами
 
-    /** Код пресета для чата: FSTWEAK{Имя|B04DFF,FF8FE0}. */
+    /**
+     * Код пресета для чата: ✦Имя[B04DFF,FF8FE0] (короче и понятнее без мода).
+     * Старый формат FSTWEAK{Имя|B04DFF,FF8FE0} тоже распознаётся.
+     */
+    private static final String HEX_LIST = "([0-9A-Fa-f]{6}(?:,[0-9A-Fa-f]{6}){0,5})";
     public static final java.util.regex.Pattern PRESET_CODE = java.util.regex.Pattern.compile(
-            "FSTWEAK\\{([^{}|]{1,24})\\|([0-9A-Fa-f]{6}(?:,[0-9A-Fa-f]{6}){0,5})\\}");
+            "FSTWEAK\\{([^{}|]{1,24})\\|" + HEX_LIST + "\\}|✦([^\\[\\]✦{}|\\n]{1,24})\\[" + HEX_LIST + "\\]");
 
     public static String presetCode(String name, String[] colors) {
-        String n = name.replaceAll("[{}|]", "").strip();
-        if (n.length() > 24) n = n.substring(0, 24);
-        return "FSTWEAK{" + (n.isEmpty() ? "Preset" : n) + "|" + String.join(",", colors) + "}";
+        String n = name.replaceAll("[\\[\\]✦{}|]", "").strip();
+        if (n.length() > 24) n = n.substring(0, 24).strip();
+        return "✦" + (n.isEmpty() ? "Preset" : n) + "[" + String.join(",", colors) + "]";
     }
 
-    /** Разбирает «Имя|HEX,HEX» (тело кода пресета). Null — если формат неверный. */
+    /** Пресет из найденного кода (любого из двух форматов). */
+    public static Preset presetOf(java.util.regex.Matcher m) {
+        String name = m.group(1) != null ? m.group(1) : m.group(3);
+        String colors = m.group(2) != null ? m.group(2) : m.group(4);
+        return new Preset(name.strip(), colors.toUpperCase(Locale.ROOT).split(","));
+    }
+
+    /** Разбирает «Имя|HEX,HEX» (тело кода пресета, команда /fstweak preset). Null — если формат неверный. */
     public static Preset parsePresetBody(String body) {
         java.util.regex.Matcher m = PRESET_CODE.matcher("FSTWEAK{" + body.strip() + "}");
         if (!m.matches()) return null;
-        return new Preset(m.group(1).strip(), m.group(2).toUpperCase(Locale.ROOT).split(","));
+        return presetOf(m);
     }
 
     /** Первый код пресета в тексте или null. */
     public static Preset findPreset(String text) {
         java.util.regex.Matcher m = PRESET_CODE.matcher(text == null ? "" : text);
-        return m.find() ? new Preset(m.group(1).strip(), m.group(2).toUpperCase(Locale.ROOT).split(",")) : null;
+        return m.find() ? presetOf(m) : null;
     }
 
     /** Общий хвост разбора: если градиента нет — крайние цвета становятся его точками, цвета букв остаются как есть. */

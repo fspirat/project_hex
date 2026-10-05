@@ -15,10 +15,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import ru.fspirat.hexgen.fslog.ChatBuffer;
+import ru.fspirat.hexgen.fslog.FsLog;
 
 /**
- * Обмен пресетами через чат: код FSTWEAK{Имя|B04DFF,FF8FE0} становится кнопкой,
- * нажатие на которую сохраняет пресет (клиентская команда /fstweak preset …, на сервер ничего не уходит).
+ * Обмен пресетами через чат. В чат уходит короткий код ✦Имя[B04DFF,FF8FE0] (его видят все),
+ * а у кого стоит FSTWEAK, код заменяется компактной строкой: «✦ Имя ■■ [+]» — имя раскрашено
+ * своим градиентом, при наведении видны цвета, клик сохраняет пресет
+ * (клиентская команда /fstweak preset …, на сервер ничего не уходит).
  */
 public final class PresetShare {
     private PresetShare() {}
@@ -33,21 +37,23 @@ public final class PresetShare {
                                 return 0;
                             }
                             HexConfig.addPreset(p.name(), p.colors());
-                            ctx.getSource().sendFeedback(Component.literal("✦ ").append(named(p))
-                                    .append(Component.literal(" — " + HexUi.tr("preset.saved_short")).withStyle(Style.EMPTY.withColor(0x55FF55))));
+                            ctx.getSource().sendFeedback(Component.literal("✦ ").withStyle(Style.EMPTY.withColor(HexCore.rgb(p.colors()[0])))
+                                    .append(named(p))
+                                    .append(Component.literal(" — " + HexUi.tr("preset.saved_short")).withStyle(Style.EMPTY.withColor(0x9BE052))));
                             return 1;
                         })))));
 
-        // Системные сообщения (так чат отдают многие серверные плагины) — делаем сам код кнопкой.
+        // Системные сообщения (так чат отдают многие серверные плагины) — меняем код на месте.
         ClientReceiveMessageEvents.MODIFY_GAME.register((message, overlay) -> overlay ? message : linkify(message));
 
-        // Подписанные сообщения игроков менять нельзя — добавляем под ними строку с кнопкой.
-        ClientReceiveMessageEvents.CHAT.register((message, signed, sender, params, time) -> {
-            HexCore.Preset p = HexCore.findPreset(message.getString());
-            if (p == null) return;
+        // Подписанные сообщения игроков изменить нельзя — прячем оригинал и показываем его копию с готовой строкой.
+        ClientReceiveMessageEvents.ALLOW_CHAT.register((message, signed, sender, params, time) -> {
+            if (HexCore.findPreset(message.getString()) == null) return true;
+            Component shown = linkify(message);
+            if (FsLog.active()) ChatBuffer.add(message, true);   // в логе /log — как в оригинале
             Minecraft client = Minecraft.getInstance();
-            client.execute(() -> client.gui.getChat().addMessage(Component.literal("✦ ").append(named(p)).append(" ")
-                    .append(Component.literal(HexUi.tr("preset.chat.save")).withStyle(clickStyle(p).withColor(0x55FF55)))));
+            client.execute(() -> client.gui.getChat().addMessage(shown));
+            return false;
         });
     }
 
@@ -55,25 +61,36 @@ public final class PresetShare {
         return "/fstweak preset " + p.name() + "|" + String.join(",", p.colors());
     }
 
-    private static Style clickStyle(HexCore.Preset p) {
-        return Style.EMPTY
+    /** Компактная строка пресета: ✦ Имя ■■■ [+]. */
+    static MutableComponent chip(HexCore.Preset p) {
+        StringBuilder hover = new StringBuilder(p.name()).append('\n');
+        for (String c : p.colors()) hover.append('#').append(c).append(' ');
+        hover.append('\n').append(HexUi.tr("preset.chat.hover", p.name()));
+        Style click = Style.EMPTY
                 .withClickEvent(new ClickEvent.RunCommand(command(p)))
-                .withHoverEvent(new HoverEvent.ShowText(Component.literal(HexUi.tr("preset.chat.hover", p.name()))))
-                .withUnderlined(true);
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal(hover.toString())));
+        MutableComponent c = Component.empty().withStyle(click);
+        c.append(Component.literal("✦ ").withStyle(Style.EMPTY.withColor(HexCore.rgb(p.colors()[0]))));
+        c.append(named(p));
+        MutableComponent dots = Component.literal(" ");
+        for (String col : p.colors()) dots.append(Component.literal("■").withStyle(Style.EMPTY.withColor(HexCore.rgb(col))));
+        c.append(dots);
+        c.append(Component.literal(" [+]").withStyle(Style.EMPTY.withColor(0x9BE052).withBold(true)));
+        return c;
     }
 
     /** Имя пресета, раскрашенное его же градиентом. */
     private static MutableComponent named(HexCore.Preset p) {
         MutableComponent c = Component.empty();
         for (HexCore.Glyph g : HexCore.gradientGlyphs(p.name(), List.of(p.colors()))) {
-            c.append(Component.literal(g.ch()).withStyle(Style.EMPTY.withColor(g.rgb())));
+            c.append(Component.literal(g.ch()).withStyle(Style.EMPTY.withColor(g.rgb()).withBold(false).withUnderlined(false)));
         }
         return c;
     }
 
     private record Part(String text, Style style) {}
 
-    /** Делает каждый код пресета в сообщении кнопкой, сохраняя остальное оформление сообщения. */
+    /** Заменяет каждый код пресета в сообщении компактной строкой, сохраняя остальное оформление. */
     static Component linkify(Component message) {
         String full = message.getString();
         Matcher m = HexCore.PRESET_CODE.matcher(full);
@@ -81,7 +98,7 @@ public final class PresetShare {
         List<HexCore.Preset> presets = new ArrayList<>();
         while (m.find()) {
             ranges.add(new int[]{m.start(), m.end()});
-            presets.add(new HexCore.Preset(m.group(1).strip(), m.group(2).toUpperCase(java.util.Locale.ROOT).split(",")));
+            presets.add(HexCore.presetOf(m));
         }
         if (ranges.isEmpty()) return message;
 
@@ -92,21 +109,26 @@ public final class PresetShare {
         }, Style.EMPTY);
 
         MutableComponent out = Component.empty();
-        int pos = 0;
+        int pos = 0, next = 0;   // next — номер следующего ещё не вставленного кода
         for (Part part : parts) {
             String t = part.text();
             int i = 0;
             while (i < t.length()) {
-                int abs = pos + i, r = -1;
+                int abs = pos + i;
+                int r = -1;
                 for (int k = 0; k < ranges.size(); k++) if (abs >= ranges.get(k)[0] && abs < ranges.get(k)[1]) r = k;
-                // Кусок до следующей границы (начала или конца кода).
-                int end = t.length();
-                for (int[] range : ranges) {
-                    if (range[0] > abs) end = Math.min(end, range[0] - pos);
-                    if (range[1] > abs) end = Math.min(end, range[1] - pos);
+                if (r >= 0) {
+                    // внутри кода: вставляем строку пресета один раз, сам текст кода пропускаем
+                    if (r >= next) {
+                        out.append(chip(presets.get(r)));
+                        next = r + 1;
+                    }
+                    i = Math.min(t.length(), ranges.get(r)[1] - pos);
+                    continue;
                 }
-                Style st = r >= 0 ? clickStyle(presets.get(r)).applyTo(part.style()) : part.style();
-                out.append(Component.literal(t.substring(i, end)).withStyle(st));
+                int end = t.length();
+                for (int[] range : ranges) if (range[0] > abs) end = Math.min(end, range[0] - pos);
+                out.append(Component.literal(t.substring(i, end)).withStyle(part.style()));
                 i = end;
             }
             pos += t.length();

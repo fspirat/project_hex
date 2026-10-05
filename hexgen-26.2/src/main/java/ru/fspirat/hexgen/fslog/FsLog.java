@@ -24,6 +24,11 @@ public final class FsLog {
         LogCommand.register();
     }
 
+    /** Включён ли логгер (у встроенной в FSTWEAK копии — только если нет отдельного мода FSLOG). */
+    public static boolean active() {
+        return started;
+    }
+
     static String version(String modId) {
         return FabricLoader.getInstance().getModContainer(modId)
                 .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
