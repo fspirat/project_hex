@@ -23,6 +23,11 @@ public final class HexConfig {
     /** Положение кнопки относительно левого верхнего угла инвентаря. */
     public static int buttonOffsetX = DEFAULT_OFFSET_X;
     public static int buttonOffsetY = DEFAULT_OFFSET_Y;
+    /** В творческом инвентаре — своё место кнопки (по умолчанию слева от окна). */
+    public static final int DEFAULT_CREATIVE_X = -22;
+    public static final int DEFAULT_CREATIVE_Y = 4;
+    public static int creativeOffsetX = DEFAULT_CREATIVE_X;
+    public static int creativeOffsetY = DEFAULT_CREATIVE_Y;
     /** Показывать всплывающие подсказки на кнопках. */
     public static boolean showHints = true;
     /** Анимированный градиент в предпросмотре и заголовке. */
@@ -64,6 +69,8 @@ public final class HexConfig {
         }
         buttonOffsetX = intProp(p, "buttonOffsetX", DEFAULT_OFFSET_X);
         buttonOffsetY = intProp(p, "buttonOffsetY", DEFAULT_OFFSET_Y);
+        creativeOffsetX = intProp(p, "creativeOffsetX", DEFAULT_CREATIVE_X);
+        creativeOffsetY = intProp(p, "creativeOffsetY", DEFAULT_CREATIVE_Y);
         showHints = !"false".equals(p.getProperty("showHints"));
         animatePreview = !"false".equals(p.getProperty("animatePreview"));
         // 1.2: появилась тема FSPIRAT (первая, по умолчанию); старый ключ «theme» сдвигаем на одну
@@ -102,6 +109,8 @@ public final class HexConfig {
         Properties p = new Properties();
         p.setProperty("buttonOffsetX", String.valueOf(buttonOffsetX));
         p.setProperty("buttonOffsetY", String.valueOf(buttonOffsetY));
+        p.setProperty("creativeOffsetX", String.valueOf(creativeOffsetX));
+        p.setProperty("creativeOffsetY", String.valueOf(creativeOffsetY));
         p.setProperty("showHints", String.valueOf(showHints));
         p.setProperty("animatePreview", String.valueOf(animatePreview));
         p.setProperty("theme2", String.valueOf(theme));

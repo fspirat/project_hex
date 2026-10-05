@@ -233,6 +233,40 @@ public final class HexUi {
         ".......##......."
     };
 
+    /**
+     * Кнопка в инвентаре: светлая, как у кнопок с предметами (InventoryBinds и др.), с иконкой 16×16 —
+     * звёздочка, залитая градиентом генератора, с тёмным контуром (видна и в обычном, и в творческом инвентаре).
+     */
+    public static void drawInventoryIcon(GuiGraphicsExtractor g, int x, int y, int size, boolean hover) {
+        g.fill(x, y, x + size, y + size, hover ? 0xFFFFFFFF : 0xFF373737);
+        g.fill(x + 1, y + 1, x + size - 1, y + size - 1, hover ? 0xFFD8D8D8 : 0xFFC6C6C6);
+        g.fill(x + 1, y + 1, x + size - 1, y + 2, 0xFFFFFFFF);
+        g.fill(x + 1, y + 1, x + 2, y + size - 1, 0xFFFFFFFF);
+        g.fill(x + 1, y + size - 2, x + size - 1, y + size - 1, 0xFF8B8B8B);
+        g.fill(x + size - 2, y + 1, x + size - 1, y + size - 1, 0xFF8B8B8B);
+        int ix = x + (size - 16) / 2, iy = y + (size - 16) / 2;
+        // контур: звёздочка, сдвинутая на пиксель в четыре стороны
+        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        for (int[] d : dirs) {
+            for (int row = 0; row < SPARKLE.length; row++) {
+                String line = SPARKLE[row];
+                int start = line.indexOf('#'), end = line.lastIndexOf('#') + 1;
+                int yy = iy + row + d[1];
+                if (yy < y + 1 || yy >= y + size - 1) continue;
+                g.fill(Math.max(x + 1, ix + start + d[0]), yy, Math.min(x + size - 1, ix + end + d[0]), yy + 1, 0xFF2A0A3A);
+            }
+        }
+        // заливка: градиент сверху вниз (фиолетовый → розовый)
+        for (int row = 0; row < SPARKLE.length; row++) {
+            String line = SPARKLE[row];
+            int start = line.indexOf('#'), end = line.lastIndexOf('#') + 1;
+            int c = HexCore.colorAt(TITLE_STOPS, row / (double) (SPARKLE.length - 1));
+            g.fill(ix + start, iy + row, ix + end, iy + row + 1, 0xFF000000 | c);
+        }
+        // блик
+        g.fill(ix + 7, iy + 3, ix + 8, iy + 6, 0xFFFFE6FF);
+    }
+
     public static void drawSparkle(GuiGraphicsExtractor g, int x, int y) {
         // Сначала тень со сдвигом на пиксель, потом сама звёздочка — рядами, чтобы не рисовать по пикселю.
         for (int pass = 0; pass < 2; pass++) {

@@ -180,9 +180,6 @@ public class HexGenScreen extends Screen {
                 .bounds(left + 18, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("redo"))).build());
         this.addRenderableWidget(Button.builder(Component.literal("⚙"), b -> open(new SettingsScreen(this)))
                 .bounds(left + W - 16, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("settings"))).build());
-        // Градиент со скриншота (F2) — как на сайте
-        this.addRenderableWidget(Button.builder(Component.literal("▣"), b -> open(new ShotScreen(this, this::applyPreset)))
-                .bounds(left + W - 34, top - 2, 16, 13).tooltip(HexUi.tip(HexUi.tr("shot.button.hint"))).build());
 
         // Иконка предмета в предпросмотре — кнопка «взять название из предмета в руке».
         itemButton = null;
@@ -707,7 +704,7 @@ public class HexGenScreen extends Screen {
         g.drawString(this.font, title, (this.width - this.font.width(title)) / 2, top + 1, 0xFFFFFFFF, true);
         // Версия мода — в правом верхнем углу, слева от ⚙.
         g.drawString(this.font, Component.literal(HexUi.VERSION_LABEL),
-                left + W - 38 - this.font.width(HexUi.VERSION_LABEL), top + 1, 0xFF606060, false);
+                left + W - 20 - this.font.width(HexUi.VERSION_LABEL), top + 1, 0xFF606060, false);
 
         // Предпросмотр в стиле подсказки предмета; для /itemname и /itemlore — с иконкой предмета.
         int px = left, py = top + Y_PREVIEW, pw = W, ph = 22;

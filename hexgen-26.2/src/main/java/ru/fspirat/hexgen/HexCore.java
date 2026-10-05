@@ -654,9 +654,14 @@ public final class HexCore {
      * Код пресета для чата: ✦Имя[B04DFF,FF8FE0] (короче и понятнее без мода).
      * Старый формат FSTWEAK{Имя|B04DFF,FF8FE0} тоже распознаётся.
      */
-    private static final String HEX_LIST = "([0-9A-Fa-f]{6}(?:,[0-9A-Fa-f]{6}){0,5})";
+    private static final String HEX_LIST = "([0-9A-Fa-f]{6}(?:\\s?,\\s?[0-9A-Fa-f]{6}){0,5})";
+    /**
+     * Метка — ✦ или значок из ресурспака сервера (некоторые серверы подменяют ✦ своим символом из
+     * области U+E000–U+F8FF); после метки и внутри скобок допускаются пробелы.
+     */
+    private static final String MARK = "(?:✦|[\\uE000-\\uF8FF])\\s?";
     public static final java.util.regex.Pattern PRESET_CODE = java.util.regex.Pattern.compile(
-            "FSTWEAK\\{([^{}|]{1,24})\\|" + HEX_LIST + "\\}|✦([^\\[\\]✦{}|\\n]{1,24})\\[" + HEX_LIST + "\\]");
+            "FSTWEAK\\{([^{}|]{1,24})\\|" + HEX_LIST + "\\}|" + MARK + "([^\\[\\]✦{}|\\n\\uE000-\\uF8FF]{1,24}?)\\s?\\[\\s?" + HEX_LIST + "\\s?\\]");
 
     public static String presetCode(String name, String[] colors) {
         String n = name.replaceAll("[\\[\\]✦{}|]", "").strip();
@@ -668,7 +673,7 @@ public final class HexCore {
     public static Preset presetOf(java.util.regex.Matcher m) {
         String name = m.group(1) != null ? m.group(1) : m.group(3);
         String colors = m.group(2) != null ? m.group(2) : m.group(4);
-        return new Preset(name.strip(), colors.toUpperCase(Locale.ROOT).split(","));
+        return new Preset(name.strip(), colors.replaceAll("\\s", "").toUpperCase(Locale.ROOT).split(","));
     }
 
     /** Разбирает «Имя|HEX,HEX» (тело кода пресета, команда /fstweak preset). Null — если формат неверный. */
