@@ -69,7 +69,7 @@ final class LogCommand {
                         .append(" ").append(copy(result.url()));
             } else {
                 String why = error != null ? Component.translatable("fslog.error.network").getString()
-                        : Component.translatable("fslog.error." + result.error(), result.wait()).getString();
+                        : Component.translatable("fslog.error." + result.error(), result.waitSec()).getString();
                 msg = prefix().append(Component.translatable("fslog.failed", why).withStyle(Style.EMPTY.withColor(RED)));
             }
             client.execute(() -> client.gui.getChat().addClientSystemMessage(msg));

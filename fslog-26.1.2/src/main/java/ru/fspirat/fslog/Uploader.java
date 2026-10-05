@@ -18,8 +18,8 @@ import net.minecraft.client.Minecraft;
 final class Uploader {
     private Uploader() {}
 
-    /** url — ссылка на лог; иначе error — код причины (rate, size, server), wait — сколько секунд подождать. */
-    record Result(String url, String error, int wait) {}
+    /** url — ссылка на лог; иначе error — код причины (rate, size, server), waitSec — сколько секунд подождать. */
+    record Result(String url, String error, int waitSec) {}
 
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
