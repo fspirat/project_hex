@@ -52,6 +52,7 @@ final class UpdateCheck {
     }
 
     private static void report(boolean join) {
+        if (System.getProperty("fabric.client.gametest") != null) return;   // автоматическая съёмка скриншотов в CI
         Minecraft mc = Minecraft.getInstance();
         ServerData data = mc.getCurrentServer();
         String mine = version("hexgen");

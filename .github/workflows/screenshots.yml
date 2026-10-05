@@ -1,0 +1,66 @@
+name: Mod screenshots
+
+# Запускает Minecraft с FSTWEAK в виртуальном экране и снимает окна мода для страницы сайта.
+# Результат — артефакт fstweak-screenshots (PNG 1920×1200, интерфейс ×3, русский язык).
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "hexgen-1.21.11/src/gametest/**"
+      - ".github/workflows/screenshots.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.2.1"
+
+      - name: Install virtual display
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
+
+      - name: Take screenshots
+        working-directory: hexgen-1.21.11
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток.
+        run: |
+          for i in 1 2 3; do
+            xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace && exit 0
+            echo "Attempt $i failed"
+          done
+          exit 1
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fstweak-screenshots
+          path: |
+            hexgen-1.21.11/build/run/clientGameTest/screenshots/
+            hexgen-1.21.11/build/run/clientGameTest/logs/latest.log
+
+      # Снимки кладутся в эту же ветку в папку .screenshots/ (вне sites/ — на деплой не влияют),
+      # чтобы их можно было забрать через git и подготовить для сайта.
+      - name: Commit screenshots to the branch
+        if: github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main'
+        run: |
+          rm -rf .screenshots && mkdir -p .screenshots
+          cp hexgen-1.21.11/build/run/clientGameTest/screenshots/*.png .screenshots/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .screenshots
+          git commit -m "Mod screenshots from CI run ${{ github.run_id }}" || exit 0
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

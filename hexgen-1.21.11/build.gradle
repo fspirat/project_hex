@@ -33,3 +33,16 @@ java {
 	sourceCompatibility = JavaVersion.VERSION_21
 	targetCompatibility = JavaVersion.VERSION_21
 }
+
+// Автоматические скриншоты для сайта: gradle runClientGameTest (в CI — workflow screenshots.yml).
+// Тестовый код лежит в src/gametest и в собранный мод не попадает.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "fstweak-shots"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+		username = "fspirat"
+	}
+}
