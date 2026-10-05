@@ -3,7 +3,7 @@
  * Чат-логи мода FSLOG.
  *   POST          — мод присылает сообщения чата → {"id": "...", "url": "https://fspirat.online/log/?id=..."}
  *   GET ?id=...   — страница log/ получает лог для показа
- * Хранится в той же базе, что и статистика (/var/lib/fspirat-stats), 30 дней.
+ * Хранится в той же базе, что и статистика (/var/lib/fspirat-stats), 30 дней; закреплённые в админке — пока их не открепят.
  * IP загрузившего не сохраняется — только его хэш с секретом для ограничения частоты.
  */
 
@@ -39,7 +39,7 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'GET') {
     $id = (string)($_GET['id'] ?? '');
     if (!preg_match('/^[A-Za-z0-9]{10}$/', $id)) { json_out(['error' => 'notfound'], 404); exit; }
-    $st = $db->prepare('SELECT * FROM chatlogs WHERE id = ? AND created >= ?');
+    $st = $db->prepare('SELECT * FROM chatlogs WHERE id = ? AND (created >= ? OR pinned = 1)');
     $st->execute([$id, time() - LOG_KEEP_DAYS * 86400]);
     $row = $st->fetch();
     if (!$row) { json_out(['error' => 'notfound'], 404); exit; }
@@ -47,7 +47,7 @@ if ($method === 'GET') {
     $raw = $row['data'];
     if (function_exists('gzuncompress') && ($u = @gzuncompress($raw)) !== false) $raw = $u;
     json_out([
-        'id' => $row['id'], 'created' => (int)$row['created'], 'expires' => (int)$row['created'] + LOG_KEEP_DAYS * 86400,
+        'id' => $row['id'], 'created' => (int)$row['created'], 'expires' => $row['pinned'] ? null : (int)$row['created'] + LOG_KEEP_DAYS * 86400,
         'player' => $row['player'], 'server' => $row['server'], 'mc' => $row['mc'], 'n' => (int)$row['n'],
         'messages' => json_decode($raw, true) ?: [],
     ]);
@@ -119,6 +119,9 @@ for ($try = 0; $try < 5; $try++) {
 }
 
 if (random_int(1, 20) === 1) {
-    $db->prepare('DELETE FROM chatlogs WHERE created < ?')->execute([time() - LOG_KEEP_DAYS * 86400]);
+    $db->prepare('DELETE FROM chatlogs WHERE created < ? AND pinned = 0')->execute([time() - LOG_KEEP_DAYS * 86400]);
 }
 json_out(['id' => $id, 'url' => LOG_URL . $id, 'n' => count($messages)]);
+finish_response();
+notify('log', '📄 ' . ($player ?: 'Игрок') . ' сохранил чат: ' . count($messages) . ' сообщ.' . ($server !== '' ? ' · ' . $server : '') . "\n" . LOG_URL . $id);
+stats_housekeeping($db);

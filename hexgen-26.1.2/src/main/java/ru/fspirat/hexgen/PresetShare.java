@@ -39,6 +39,7 @@ public final class PresetShare {
                                 return 0;
                             }
                             HexConfig.addPreset(p.name(), p.colors());
+                            Usage.inc("preset_chat");
                             ctx.getSource().sendFeedback(Component.literal("✦ ").withStyle(Style.EMPTY.withColor(HexCore.rgb(p.colors()[0])))
                                     .append(named(p))
                                     .append(Component.literal(" — " + HexUi.tr("preset.saved_short")).withStyle(Style.EMPTY.withColor(0x9BE052))));

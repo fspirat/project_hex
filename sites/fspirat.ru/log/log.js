@@ -43,7 +43,7 @@
     var first = log.messages[0], last = log.messages[log.messages.length - 1];
     [['Сервер', serverName(log.server)], ['Сообщений', String(log.n)],
      ['Период', first && last ? day(first.t) + ' ' + time(first.t) + ' — ' + (day(first.t) === day(last.t) ? '' : day(last.t) + ' ') + time(last.t) : '—'],
-     ['Minecraft', log.mc || '—'], ['Удалится', day(log.expires * 1000)]
+     ['Minecraft', log.mc || '—'], log.expires ? ['Удалится', day(log.expires * 1000)] : ['Хранится', 'бессрочно']
     ].forEach(function (p) { var s = el('span', null, p[0] + ': '); s.appendChild(el('b', null, p[1])); meta.appendChild(s); });
   }
 

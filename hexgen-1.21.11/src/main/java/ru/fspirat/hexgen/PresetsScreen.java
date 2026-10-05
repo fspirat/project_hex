@@ -105,6 +105,7 @@ public class PresetsScreen extends Screen {
         Button b = Button.builder(Component.literal(HexUi.presetName(p)), btn -> {
             if (mode == SHARE) {
                 copied = HexCore.presetCode(HexUi.presetName(p), p.colors());
+                Usage.inc("preset_share");
                 this.minecraft.keyboardHandler.setClipboard(copied);
                 return;
             }

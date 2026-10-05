@@ -63,6 +63,8 @@ final class UpdateCheck {
         o.addProperty("server", data != null ? data.ip : mc.hasSingleplayerServer() ? "singleplayer" : "");
         o.addProperty("lang", mc.options.languageCode);
         o.addProperty("join", join ? 1 : 0);
+        JsonObject use = Usage.snapshot();
+        if (use.size() > 0) o.add("use", use);
         HttpRequest req = HttpRequest.newBuilder(URI.create(ENDPOINT))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/json; charset=utf-8")
@@ -70,6 +72,7 @@ final class UpdateCheck {
                 .POST(HttpRequest.BodyPublishers.ofString(o.toString(), StandardCharsets.UTF_8))
                 .build();
         HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenAccept(r -> {
+            if (r.statusCode() == 200 && use.size() > 0) Usage.sent(use);
             if (r.statusCode() != 200 || notified) return;
             try {
                 JsonObject a = JsonParser.parseString(r.body()).getAsJsonObject();

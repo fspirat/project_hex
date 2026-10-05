@@ -95,7 +95,9 @@
     'gen.copy': 'Генератор: копирование', 'gen.random': 'Генератор: случайный градиент', 'gen.pal_save': 'Генератор: сохранил палитру',
     'gen.shot_load': 'Генератор: загрузил скриншот', 'gen.shot_apply': 'Генератор: цвета со скриншота'
   };
-  var AUDIT = { chatlog_deleted: 'Удалён чат-лог', login_ok: 'Вход', login_fail: 'Неверный пароль', login_blocked: 'Вход заблокирован', logout: 'Выход', setup: 'Первая настройка', password_changed: 'Пароль изменён' };
+  var AUDIT = { chatlog_deleted: 'Удалён чат-лог', chatlog_pinned: 'Лог закреплён', chatlog_unpinned: 'Лог откреплён', login_ok: 'Вход', login_fail: 'Неверный пароль',
+    login_blocked: 'Вход заблокирован', logout: 'Выход', setup: 'Первая настройка', password_changed: 'Пароль изменён',
+    backup_made: 'Создана копия базы', backup_downloaded: 'Скачана копия базы', notify_changed: 'Изменены уведомления' };
   var pageName = function (p) { return PAGES[p] || p; };
   var fmtName = function (f) { return FMT[f] || f; };
   var evName = function (e) { return EV_NAME[e] || e; };
@@ -130,6 +132,8 @@
   function ago(sec) { return sec < 60 ? sec + ' с' : sec < 3600 ? Math.floor(sec / 60) + ' мин' : Math.floor(sec / 3600) + ' ч ' + Math.floor(sec % 3600 / 60) + ' мин'; }
   function dur(sec) { return Math.floor(sec / 60) + ':' + pad(sec % 60); }
   var num = function (n) { return Number(n || 0).toLocaleString('ru-RU'); };
+  /** plural(5, 'заход', 'захода', 'заходов') → «заходов» */
+  function plural(n, one, few, many) { n = Math.abs(n) % 100; var d = n % 10; return n > 10 && n < 20 ? many : d === 1 ? one : d >= 2 && d <= 4 ? few : many; }
 
   function vidButton(vid) { return h('button', { type: 'button', class: 'vid', title: 'Вся история посетителя', onclick: function () { openVisitor(vid); } }, shortId(vid)); }
   function who(r) {
@@ -153,11 +157,12 @@
   document.querySelectorAll('.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-tab')); }); });
   function load() {
     clearTimeout(timer);
-    var next = { overview: 60000, live: 15000, mod: 60000 }[current];
-    var p = current === 'overview' ? loadOverview() : current === 'live' ? loadLive() : current === 'journal' ? loadJournal(false) : current === 'audit' ? loadAudit() : current === 'chatlogs' ? loadChatlogs() : current === 'mod' ? loadMod() : null;
+    var next = { overview: liveOpen ? 15000 : 60000, mod: 60000 }[current];
+    var p = current === 'overview' ? loadOverview() : current === 'journal' ? loadJournal(false) : current === 'chatlogs' ? loadChatlogs()
+      : current === 'mod' ? loadMod() : current === 'service' ? loadService() : null;
     if (next && p) p.then(function () { timer = setTimeout(function () { if (!document.hidden) load(); else timer = setTimeout(load, next); }, next); }, function () {});
   }
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && (current === 'overview' || current === 'live')) load(); });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && current === 'overview') load(); });
 
   // ---------- обзор ----------
   var days = 7;
@@ -181,14 +186,28 @@
       h('div', { class: 'd' }, d || '\u00a0'));
   }
 
+  // «Сейчас на сайте» — раскрывающийся список под карточками (раньше была отдельная вкладка)
+  var liveOpen = false;
+  function toggleLive() {
+    liveOpen = !liveOpen;
+    $('livePanel').hidden = !liveOpen;
+    var c = document.querySelector('#cards .card.live'); if (c) c.classList.toggle('open', liveOpen);
+    if (liveOpen) loadLive().catch(function () {});
+    load();
+  }
   function loadOverview() {
     loadServer();
+    if (liveOpen) loadLive().catch(function () {});
     return api({ q: 'summary', days: days, host: host() }).then(function (r) {
       var c = r.cur, p = r.prev, per = { 1: 'чем вчера', 7: 'чем 7 дней назад', 30: 'чем прошлые 30 дней', 90: 'чем прошлые 90 дней' }[r.days];
       var cards = $('cards'); cards.textContent = '';
       var withD = function (cur, prev) { var x = delta(cur, prev); return x ? h('span', null, x, ' ' + per) : 'за прошлый период данных нет'; };
+      var liveCard = card('Сейчас на сайте', num(r.online), 'за 5 минут', 'live' + (liveOpen ? ' open' : ''));
+      liveCard.setAttribute('role', 'button'); liveCard.setAttribute('tabindex', '0'); liveCard.setAttribute('aria-expanded', String(liveOpen));
+      liveCard.addEventListener('click', toggleLive);
+      liveCard.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLive(); } });
       cards.append(
-        card('Сейчас на сайте', num(r.online), 'за последние 5 минут', 'live'),
+        liveCard,
         card('Посетители', num(c.visitors), withD(c.visitors, p.visitors)),
         card('Визиты', num(c.visits), withD(c.visits, p.visits)),
         card('Просмотры страниц', num(c.views), withD(c.views, p.views)),
@@ -305,10 +324,7 @@
     ['palettes', 'Популярные палитры', 'раз'],
     ['downloads', 'Скачивания', 'раз'],
     ['links', 'Переходы на другие сайты', 'раз'],
-    ['devices', 'Устройства', 'визиты'],
-    ['browsers', 'Браузеры', 'визиты'],
-    ['os', 'Системы', 'визиты'],
-    ['hosts', 'Сайт', 'визиты']
+    ['devices', 'Устройства · система · браузер', 'визиты']
   ];
   function tables(t) {
     var box = $('tables'); box.textContent = '';
@@ -419,8 +435,87 @@
         card('За сутки', num(c.day), null), card('За 7 дней', num(c.week), 'новых: ' + num(c.fresh)),
         card('Последняя версия', r.latest || '—', old ? old + ' на старой версии' : 'все обновлены'));
       renderMod();
+      renderUsage(r.usage || []);
+      loadDownloads();
     });
   }
+
+  // что делают в моде — счётчики приходят вместе с проверкой обновлений (с версии 1.2.2)
+  var FMT_LABELS = ['/itemname', '/itemlore', 'без команды', '/sponsor prefix', 'Nickname &#', 'Chat <#>', 'Legacy &x', 'Console §x', 'BBCode', 'MiniMessage', 'BirdFlop', '/sponsor editprefix'];
+  var USE = { open: 'Открыли генератор', copy: 'Скопировали команду', run: 'Выполнили команду', import: 'Импорт из буфера', history: 'Открыли историю',
+    presets: 'Открыли пресеты', preset_save: 'Сохранили свой пресет', preset_share: 'Скопировали код пресета', preset_chat: 'Добавили пресет из чата [+]',
+    random: 'Случайный градиент', symbols: 'Открыли символы' };
+  function useName(k) { return k.indexOf('fmt.') === 0 ? 'Формат: ' + (FMT_LABELS[+k.slice(4)] || k.slice(4)) : USE[k] || k; }
+  function renderUsage(list) {
+    var box = $('modUsage'); box.textContent = '';
+    if (!list.length) { box.appendChild(h('p', { class: 'empty', text: 'Пока нет данных: счётчики присылает FSTWEAK 1.2.2 и новее.' })); return; }
+    var acts = list.filter(function (r) { return r.k.indexOf('fmt.') !== 0; }), fmts = list.filter(function (r) { return r.k.indexOf('fmt.') === 0; });
+    [[acts, 'Действия'], [fmts, 'Форматы (копирование и выполнение)']].forEach(function (g) {
+      if (!g[0].length) return;
+      var max = g[0].reduce(function (a, r) { return Math.max(a, r.n); }, 0), ul = h('ul', { class: 'top-list' });
+      g[0].forEach(function (r) {
+        ul.appendChild(h('li', { title: r.k }, h('i', { class: 'b', style: 'width:' + Math.max(2, r.n / max * 100) + '%' }), h('span', { class: 'k', text: useName(r.k) }), h('span', { class: 'n', text: num(r.n) })));
+      });
+      box.append(h('div', { class: 'sub-h', text: g[1] }), ul);
+    });
+  }
+  function loadDownloads(fresh) {
+    return api({ q: 'downloads', fresh: fresh ? 1 : '' }).then(function (r) {
+      var box = $('downloads'); box.textContent = '';
+      var rel = (r.releases || []).filter(function (x) { return x.assets.some(function (a) { return /^fstweak-/.test(a.name); }); });
+      $('dlInfo').textContent = 'данные GitHub на ' + time(r.at).slice(0, 5);
+      if (!rel.length) { box.appendChild(h('p', { class: 'empty', text: 'Релизов пока нет.' })); return; }
+      var total = 0, tb = h('tbody');
+      rel.forEach(function (x) {
+        var files = x.assets.filter(function (a) { return /^fstweak-/.test(a.name); }), sum = files.reduce(function (a, f) { return a + f.n; }, 0);
+        total += sum;
+        tb.appendChild(h('tr', null, h('td', null, h('div', { class: 'ev', text: x.tag }), h('small', { class: 'muted', text: x.date ? date(x.date) : '' })),
+          h('td', null, files.map(function (f) { return h('span', { class: 'tag', text: f.name.replace(/^fstweak-|\.jar$/g, '') + ': ' + num(f.n) }); })),
+          h('td', { class: 't', text: num(sum) })));
+      });
+      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Версия' }), h('th', { text: 'По версиям Minecraft' }), h('th', { text: 'Всего' }))), tb));
+      box.appendChild(h('p', { class: 'muted', text: 'Всего скачиваний FSTWEAK: ' + num(total) + '. Обновляется раз в час.' }));
+    }).catch(function (e) { if (e.message !== 'auth') { $('downloads').textContent = 'GitHub сейчас не отвечает — попробуйте позже.'; } });
+  }
+
+  // ---------- карточка игрока ----------
+  var playerBack = 'mod';
+  function openPlayer(nick) {
+    if (current !== 'player') playerBack = current;
+    current = 'player'; clearTimeout(timer);
+    document.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== 'player'; });
+    var box = $('player'); box.textContent = 'Загрузка…';
+    api({ q: 'player', nick: nick }).then(function (r) {
+      var p = r.player, now = Date.now() / 1000; box.textContent = '';
+      var online = now - p.last_seen < 900;
+      box.appendChild(h('div', { class: 'ph' }, h('h2', null, 'Игрок ', h('b', { text: p.nick })), online ? h('span', { class: 'tag new', text: 'сейчас в игре' }) : h('span', { class: 'muted', text: 'был ' + date(p.last_seen) + ' ' + time(p.last_seen) })));
+      var vh = h('div', { class: 'vhead' }); box.appendChild(vh);
+      [['Первый заход', date(p.first_seen) + ' ' + time(p.first_seen)], ['Последняя активность', date(p.last_seen) + ' ' + time(p.last_seen)],
+        ['Заходов в мир', num(p.joins)], ['Сейчас', 'FSTWEAK ' + (p.mod || '?') + ' · MC ' + (p.mc || '?')], ['Язык игры', p.lang || '—']
+      ].forEach(function (i) { vh.appendChild(h('div', null, h('small', { text: i[0] }), i[1])); });
+      box.appendChild(h('div', { class: 'sub-h', text: 'Версии и серверы' }));
+      if (r.seen.length) {
+        var tb = h('tbody');
+        r.seen.forEach(function (x) {
+          tb.appendChild(h('tr', null, h('td', null, h('span', { class: 'tag', text: 'FSTWEAK ' + (x.mod || '?') }), h('span', { class: 'tag', text: 'MC ' + (x.mc || '?') })),
+            h('td', { text: x.server === 'singleplayer' ? 'одиночная игра' : x.server || 'меню' }),
+            h('td', { class: 't', text: date(x.first_seen) + ' — ' + date(x.last_seen) })));
+        });
+        box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Версии' }), h('th', { text: 'Сервер' }), h('th', { text: 'Когда' }))), tb));
+      } else box.appendChild(h('p', { class: 'empty', text: 'История появится со следующего захода игрока (собирается с этого обновления).' }));
+      box.appendChild(h('div', { class: 'sub-h', text: 'Чат-логи игрока' }));
+      if (r.chatlogs.length) {
+        var tl = h('tbody');
+        r.chatlogs.forEach(function (x) {
+          tl.appendChild(h('tr', null, h('td', { class: 't', text: date(x.created) + ' ' + time(x.created) }),
+            h('td', null, x.pinned ? '📌 ' : '', h('a', { href: LOG_VIEW + x.id, target: '_blank', rel: 'noopener noreferrer', text: x.id })),
+            h('td', { text: x.server || '—' }), h('td', { class: 't', text: num(x.n) + ' сообщ. · ' + num(x.views) + ' просм.' })));
+        });
+        box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }), h('th', { text: 'Сервер' }), h('th', { text: 'Размер' }))), tl));
+      } else box.appendChild(h('p', { class: 'empty', text: 'Этот игрок не сохранял чат командой /log.' }));
+    }).catch(function () { box.textContent = 'Игрок не найден.'; });
+  }
+  $('pBack').addEventListener('click', function () { show(playerBack); });
   function renderMod() {
     var r = modData; if (!r) return;
     var q = $('modQ').value.trim().toLowerCase(), now = Date.now() / 1000;
@@ -432,11 +527,12 @@
     list.forEach(function (p) {
       var online = now - p.last_seen < 900, outdated = r.latest && cmpVer(p.mod, r.latest) < 0;
       tb.appendChild(h('tr', null,
-        h('td', { class: 'who' }, h('span', { class: 'ev', text: p.nick }), online ? h('span', { class: 'tag new', text: 'в игре', style: 'margin-left:6px' }) : null),
+        h('td', { class: 'who' }, h('button', { type: 'button', class: 'vid', title: 'Карточка игрока', text: p.nick, onclick: function () { openPlayer(p.nick); } }),
+          online ? h('span', { class: 'tag new', text: 'в игре', style: 'margin-left:6px' }) : null),
         h('td', null, h('span', { class: 'tag' + (outdated ? ' bad' : ''), text: 'FSTWEAK ' + (p.mod || '?') }), h('span', { class: 'tag', text: 'MC ' + (p.mc || '?') })),
         h('td', null, h('small', { class: 'muted', text: p.server === 'singleplayer' ? 'одиночная игра' : p.server || '—' })),
         h('td', { class: 't' }, online ? 'сейчас' : date(p.last_seen) + ' ' + time(p.last_seen), h('br'), h('small', { class: 'muted', text: 'впервые ' + date(p.first_seen) })),
-        h('td', { class: 't', text: num(p.joins) + ' заходов' })));
+        h('td', { class: 't', text: num(p.joins) + ' ' + plural(p.joins, 'заход', 'захода', 'заходов') })));
     });
     box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Ник' }), h('th', { text: 'Версии' }),
       h('th', { text: 'Сервер' }), h('th', { text: 'Последний раз' }), h('th', { text: 'Заходы' }))), tb));
@@ -457,18 +553,151 @@
           del.disabled = true;
           api({ q: 'chatlog_delete' }, { id: x.id }).then(function () { loadChatlogs(); }, function () { del.disabled = false; });
         } });
-        tb.appendChild(h('tr', null,
-          h('td', { class: 't', text: date(x.created) + ' ' + time(x.created) }),
+        var pin = h('button', { type: 'button', class: 'pin', 'aria-pressed': String(!!x.pinned), text: '📌',
+          title: x.pinned ? 'Закреплён: не удалится через 30 дней. Нажмите, чтобы открепить' : 'Закрепить: лог не удалится через 30 дней', onclick: function () {
+            pin.disabled = true;
+            api({ q: 'chatlog_pin' }, { id: x.id, pinned: !x.pinned }).then(function () { loadChatlogs(); }, function () { pin.disabled = false; });
+          } });
+        tb.appendChild(h('tr', { class: x.pinned ? 'pinned' : null },
+          h('td', { class: 't' }, date(x.created) + ' ' + time(x.created), h('br'),
+            h('small', { class: 'muted', text: x.pinned ? 'хранится бессрочно' : 'удалится ' + date(x.created + 30 * 86400) })),
           h('td', null, h('a', { href: LOG_VIEW + x.id, target: '_blank', rel: 'noopener noreferrer', text: x.id })),
-          h('td', null, h('div', { class: 'ev', text: x.player || '—' }), h('small', { class: 'muted', text: x.server || '' })),
+          h('td', null, x.player ? h('button', { type: 'button', class: 'vid', text: x.player, title: 'Карточка игрока', onclick: function () { openPlayer(x.player); } }) : h('div', { class: 'ev', text: '—' }),
+            h('br'), h('small', { class: 'muted', text: x.server || '' })),
           h('td', { class: 't' }, num(x.n) + ' сообщ.', h('br'), h('small', { class: 'muted', text: bytes(x.bytes) + ' · MC ' + (x.mc || '?') })),
           h('td', { class: 't', text: num(x.views) }),
-          h('td', null, del)));
+          h('td', { class: 't' }, pin, del)));
       });
       box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }),
         h('th', { text: 'Игрок · сервер' }), h('th', { text: 'Размер' }), h('th', { text: 'Просмотры' }), h('th', { text: '' }))), tb));
-      box.appendChild(h('p', { class: 'muted', text: 'Всего ' + num(r.count) + ' логов, ' + bytes(r.bytes) + ' текста. Старше 30 дней удаляются сами.' }));
+      box.appendChild(h('p', { class: 'muted', text: 'Всего ' + num(r.count) + ' логов, ' + bytes(r.bytes) + ' текста. Старше 30 дней удаляются сами, кроме закреплённых 📌.' }));
     });
+  }
+
+  // ---------- сервис: здоровье, уведомления, копии базы, ошибки ----------
+  function kv(rows) {
+    var box = h('div', { class: 'kv' });
+    rows.forEach(function (r) { box.appendChild(h('div', null, h('span', { text: r[0] }), h('b', { class: r[2] || '', text: r[1] }))); });
+    return box;
+  }
+  function daysLeft(ts) { return Math.floor((ts - Date.now() / 1000) / 86400); }
+  function loadService() {
+    loadAudit();
+    return api({ q: 'service' }).then(function (r) {
+      $('svcUpd').textContent = 'проверено в ' + time(Date.now() / 1000).slice(0, 5);
+      // здоровье
+      var hb = $('health'); hb.textContent = '';
+      hb.appendChild(h('div', { class: 'sub-h', text: 'SSL-сертификаты' }));
+      hb.appendChild(kv(r.ssl.map(function (x) {
+        if (!x.until) return [x.host, 'не удалось проверить', 'bad'];
+        var d = daysLeft(x.until);
+        return [x.host, (d < 0 ? 'истёк ' + date(x.until) : 'до ' + date(x.until) + ' · ' + d + ' дн.') + (x.issuer ? ' · ' + x.issuer : ''), d < 7 ? 'bad' : d < 21 ? 'warn' : 'ok'];
+      })));
+      hb.appendChild(h('div', { class: 'sub-h', text: 'Последняя выкладка' }));
+      hb.appendChild(kv(r.deploys.map(function (x) {
+        var b = x.build;
+        return [x.site, b && b.time ? date(b.time) + ' ' + time(b.time).slice(0, 5) + ' · ' + b.sha.slice(0, 7) : 'нет данных (появятся после следующей выкладки)', b && b.time ? 'ok' : 'warn'];
+      })));
+      hb.appendChild(h('div', { class: 'sub-h', text: 'Ошибки PHP' }));
+      hb.appendChild(kv([['Журнал ошибок', r.errors.length ? r.errors.length + ' последних строк · ' + bytes(r.errors_size) : 'ошибок нет', r.errors.length ? 'warn' : 'ok']]));
+      // ошибки
+      var eb = $('errors'); eb.textContent = '';
+      eb.appendChild(r.errors.length ? h('pre', { class: 'errlog', text: r.errors.join('\n') }) : h('p', { class: 'empty', text: 'Ошибок нет.' }));
+      renderBackups(r);
+      renderNotify(r.notify);
+    }).catch(function (e) { if (e.message !== 'auth') $('health').textContent = 'Не удалось получить данные сервиса.'; });
+  }
+
+  function renderBackups(r) {
+    $('bkInfo').textContent = 'автоматически раз в сутки, хранятся ' + r.backup_keep + ' последних · база сейчас ' + bytes(r.db);
+    var box = $('backups'); box.textContent = '';
+    var make = h('button', { type: 'button', class: 'small accent', text: 'Сделать копию сейчас', onclick: function () {
+      make.disabled = true; make.textContent = 'Копирую…';
+      api({ q: 'backup_now' }, {}).then(function () { loadService(); }, function () { make.disabled = false; make.textContent = 'Не получилось — ещё раз'; });
+    } });
+    box.appendChild(h('div', { class: 'field' }, make, h('span', { class: 'muted', text: 'Копия — файл SQLite: его можно открыть в DB Browser for SQLite или вернуть на сервер вместо stats.sqlite.' })));
+    if (!r.backups.length) { box.appendChild(h('p', { class: 'empty', text: 'Копий пока нет — первая появится в течение часа после выкладки.' })); return; }
+    var tb = h('tbody');
+    r.backups.forEach(function (b) {
+      var dl = h('button', { type: 'button', class: 'small', text: 'Скачать', onclick: function () { download(b.name, dl); } });
+      tb.appendChild(h('tr', null, h('td', { class: 't', text: date(b.time) + ' ' + time(b.time).slice(0, 5) }), h('td', { text: b.name }), h('td', { class: 't', text: bytes(b.size) }), h('td', null, dl)));
+    });
+    box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Файл' }), h('th', { text: 'Размер' }), h('th', { text: '' }))), tb));
+  }
+  function download(name, btn) {
+    btn.disabled = true;
+    fetch(API + '?q=backup&name=' + encodeURIComponent(name), { headers: { Authorization: 'Bearer ' + token() }, credentials: 'omit', cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+      .then(function (blob) {
+        var a = h('a', { href: URL.createObjectURL(blob), download: 'fspirat-' + name });
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+      }).catch(function () { alert('Не удалось скачать копию.'); }).then(function () { btn.disabled = false; });
+  }
+
+  var NOTIFY_ERR = { token: 'Токен не подошёл — проверьте, что скопировали его целиком из @BotFather.', network: 'Сервер не смог связаться с api.telegram.org.',
+    chat: 'Сначала выберите чат.', send: 'Telegram не принял сообщение', write: 'Не удалось сохранить настройки на сервере.' };
+  function notifyErr(e) { var d = e.data || {}; return (NOTIFY_ERR[d.error] || 'Ошибка') + (d.detail ? ': ' + d.detail : '.'); }
+  function renderNotify(n) {
+    var box = $('notify'); box.textContent = '';
+    var msg = h('p', { class: 'msg', role: 'status' });
+    function say(t, cls) { msg.textContent = t; msg.className = 'msg ' + (cls || ''); }
+    $('tgState').textContent = n.token && n.chat ? 'включены' + (n.bot ? ' · @' + n.bot : '') : n.token ? 'бот подключён, выберите чат' : 'не настроены';
+    if (!n.token) {
+      box.appendChild(h('p', { class: 'note' }, '1. В Telegram откройте ', h('b', { text: '@BotFather' }), ', отправьте ', h('b', { text: '/newbot' }),
+        ' и придумайте имя — он пришлёт токен.', h('br'), '2. Вставьте токен сюда и нажмите «Подключить».'));
+      var tok = h('input', { type: 'password', placeholder: '123456789:AA…', 'aria-label': 'Токен бота', autocomplete: 'off' });
+      var save = h('button', { type: 'button', class: 'small accent', text: 'Подключить', onclick: function () {
+        save.disabled = true; say('Проверяю токен…');
+        api({ q: 'notify_save' }, { token: tok.value.trim() }).then(function () { loadService(); }, function (e) { save.disabled = false; say(notifyErr(e), 'bad'); });
+      } });
+      box.append(h('div', { class: 'field' }, tok, save), msg);
+      return;
+    }
+    // выбор чата
+    if (!n.chat) {
+      box.appendChild(h('p', { class: 'note' }, 'Напишите вашему боту ', n.bot ? h('b', { text: '@' + n.bot }) : 'в Telegram', ' любое сообщение, затем нажмите «Найти чат».'));
+      var chats = h('div', { class: 'chats' });
+      var find = h('button', { type: 'button', class: 'small accent', text: 'Найти чат', onclick: function () {
+        find.disabled = true; say('Ищу…'); chats.textContent = '';
+        api({ q: 'notify_chats' }, {}).then(function (r) {
+          find.disabled = false;
+          if (!r.chats.length) { say('Сообщений боту пока нет — напишите ему и нажмите ещё раз.', 'warn'); return; }
+          say('Выберите, куда присылать уведомления:');
+          r.chats.forEach(function (c) {
+            chats.appendChild(h('button', { type: 'button', class: 'small', text: (c.name || c.user || c.id) + (c.user ? ' (@' + c.user + ')' : ''), onclick: function () {
+              api({ q: 'notify_save' }, { chat: c.id }).then(function () { loadService(); }, function (e) { say(notifyErr(e), 'bad'); });
+            } }));
+          });
+        }, function (e) { find.disabled = false; say(notifyErr(e), 'bad'); });
+      } });
+      box.append(h('div', { class: 'field' }, find), chats, msg);
+    } else {
+      box.appendChild(h('div', { class: 'sub-h', text: 'О чём сообщать' }));
+      var checks = h('div', { class: 'checks' });
+      n.events.forEach(function (ev) {
+        var cb = h('input', { type: 'checkbox' }); cb.checked = ev.on;
+        cb.addEventListener('change', function () {
+          var o = {}; o[ev.k] = cb.checked;
+          api({ q: 'notify_save' }, { events: o }).then(function () { say('Сохранено.', 'ok'); }, function (e) { cb.checked = !cb.checked; say(notifyErr(e), 'bad'); });
+        });
+        checks.appendChild(h('label', null, cb, ev.label));
+      });
+      box.appendChild(checks);
+      var test = h('button', { type: 'button', class: 'small accent', text: 'Отправить проверку', onclick: function () {
+        test.disabled = true; say('Отправляю…');
+        api({ q: 'notify_test' }, {}).then(function () { test.disabled = false; say('Отправлено — проверьте Telegram.', 'ok'); }, function (e) { test.disabled = false; say(notifyErr(e), 'bad'); });
+      } });
+      var other = h('button', { type: 'button', class: 'small', text: 'Другой чат', onclick: function () {
+        api({ q: 'notify_save' }, { chat: '' }).then(function () { loadService(); });
+      } });
+      box.append(h('div', { class: 'field' }, test, other), msg);
+    }
+    var off = h('button', { type: 'button', class: 'small', text: 'Отключить бота', onclick: function () {
+      if (!confirm('Отключить уведомления и удалить токен бота с сервера?')) return;
+      api({ q: 'notify_save' }, { token: '' }).then(function () { loadService(); });
+    } });
+    box.appendChild(h('div', { class: 'field', style: 'margin-top:10px' }, off));
   }
 
   // ---------- журнал входов ----------
