@@ -22,6 +22,13 @@ jobs:
             gradle: "9.5.1"
           - project: hexgen-26.1.2
             gradle: "9.5.1"
+          # FSLOG — отдельный мод (логгер чата)
+          - project: fslog-1.21.11
+            gradle: "9.2.1"
+          - project: fslog-26.2
+            gradle: "9.5.1"
+          - project: fslog-26.1.2
+            gradle: "9.5.1"
     steps:
       - uses: actions/checkout@v4
 
@@ -43,18 +50,22 @@ jobs:
           name: ${{ matrix.project }}
           path: ${{ matrix.project }}/build/libs/*.jar
 
-      # Копия с постоянным именем (fstweak-<версия MC>.jar) — на неё ссылается страница fspirat.ru/fstweak/.
+      # Копия с постоянным именем (fstweak-<версия MC>.jar / fslog-<версия MC>.jar) — на неё ссылаются страницы сайта.
       - name: Prepare release file
         run: |
           mkdir -p dist
           jar=$(ls ${{ matrix.project }}/build/libs/*.jar | grep -v -- '-sources' | head -n 1)
-          cp "$jar" "dist/fstweak-${MC#hexgen-}.jar"
+          case "$P" in
+            hexgen-*) cp "$jar" "dist/fstweak-${P#hexgen-}.jar" ;;
+            fslog-*)  cp "$jar" "dist/fslog-${P#fslog-}.jar" ;;
+          esac
         env:
-          MC: ${{ matrix.project }}
+          P: ${{ matrix.project }}
 
+      # В релиз FSTWEAK попадают только файлы FSTWEAK; файлы FSLOG — отдельными артефактами.
       - uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.project }}
+          name: ${{ startsWith(matrix.project, 'hexgen-') && format('release-{0}', matrix.project) || format('fslog-jar-{0}', matrix.project) }}
           path: dist/*.jar
 
   # Релиз на GitHub: при пуше тега вида v1.0.0 или при ручном запуске с заполненным release_tag
