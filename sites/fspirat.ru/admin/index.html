@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://fspirat.online; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<title>FSPIRAT · Админ-панель</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body class="login">
+<!-- Страница одинаковая на fspirat.ru и fspirat.online; данные приходят с fspirat.online/admin/api.php -->
+<main class="login-box" id="loginView">
+  <p class="kicker"><b>&gt;</b> FSPIRAT · admin</p>
+  <h1>Админ-<span>панель</span></h1>
+  <form id="loginForm" autocomplete="off">
+    <label for="pw">Пароль</label>
+    <input type="password" id="pw" name="password" required autofocus autocomplete="current-password">
+    <p class="err" id="loginErr" role="alert" hidden></p>
+    <button type="submit" class="accent" id="loginBtn">Войти</button>
+  </form>
+  <p class="hint">Все входы и неудачные попытки записываются в журнал. Вход действует, пока открыта вкладка.</p>
+</main>
+<div id="appView" hidden>
+<header class="top">
+  <div class="brand"><span class="dot"></span>FSPIRAT <span>admin</span></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="overview" aria-selected="true">Обзор</button>
+    <button role="tab" data-tab="live" aria-selected="false">Сейчас</button>
+    <button role="tab" data-tab="journal" aria-selected="false">Журнал</button>
+    <button role="tab" data-tab="audit" aria-selected="false">Входы</button>
+  </nav>
+  <div class="logout"><button type="button" class="small" id="logout">Выйти</button></div>
+</header>
+<main id="main">
+  <section data-pane="overview">
+    <div class="bar">
+      <div class="seg" id="range" role="group" aria-label="Период">
+        <button data-days="1" aria-pressed="false">Сегодня</button>
+        <button data-days="7" aria-pressed="true">7 дней</button>
+        <button data-days="30" aria-pressed="false">30 дней</button>
+        <button data-days="90" aria-pressed="false">90 дней</button>
+      </div>
+      <select id="hostFilter" aria-label="Сайт">
+        <option value="">Оба сайта</option>
+        <option value="fspirat.ru">fspirat.ru</option>
+        <option value="fspirat.online">fspirat.online</option>
+      </select>
+      <span class="upd" id="upd"></span>
+    </div>
+    <div class="cards" id="cards"></div>
+    <div class="panel">
+      <div class="ph"><h2>Посещаемость</h2><div class="legend" id="legend"></div></div>
+      <div class="chart" id="chart"></div>
+    </div>
+    <div class="grid" id="tables"></div>
+  </section>
+  <section data-pane="live" hidden>
+    <div class="panel">
+      <div class="ph"><h2>Сейчас на сайте <b id="liveN"></b></h2><span class="muted">активность за последние 5 минут · обновляется сама</span></div>
+      <div id="live"></div>
+    </div>
+  </section>
+  <section data-pane="journal" hidden>
+    <div class="bar filters">
+      <input type="date" id="fDay" aria-label="День">
+      <select id="fEv" aria-label="Действие"><option value="">Все действия</option></select>
+      <input type="text" id="fPath" placeholder="Страница, например /hex_generator/" aria-label="Страница">
+      <input type="text" id="fVid" placeholder="Посетитель #" aria-label="Посетитель" maxlength="16">
+      <button type="button" class="small" id="fReset">Сбросить</button>
+    </div>
+    <div class="panel"><div id="journal"></div><button type="button" class="more" id="jMore" hidden>Показать ещё</button></div>
+  </section>
+  <section data-pane="visitor" hidden>
+    <button type="button" class="small" id="vBack">← Назад</button>
+    <div class="panel" id="visitor"></div>
+  </section>
+  <section data-pane="audit" hidden>
+    <div class="panel">
+      <div class="ph"><h2>Журнал входов в админку</h2><span class="muted">хранится 90 дней</span></div>
+      <div id="audit"></div>
+    </div>
+  </section>
+</main>
+</div>
+<script src="admin.js"></script>
+</body>
+</html>

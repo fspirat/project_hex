@@ -317,6 +317,43 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 .leg-sw:hover{border-color:#fff;transform:translateY(-1px)}
 @media(max-width:560px){.leg-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .obf{display:inline-block}
+/* градиент со скриншота */
+.shot-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 12px;border-style:dashed;color:var(--green-lt)}
+.shot-btn svg{flex:none}
+.dlg-box.shot-box{max-width:780px;max-height:calc(100vh - 32px);overflow:auto}
+.shot-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.shot-head h3{margin:0}
+.shot-head .icon-btn{flex:none}
+.shot-drop{display:block;border:1px dashed var(--line-hi);background:var(--surface);padding:20px 14px;text-align:center;color:var(--muted);border-radius:2px;cursor:pointer;line-height:1.5}
+.shot-drop b{color:var(--green-hi);font-weight:400}
+.shot-drop.over,.shot-drop:hover{border-color:var(--green);color:var(--text)}
+.shot-drop.mini{padding:8px 12px;font-size:14px}
+.shot-view{margin-top:10px;background:#000;border:1px solid var(--line);display:flex;justify-content:center}
+.shot-view canvas{display:block;max-width:100%;max-height:46vh;width:auto;height:auto;image-rendering:pixelated;cursor:crosshair;touch-action:none}
+.shot-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:8px;font-size:14px;color:var(--muted)}
+.shot-ctl label{display:flex;align-items:center;gap:8px}
+.shot-ctl input[type=range]{width:140px;accent-color:var(--green)}
+.shot-ctl .sp{flex:1}
+.shot-lines{display:grid;gap:8px;margin-top:12px}
+.shot-line{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:8px 10px;background:var(--surface);border:1px solid var(--line);border-radius:2px}
+.shot-line:hover,.shot-line.hi{border-color:var(--line-hi)}
+.shot-line .n{color:var(--green);font-size:14px;text-align:center}
+.shot-chars{display:flex;flex-wrap:wrap;gap:2px;margin-bottom:6px}
+.shot-chars i{width:10px;height:14px;border:1px solid rgba(0,0,0,.6)}
+.shot-chars i.sp{width:6px;border:0;background:none}
+.shot-line .bar{height:14px;border:1px solid rgba(0,0,0,.55)}
+.shot-hex{margin-top:5px;font-size:14px;color:var(--text);overflow-wrap:anywhere}
+.shot-hex span{color:var(--muted);overflow-wrap:normal}
+.shot-hex span b{font-weight:400;white-space:nowrap}
+.shot-alt{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:14px;color:var(--text)}
+.shot-alt span{color:var(--muted)}
+.shot-alt b{font-weight:400}
+.shot-alt button{margin-left:4px;font-size:14px;padding:3px 8px}
+.shot-msg{margin:8px 0 0;font-size:14px;color:var(--muted)}
+.shot-msg:empty{display:none}
+.shot-msg.ok{color:var(--green-lt)}
+.shot-msg.err{color:#ff6b6b}
+@media(max-width:560px){.shot-line{grid-template-columns:1fr}.shot-line .n{text-align:left}.shot-line button{width:100%}}
 /* диалог */
 .dlg{position:fixed;inset:0;background:rgba(3,5,3,.78);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
 .dlg-box{width:100%;max-width:380px;background:linear-gradient(180deg,var(--card),var(--surface));border:1px solid var(--line-hi);border-radius:3px;padding:18px;
@@ -454,6 +491,7 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
       <!-- 02 Цвет -->
       <section class="panel reveal" style="animation-delay:.18s">
         <div class="sec-head"><h2><span>02</span>Цвет</h2><span class="sec-meta">редактируется: <b id="targetLabel">Название</b></span></div>
+        <button type="button" class="shot-btn" id="shotBtn"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M2 4h3l1-2h4l1 2h3v9H2zm6 2a3 3 0 1 0 0 6a3 3 0 0 0 0-6zm0 1.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3z"/></svg><span>Узнать градиент по скриншоту</span></button>
         <div class="seg" role="group" aria-label="Режим цвета" id="seg">
           <button id="modeSolid" aria-pressed="false">Один цвет</button>
           <button id="modeGrad" aria-pressed="true">Градиент</button>
@@ -559,6 +597,31 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
       <button type="button" id="dlgCancel">Отмена</button>
       <button type="button" id="dlgOk" class="accent">Сохранить</button>
     </div>
+  </div>
+</div>
+
+<div class="dlg" id="shotDlg" hidden>
+  <div class="dlg-box shot-box" role="dialog" aria-modal="true" aria-labelledby="shotTitle">
+    <div class="shot-head">
+      <h3 id="shotTitle">Градиент со скриншота</h3>
+      <button type="button" class="icon-btn" id="shotClose" aria-label="Закрыть">✕</button>
+    </div>
+    <label class="shot-drop" id="shotDrop">
+      <input type="file" id="shotFile" accept="image/*" hidden>
+      <span id="shotDropText"><b>Ctrl+V</b> — вставить скриншот из буфера обмена<br>или перетащите картинку сюда / <b>нажмите, чтобы выбрать файл или фото</b></span>
+    </label>
+    <p class="shot-msg" id="shotMsg"></p>
+    <div id="shotWork" hidden>
+      <div class="shot-view"><canvas id="shotCanvas" aria-label="Скриншот. Выделите мышью или пальцем строку с текстом"></canvas></div>
+      <div class="shot-ctl">
+        <span>Выделите область с текстом, чтобы убрать лишнее</span>
+        <span class="sp"></span>
+        <label>Порог <input type="range" id="shotThr" min="20" max="250" step="1"><span id="shotThrVal">авто</span></label>
+        <button type="button" class="small" id="shotReset">Сбросить</button>
+      </div>
+      <div class="shot-lines" id="shotLines"></div>
+    </div>
+    <p class="note" style="margin:10px 0 0">Лучше всего работает обычный скриншот (F2, Win+Shift+S) — у него точные цвета. С фото экрана цвета получаются примерные. Картинка никуда не отправляется: всё считается в браузере.</p>
   </div>
 </div>
 
@@ -684,6 +747,8 @@ const maxStops = () => isSponsor()?7:6;
 
 /* ================= Цвет: та же логика, что в HEX-генераторе ================= */
 const $ = id => document.getElementById(id);
+/** Анонимная статистика сайта (js/stats.js): только действия, без введённых текстов. */
+const track = (e,d) => { try{ if(window.fsTrack) window.fsTrack(e,d); }catch(_){} };
 const clean = h => (h||"").replace(/[^0-9a-f]/gi,"").slice(0,6).toUpperCase();
 const valid = h => /^[0-9A-F]{6}$/.test(h);
 const toRgb = h => [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
@@ -799,7 +864,7 @@ function card(p,onPick,isActive){
 }
 const isOn = (style,p) => p.codes ? legOf(style).join("")===p.codes.join("")
   : style.mode==="gradient"&&p.colors.length===style.stops.length&&p.colors.every((c,i)=>c===style.stops[i]);
-function applyPalette(t,p){ const st=targetObj(t).style; if(p.codes){ st.legacy=[...p.codes]; return; } st.mode="gradient"; st.stops=[...p.colors]; }
+function applyPalette(t,p){ track("gen.palette",{name:p.name||"",own:p.own?1:0,classic:p.codes?1:0}); const st=targetObj(t).style; if(p.codes){ st.legacy=[...p.codes]; return; } st.mode="gradient"; st.stops=[...p.colors]; }
 
 let palCat="all", palQuery="", palOpen=false;
 function renderCats(){
@@ -1022,7 +1087,7 @@ function renderClassic(){
 }
 $("legRev").addEventListener("click",()=>{ legOf(cur()).reverse(); refresh(); });
 $("legClear").addEventListener("click",()=>{ cur().legacy=[]; refresh(); });
-$("legRnd").addEventListener("click",()=>{
+$("legRnd").addEventListener("click",()=>{ track("gen.random",{classic:1});
   const all=Object.keys(LEG).filter(c=>c!=="0"), n=2+Math.floor(Math.random()*3), out=[];
   while(out.length<n){ const c=all[Math.floor(Math.random()*all.length)]; if(c!==out[out.length-1]) out.push(c); }
   cur().legacy=out; refresh();
@@ -1085,7 +1150,7 @@ function hsl2hex(h,s,l){
   const f=n=>l-a*Math.max(-1,Math.min(k(n)-3,Math.min(9-k(n),1)));
   return [f(0),f(8),f(4)].map(x=>Math.round(x*255).toString(16).padStart(2,"0")).join("").toUpperCase();
 }
-$("rndStops").addEventListener("click",()=>{
+$("rndStops").addEventListener("click",()=>{ track("gen.random");
   const st=cur(), n=st.mode==="solid"?1:(Math.random()<.65?2:3), h=Math.random()*360, step=35+Math.random()*70, dir=Math.random()<.5?1:-1;
   const cols=Array.from({length:n},(_,i)=>hsl2hex((h+dir*step*i+360)%360,75+Math.random()*25,55+Math.random()*20));
   if(st.mode==="solid") st.stops[0]=cols[0]; else st.stops=cols;
@@ -1112,7 +1177,7 @@ function confirmDlg(){
   const i=mine.findIndex(p=>p.n.toLowerCase()===name.toLowerCase());
   if(i>=0) mine[i]={n:name,c:cols}; else mine.push({n:name,c:cols});
   if(!saveMine()){ $("dlgErr").textContent="Браузер запретил сохранение данных."; return; }
-  closeDlg(); setTab("mine"); mineMsg(i>=0?"Палитра «"+name+"» обновлена":"Палитра «"+name+"» сохранена");
+  track("gen.pal_save",{colors:cols.length}); closeDlg(); setTab("mine"); mineMsg(i>=0?"Палитра «"+name+"» обновлена":"Палитра «"+name+"» сохранена");
   const t=$("savePal").querySelector("span"); t.textContent="Сохранено ✓"; setTimeout(()=>t.textContent="Сохранить палитру",1500);
   refresh();
 }
@@ -1344,6 +1409,7 @@ function cmdRow(num,line){
 }
 let lastAll="";
 async function copyText(t,btn,label){
+  track("gen.copy",{fmt:S.cmd,len:t.length,all:btn.id==="copyAll"?1:0});
   try{ await navigator.clipboard.writeText(t); }
   catch(e){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
   btn.textContent="Скопировано"; setTimeout(()=>btn.textContent=label,1400);
@@ -1413,8 +1479,8 @@ function applyMode(){
     if(st.stops.length>6) st.stops=st.stops.slice(0,5).concat(st.stops[st.stops.length-1]); }
   refresh();
 }
-$("cmd").addEventListener("change",()=>{ S.cmd=$("cmd").value; applyMode(); });
-$("font").addEventListener("change",()=>{ S.font=$("font").value; update(); });
+$("cmd").addEventListener("change",()=>{ S.cmd=$("cmd").value; applyMode(); track("gen.format",{fmt:S.cmd}); });
+$("font").addEventListener("change",()=>{ S.font=$("font").value; update(); track("gen.font",{font:S.font}); });
 $("cmdName").addEventListener("input",()=>{ S.cmdName=$("cmdName").value; update(); });
 $("cmdLore").addEventListener("input",()=>{ S.cmdLore=$("cmdLore").value; update(); });
 $("tpl").addEventListener("input",()=>{ S.tpl=$("tpl").value; update(); });
@@ -1517,6 +1583,268 @@ function update(){
 function refresh(){ closePop(); renderText(); renderStops(); renderPalettes(); update(); }
 addEventListener("resize",()=>renderPreview());
 
+/* ================= Градиент со скриншота =================
+ * Всё считается в браузере, картинка никуда не отправляется.
+ * 1) пиксели текста — те, что ярче порога (тень Minecraft в 4 раза темнее и отсекается);
+ * 2) связные области → буквы, буквы группируются в строки, большие промежутки — пробелы;
+ * 3) цвет буквы — медиана её пикселей;
+ * 4) цвета градиента подбираются методом наименьших квадратов по той же формуле, что и у генератора,
+ *    берётся наименьшее число цветов, которое даёт такой же результат. */
+const shot={W:0,H:0,data:null,sel:null,lines:[],thr:null,drag:null};
+const shotMsg=(t,cls)=>{ const m=$("shotMsg"); m.textContent=t||""; m.className="shot-msg"+(cls?" "+cls:""); };
+function openShot(){ $("shotDlg").hidden=false; shotMsg(""); if(shot.data) renderShotLines(); setTimeout(()=>$("shotClose").focus(),30); }
+function closeShot(){ $("shotDlg").hidden=true; }
+function loadShot(file){
+  if(!file||!/^image\//.test(file.type)){ shotMsg("Это не картинка. Нужен PNG, JPG или WEBP.","err"); return; }
+  const url=URL.createObjectURL(file), img=new Image();
+  img.onload=()=>{
+    let W=img.naturalWidth,H=img.naturalHeight; const k=Math.min(1,Math.sqrt(16e6/(W*H)));
+    W=Math.max(1,Math.round(W*k)); H=Math.max(1,Math.round(H*k));
+    const c=document.createElement("canvas"); c.width=W; c.height=H;
+    const g=c.getContext("2d",{willReadFrequently:true}); g.drawImage(img,0,0,W,H); URL.revokeObjectURL(url);
+    Object.assign(shot,{W,H,data:g.getImageData(0,0,W,H).data,sel:null,thr:null,src:c,fresh:true});
+    const v=$("shotCanvas"); v.width=W; v.height=H;
+    $("shotWork").hidden=false; $("shotDrop").classList.add("mini");
+    $("shotDropText").innerHTML="<b>Ctrl+V</b> или <b>нажмите</b> — другая картинка";
+    analyzeShot();
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(url); shotMsg("Не удалось открыть картинку.","err"); };
+  img.src=url;
+}
+/** Порог Оцу по яркости (максимум из R,G,B). */
+function otsu(hist,total){
+  let sum=0; for(let i=0;i<256;i++) sum+=i*hist[i];
+  let sB=0,wB=0,best=0,thr=128;
+  for(let t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; const wF=total-wB; if(!wF) break;
+    sB+=t*hist[t]; const mB=sB/wB, mF=(sum-sB)/wF, v=wB*wF*(mB-mF)*(mB-mF); if(v>best){best=v;thr=t+1;} }
+  return thr;
+}
+const median = a => { if(!a.length) return 0; const s=Float64Array.from(a).sort(); return s[s.length>>1]; };
+/** Пиксель текста Minecraft: под ним (со сдвигом на 1 пиксель шрифта вниз-вправо) лежит тень ровно в 4 раза темнее. */
+function shadowOk(d,W,i,j,strict){
+  const v=Math.max(d[i],d[i+1],d[i+2]); if(v<40) return false;
+  const tol=strict?1:4+(v>>5);
+  for(let c=0;c<3;c++) if(Math.abs(d[j+c]-(d[i+c]>>2))>tol) return false;
+  return v-Math.max(d[j],d[j+1],d[j+2])>=24;
+}
+function analyzeShot(){
+  const {W,H,data}=shot, r=shot.sel||{x:0,y:0,w:W,h:H}, w=r.w, h=r.h, N=w*h;
+  const V=new Uint8Array(N), hist=new Uint32Array(256);
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const i=((r.y+y)*W+r.x+x)*4, v=Math.max(data[i],data[i+1],data[i+2]); V[y*w+x]=v; hist[v]++; }
+  // размер «пикселя шрифта» (масштаб интерфейса) — тот сдвиг, при котором у ярких пикселей чаще всего находится тень
+  let u=0,bestCnt=0; const step=N>2e6?2:1;
+  for(let s=1;s<=12;s++){ let cnt=0;
+    for(let y=0;y+s<h;y+=step) for(let x=0;x+s<w;x+=step){ const p=y*w+x; if(V[p]<40) continue;
+      if(shadowOk(data,W,((r.y+y)*W+r.x+x)*4,((r.y+y+s)*W+r.x+x+s)*4)) cnt++; }
+    if(cnt>bestCnt*1.15){ bestCnt=cnt; u=s; } }
+  const useShadow=bestCnt*step*step>=25;
+  // точный скриншот (PNG без масштабирования): тень совпадает до единицы
+  let strict=0; if(useShadow) for(let y=0;y+u<h;y+=step) for(let x=0;x+u<w;x+=step){ if(V[y*w+x]<40) continue;
+    if(shadowOk(data,W,((r.y+y)*W+r.x+x)*4,((r.y+y+u)*W+r.x+x+u)*4,true)) strict++; }
+  shot.exact=useShadow&&strict>=bestCnt*.6;
+  const auto=useShadow?40:Math.max(40,otsu(hist,N)), thr=shot.thr ?? auto;
+  $("shotThr").value=thr; $("shotThrVal").textContent=shot.thr==null?"авто ("+thr+")":thr;
+  shot.mode=useShadow?"shadow":"bright"; shot.u=u;
+  // маска текста
+  const M=new Uint8Array(N);
+  if(useShadow){
+    const q=[]; for(let y=0;y+u<h;y++) for(let x=0;x+u<w;x++){ const p=y*w+x; if(V[p]<thr) continue;
+      const i=((r.y+y)*W+r.x+x)*4;
+      // сам пиксель — тень другой буквы (у неё тоже может найтись «тень» на тёмном фоне)
+      if(x>=u&&y>=u&&shadowOk(data,W,((r.y+y-u)*W+r.x+x-u)*4,i)) continue;
+      if(shadowOk(data,W,i,((r.y+y+u)*W+r.x+x+u)*4)){ M[p]=2; q.push(p); } }
+    // пиксели внутри буквы, чья тень закрыта соседними пикселями той же буквы: тот же цвет рядом с найденными
+    while(q.length){ const p=q.pop(), px=p%w, py=(p-px)/w, i=((r.y+py)*W+r.x+px)*4;
+      for(let dy=-1;dy<=1;dy++){ const yy=py+dy; if(yy<0||yy>=h) continue;
+        for(let dx=-1;dx<=1;dx++){ const xx=px+dx; if(xx<0||xx>=w) continue; const o=yy*w+xx; if(M[o]||V[o]<thr) continue;
+          const j=((r.y+yy)*W+r.x+xx)*4;
+          if(Math.abs(data[j]-data[i])<=10&&Math.abs(data[j+1]-data[i+1])<=10&&Math.abs(data[j+2]-data[i+2])<=10){ M[o]=1; q.push(o); } } } }
+  } else for(let p=0;p<N;p++) M[p]=V[p]>=thr?1:0;
+  // связные области (8 соседей)
+  const lab=new Int32Array(N).fill(-1), comps=[], stack=new Int32Array(N);
+  for(let p=0;p<N;p++){
+    if(!M[p]||lab[p]>=0) continue;
+    const id=comps.length, c={x0:w,y0:h,x1:-1,y1:-1,n:0,seed:0,id}; let sp=0; stack[sp++]=p; lab[p]=id;
+    while(sp){ const q=stack[--sp], qx=q%w, qy=(q-qx)/w; c.n++; if(M[q]===2) c.seed++;
+      if(qx<c.x0)c.x0=qx; if(qx>c.x1)c.x1=qx; if(qy<c.y0)c.y0=qy; if(qy>c.y1)c.y1=qy;
+      for(let dy=-1;dy<=1;dy++){ const yy=qy+dy; if(yy<0||yy>=h) continue;
+        for(let dx=-1;dx<=1;dx++){ const xx=qx+dx; if(xx<0||xx>=w) continue; const o=yy*w+xx;
+          if(lab[o]<0&&M[o]){ lab[o]=id; stack[sp++]=o; } } } }
+    comps.push(c);
+  }
+  // шум, рамки подсказки, подчёркивания
+  const big=comps.filter(c=>c.n>=3), mh=median(big.map(c=>c.y1-c.y0+1))||1;
+  const keep=comps.filter(c=>{ const cw=c.x1-c.x0+1, ch=c.y1-c.y0+1;
+    if(c.n<Math.max(2,useShadow?u*u:mh*mh*.02)) return false;
+    if(useShadow&&c.seed<c.n*.2) return false;  // у настоящей буквы тень есть у заметной части пикселей
+    if(cw>=8*ch&&cw>mh*3) return false;        // длинная горизонтальная линия
+    if(ch>mh*2.6) return false;                 // вертикальная рамка, картинка
+    return true; });
+  // строки: полосы по вертикали
+  const rows=new Uint16Array(h); keep.forEach(c=>{ for(let y=c.y0;y<=c.y1;y++) rows[y]++; });
+  const bands=[]; for(let y=0;y<h;y++){ if(!rows[y]) continue; let y2=y; while(y2+1<h&&rows[y2+1]) y2++; bands.push([y,y2]); y=y2; }
+  const lines=[];
+  for(const [b0,b1] of bands){
+    const cs=keep.filter(c=>c.y0>=b0&&c.y1<=b1).sort((a,b)=>a.x0-b.x0);
+    if(!cs.length) continue;
+    const gl=[]; for(const c of cs){ const g=gl[gl.length-1]; if(g&&c.x0<=g.x1){ g.x1=Math.max(g.x1,c.x1); g.y0=Math.min(g.y0,c.y0); g.y1=Math.max(g.y1,c.y1); g.ids.push(c.id); } else gl.push({x0:c.x0,x1:c.x1,y0:c.y0,y1:c.y1,ids:[c.id]}); }
+    const bh=b1-b0+1; if(bh<4) continue;
+    // цвет участка буквы: медиана самых ярких пикселей (края при масштабировании размыты)
+    const colorOf=(g,xa,xb)=>{ const ids=new Set(g.ids), R=[],G=[],B=[],Vs=[];
+      for(let y=g.y0;y<=g.y1;y++) for(let x=xa;x<=xb;x++){ const p=y*w+x; if(!ids.has(lab[p])) continue;
+        const i=((r.y+y)*W+r.x+x)*4; R.push(data[i]); G.push(data[i+1]); B.push(data[i+2]); Vs.push(V[p]); }
+      if(!Vs.length) return null;
+      const cut=median(Vs)*.85, idx=Vs.map((v,i)=>v>=cut?i:-1).filter(i=>i>=0);
+      return [R,G,B].map(ch=>Math.round(median(idx.map(i=>ch[i])))); };
+    const diff=(a,b)=>Math.max(...a.map((v,i)=>Math.abs(v-b[i])));
+    gl.forEach(g=>g.rgb=colorOf(g,g.x0,g.x1));
+    const mw=median(gl.map(g=>g.x1-g.x0+1))||1;
+    let gs=[];
+    for(const g of gl){
+      // слипшиеся буквы (на точном скриншоте у соседних букв градиента разный цвет) — делим по смене цвета
+      if(shot.exact&&g.x1-g.x0+1>mw*1.4){
+        let start=g.x0, prev=null;
+        for(let x=g.x0;x<=g.x1;x++){ const c=colorOf(g,x,x); if(!c) continue;
+          if(prev&&diff(c,prev)>=2&&x-start>=u*2){ gs.push({...g,x0:start,x1:x-1,rgb:colorOf(g,start,x-1)}); start=x; }
+          prev=c; }
+        gs.push({...g,x0:start,rgb:colorOf(g,start,g.x1)});
+      } else gs.push(g);
+    }
+    // части одной буквы («ы», «"»): узкий кусок того же цвета вплотную к соседу
+    const merged=[]; for(const g of gs){ const m=merged[merged.length-1];
+      if(m&&diff(m.rgb,g.rgb)<=1&&g.x0-m.x1-1<=(shot.mode==="shadow"?u:mw*.2)&&Math.min(g.x1-g.x0,m.x1-m.x0)+1<=mw*.4){ m.x1=g.x1; m.ids=m.ids.concat(g.ids); }
+      else merged.push({...g}); }
+    gs=merged;
+    // пробелы: в Minecraft между буквами 1 пиксель шрифта, пробел добавляет ещё ~4
+    const gaps=gs.slice(1).map((g,i)=>g.x0-gs[i].x1-1), g0=shot.mode==="shadow"?u:Math.max(median(gaps.filter(v=>v>0)),bh/16,1);
+    // очень большой разрыв — это уже не та же строка (например, мусор с фона справа)
+    let part=[gs[0]], parts=[part];
+    gs.forEach((g,i)=>{ if(!i) return; const gap=gaps[i-1];
+      if(gap>g0*14){ part=[g]; parts.push(part); return; }
+      if(gap>g0*2.6) for(let s=Math.max(1,Math.round((gap-g0)/(4*g0)));s>0;s--) part.push(null);
+      part.push(g); });
+    for(const chars of parts){
+      const real=chars.filter(Boolean); if(real.length<2||chars.length-real.length>real.length) continue;
+      const box={x0:real[0].x0,x1:real[real.length-1].x1,y0:Math.min(...real.map(g=>g.y0)),y1:Math.max(...real.map(g=>g.y1))};
+      if(shot.mode==="shadow"&&box.y1-box.y0+1<u*3) continue;   // ниже 3 пикселей шрифта — не текст
+      const fit=fitShot(chars);
+      if(shot.mode==="shadow"&&fit.err>6&&median(real.map(g=>Math.max(...g.rgb)))<110) continue;   // тёмный шум с фона
+      lines.push({box,chars,...fit});
+    }
+  }
+  shot.lines=lines; drawShot(); renderShotLines();
+  if(shot.fresh){ shot.fresh=false; track("gen.shot_load",{exact:shot.exact?1:0,lines:lines.length,src:shot.from||"file"}); }
+}
+/** Вес каждого цвета градиента для символа j из n — та же формула, что в glyphColors / sponsorColors. */
+function shotBasis(n,k,j){
+  const w=new Float64Array(k); if(k===1){ w[0]=1; return w; }
+  if(isSponsor()){ const s=(n>1?j/(n-1):0)*(k-1), a=Math.min(Math.floor(s),k-2); w[a]=1-(s-a); w[a+1]+=s-a; return w; }
+  for(let p=0;p<k-1;p++){ const a=Math.round(n*p/(k-1)), b=Math.round(n*(p+1)/(k-1));
+    if(j>=a&&j<b){ const m=b-a, t=m>1?(j-a)/(m-1):0; w[p]=1-t; w[p+1]+=t; return w; } }
+  w[k-1]=1; return w;
+}
+function solveLS(rows,ys,k){
+  const A=Array.from({length:k},()=>new Float64Array(k+3));
+  rows.forEach((w,r)=>{ for(let i=0;i<k;i++){ if(!w[i]) continue; for(let j=0;j<k;j++) A[i][j]+=w[i]*w[j]; for(let c=0;c<3;c++) A[i][k+c]+=w[i]*ys[r][c]; } });
+  for(let i=0;i<k;i++) A[i][i]+=1e-6;
+  for(let i=0;i<k;i++){ let p=i; for(let r=i+1;r<k;r++) if(Math.abs(A[r][i])>Math.abs(A[p][i])) p=r; [A[i],A[p]]=[A[p],A[i]];
+    for(let r=0;r<k;r++){ if(r===i) continue; const f=A[r][i]/A[i][i]; if(f) for(let c=i;c<k+3;c++) A[r][c]-=f*A[i][c]; } }
+  return A.map((row,i)=>[0,1,2].map(c=>Math.max(0,Math.min(255,Math.round(row[k+c]/row[i])))));
+}
+const rgbHex = c => c.map(v=>v.toString(16).padStart(2,"0")).join("").toUpperCase();
+function fitShot(chars){
+  const n=chars.length, known=chars.map((c,j)=>c?j:-1).filter(j=>j>=0), ys=known.map(j=>chars[j].rgb);
+  const codes=[]; ys.forEach(c=>{ const l=nearestLeg(rgbHex(c)); if(codes[codes.length-1]!==l) codes.push(l); });
+  const K=Math.max(1,Math.min(isSponsor()?7:6, isSponsor()?known.length:Math.floor(n/2)+1));
+  const fits=[];
+  for(let k=1;k<=K;k++){
+    const rows=known.map(j=>shotBasis(n,k,j)), st=solveLS(rows,ys,k);
+    let e=0; rows.forEach((w,r)=>{ for(let c=0;c<3;c++){ let v=0; for(let i=0;i<k;i++) v+=w[i]*st[i][c]; e+=(v-ys[r][c])**2; } });
+    fits.push({k,stops:st.map(rgbHex),err:Math.sqrt(e/Math.max(1,ys.length*3))});
+  }
+  const best=Math.min(...fits.map(f=>f.err)), pick=fits.find(f=>f.err<=best+Math.max(2.5,best*.35))||fits[fits.length-1];
+  // одинаковые цвета подряд: часть текста на скриншоте одного цвета, а генератор делит текст на равные части —
+  // точная копия требует повторов. Предлагаем и упрощённый вариант без повторов.
+  const uniq=pick.stops.filter((c,i,a)=>!i||Math.max(...toRgb(c).map((v,j)=>Math.abs(v-toRgb(a[i-1])[j])))>4);
+  const alt=uniq.length<pick.stops.length&&uniq.length>=(isSponsor()?1:2)?fits[uniq.length-1]:null;
+  return {stops:pick.stops,err:pick.err,codes:codes.slice(0,LEG_MAX),alt};
+}
+function drawShot(){
+  const v=$("shotCanvas"), g=v.getContext("2d"); g.drawImage(shot.src,0,0);
+  const sc=Math.max(1,shot.W/(v.clientWidth||shot.W)), r=shot.sel||{x:0,y:0};
+  g.lineWidth=Math.max(1,sc*1.5);
+  if(shot.sel){ g.fillStyle="rgba(0,0,0,.55)"; const s=shot.sel;
+    g.fillRect(0,0,shot.W,s.y); g.fillRect(0,s.y+s.h,shot.W,shot.H-s.y-s.h); g.fillRect(0,s.y,s.x,s.h); g.fillRect(s.x+s.w,s.y,shot.W-s.x-s.w,s.h);
+    g.strokeStyle="#9be052"; g.setLineDash([6*sc,4*sc]); g.strokeRect(s.x+.5,s.y+.5,s.w-1,s.h-1); g.setLineDash([]); }
+  const pad=Math.max(2,sc*2);
+  shot.lines.forEach((l,i)=>{ const b=l.box, hi=i===shot.hi;
+    g.strokeStyle=hi?"#d4ff9a":"rgba(127,191,58,.85)"; g.lineWidth=Math.max(1,sc*(hi?2.5:1.5));
+    g.strokeRect(r.x+b.x0-pad,r.y+b.y0-pad,b.x1-b.x0+1+pad*2,b.y1-b.y0+1+pad*2);
+    const fs=Math.round(Math.max(10,12*sc)); g.font=fs+"px monospace"; g.fillStyle="#9be052"; g.textBaseline="bottom";
+    const label=String(i+1), lw=g.measureText(label).width, lx=r.x+b.x0-pad-lw-3*sc;
+    if(lx>=0){ g.textBaseline="middle"; g.fillText(label,lx,r.y+(b.y0+b.y1)/2); } else g.fillText(label,r.x+b.x0-pad,r.y+b.y0-pad-1); });
+}
+function renderShotLines(){
+  const box=$("shotLines"); box.innerHTML="";
+  const target=$("targetLabel").textContent, cl=isClassic();
+  if(!shot.lines.length){ shotMsg("Текст не найден. Выделите строку с текстом или сдвиньте «Порог».","err"); return; }
+  shotMsg("Найдено строк: "+shot.lines.length+". Выберите нужную и нажмите «Применить» — цвета встанут в «"+target+"»."
+    +(shot.exact?"":" Картинка сжата, уменьшена или это фото — цвета примерные."));
+  shot.lines.forEach((l,i)=>{
+    const d=document.createElement("div"); d.className="shot-line";
+    const cols=cl?l.codes.map(c=>LEG[c]):l.stops, glyphs=l.chars.filter(Boolean).length;
+    const acc=Math.max(0,Math.round(100-l.err/2.55));
+    d.innerHTML=`<span class="n">${i+1}</span><div><div class="shot-chars"></div><div class="bar"></div>
+      <div class="shot-hex"></div></div><button type="button" class="accent">Применить</button>`;
+    const ch=d.querySelector(".shot-chars");
+    l.chars.forEach(c=>{ const s=document.createElement("i"); if(c) s.style.background="rgb("+c.rgb.join(",")+")"; else s.className="sp"; ch.appendChild(s); });
+    d.querySelector(".bar").style.background=cl?cssHard(l.codes):css(cols.length===1?[cols[0],cols[0]]:cols);
+    d.querySelector(".shot-hex").innerHTML = (cl ? l.codes.map(c=>"&amp;"+c).join(" ") : cols.map(c=>"#"+c).join(" → "))
+      + ` <span><b>· ${glyphs} букв</b> <b>· ${cl?l.codes.length:cols.length} ${cl?"цв. /colors":"цв."}</b>${cl?"":" <b>· совпадение "+acc+"%</b>"}</span>`;
+    if(l.alt&&!cl){ const a=document.createElement("div"); a.className="shot-alt";
+      a.innerHTML=`<span>В конце повторяется один цвет: значит, часть текста на скриншоте одного цвета. Без повторов (примерно): </span><b></b> <span>· совпадение ${Math.max(0,Math.round(100-l.alt.err/2.55))}%</span> <button type="button" class="small">Без повторов</button>`;
+      a.querySelector("b").textContent=l.alt.stops.map(c=>"#"+c).join(" → ");
+      a.querySelector("button").addEventListener("click",()=>applyShot({...l,stops:l.alt.stops}));
+      d.children[1].appendChild(a); }
+    d.addEventListener("mouseenter",()=>{ shot.hi=i; drawShot(); });
+    d.addEventListener("mouseleave",()=>{ shot.hi=null; drawShot(); });
+    d.querySelector("button.accent").addEventListener("click",()=>applyShot(l));
+    box.appendChild(d);
+  });
+}
+function applyShot(l){
+  track("gen.shot_apply",{colors:isClassic()?l.codes.length:l.stops.length,simple:l.alt&&l.stops===l.alt.stops?1:0,classic:isClassic()?1:0});
+  const st=cur(), target=$("targetLabel").textContent;
+  if(isClassic()) st.legacy=[...l.codes];
+  else if(l.stops.length===1&&!isSponsor()){ st.mode="solid"; st.stops=[l.stops[0],st.stops[1]||l.stops[0]]; }
+  else { st.mode="gradient"; st.stops=l.stops.length===1&&!isSponsor()?[l.stops[0],l.stops[0]]:[...l.stops]; }
+  refresh(); closeShot();
+  $("warn").textContent=""; const b=$("shotBtn").querySelector("span"), t=b.textContent;
+  b.textContent="Цвета со скриншота → «"+target+"» ✓"; setTimeout(()=>b.textContent=t,1800);
+}
+function shotPoint(e){ const v=$("shotCanvas"), b=v.getBoundingClientRect();
+  return [Math.max(0,Math.min(shot.W,Math.round((e.clientX-b.left)*shot.W/b.width))),Math.max(0,Math.min(shot.H,Math.round((e.clientY-b.top)*shot.H/b.height)))]; }
+$("shotCanvas").addEventListener("pointerdown",e=>{ if(!shot.data) return; e.preventDefault(); $("shotCanvas").setPointerCapture(e.pointerId); shot.drag=shotPoint(e); });
+$("shotCanvas").addEventListener("pointermove",e=>{ if(!shot.drag) return; const [x,y]=shotPoint(e), [a,b]=shot.drag;
+  shot.sel={x:Math.min(a,x),y:Math.min(b,y),w:Math.abs(x-a),h:Math.abs(y-b)}; shot.lines=[]; drawShot(); });
+$("shotCanvas").addEventListener("pointerup",()=>{ if(!shot.drag) return; shot.drag=null;
+  if(!shot.sel||shot.sel.w<4||shot.sel.h<4) shot.sel=null; analyzeShot(); });
+$("shotThr").addEventListener("input",()=>{ if(!shot.data) return; shot.thr=+$("shotThr").value; analyzeShot(); });
+$("shotReset").addEventListener("click",()=>{ shot.sel=null; shot.thr=null; analyzeShot(); });
+$("shotBtn").addEventListener("click",openShot);
+$("shotClose").addEventListener("click",closeShot);
+$("shotDlg").addEventListener("click",e=>{ if(e.target===$("shotDlg")) closeShot(); });
+$("shotFile").addEventListener("change",e=>{ shot.from="file"; loadShot(e.target.files[0]); e.target.value=""; });
+["dragenter","dragover"].forEach(t=>$("shotDlg").addEventListener(t,e=>{ e.preventDefault(); $("shotDrop").classList.add("over"); }));
+["dragleave","drop"].forEach(t=>$("shotDlg").addEventListener(t,()=>$("shotDrop").classList.remove("over")));
+$("shotDlg").addEventListener("drop",e=>{ e.preventDefault(); shot.from="drop"; loadShot(e.dataTransfer.files[0]); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("shotDlg").hidden) closeShot(); });
+// Ctrl+V с картинкой в любом месте страницы открывает окно; обычная вставка текста не трогается
+document.addEventListener("paste",e=>{
+  const f=[...(e.clipboardData?.items||[])].find(i=>i.kind==="file"&&/^image\//.test(i.type));
+  if(!f) return; e.preventDefault(); openShot(); shot.from="paste"; loadShot(f.getAsFile());
+});
+
 /* ================= Старт ================= */
 if(S.cmd==="am") S.cmd="item";
 if(![...$("cmd").options].some(o=>o.value===S.cmd)) S.cmd="item";
@@ -1571,5 +1899,6 @@ applyMode();
   allay.addEventListener('click',function(){ for(var k=0;k<5;k++) setTimeout(note,k*110); });
 })();
 </script>
+<script src="/js/stats.js" defer></script>
 </body>
 </html>
