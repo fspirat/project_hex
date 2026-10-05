@@ -33,19 +33,22 @@ public class ShotsTest implements FabricClientGameTest {
 
     @Override
     public void runTest(ClientGameTestContext ctx) {
+        // Сначала мир в маленьком окне: на виртуальном экране CI отрисовка программная и медленная.
         ctx.runOnClient(mc -> {
-            mc.options.languageCode = "ru_ru";
-            mc.getLanguageManager().setSelected("ru_ru");
-            mc.options.guiScale().set(SCALE);
-            mc.options.hideGui = false;
+            mc.options.renderDistance().set(2);
+            mc.options.simulationDistance().set(5);
         });
-        ctx.getInput().resizeWindow(1920, 1200);
-        ctx.runOnClient(Minecraft::reloadResourcePacks);
-        ctx.waitFor(mc -> mc.getOverlay() == null, 20 * 120);
-        ctx.waitTicks(10);
-
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
             sp.getClientWorld().waitForChunksRender();
+            ctx.runOnClient(mc -> {
+                mc.options.languageCode = "ru_ru";
+                mc.getLanguageManager().setSelected("ru_ru");
+                mc.options.guiScale().set(SCALE);
+            });
+            ctx.runOnClient(Minecraft::reloadResourcePacks);
+            ctx.waitFor(mc -> mc.getOverlay() == null, 20 * 300);
+            ctx.getInput().resizeWindow(1920, 1200);
+            ctx.waitTicks(20);
             sp.getServer().runCommand("gamemode survival @a");
             sp.getServer().runCommand("time set noon");
             for (String item : List.of("netherite_sword", "netherite_pickaxe", "bow", "golden_apple 16", "ender_pearl 16",
