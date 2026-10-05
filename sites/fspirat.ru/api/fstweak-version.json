@@ -1,9 +1,9 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "url": "https://fspirat.ru/fstweak/",
   "notes": {
-    "ru": "Исправлены пресеты в чате: на некоторых серверах код не превращался в строку с кнопкой [+].",
-    "en": "Fixed presets in chat: on some servers the code was not turned into a line with the [+] button.",
-    "uk": "Виправлено пресети в чаті: на деяких серверах код не перетворювався на рядок з кнопкою [+]."
+    "ru": "Исправлены мелкие ошибки.",
+    "en": "Minor bug fixes.",
+    "uk": "Виправлено дрібні помилки."
   }
 }
