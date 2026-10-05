@@ -306,12 +306,12 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin
 /* галерея */
 .gallery{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .g-main{margin:0;position:relative;background:#050705;border:1px solid var(--line);border-radius:2px;overflow:hidden;cursor:zoom-in}
-.g-main img{display:block;width:100%;aspect-ratio:16/10;object-fit:contain;image-rendering:auto}
+.g-main img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain;image-rendering:auto}
 .g-main figcaption{font-size:15px;color:var(--text);padding:10px 12px;border-top:1px dashed var(--line)}
 .g-main figcaption small{display:block;font-family:var(--sans);color:var(--muted);font-size:13px;margin-top:3px}
 .thumbs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
 .thumb{flex:none;width:118px;padding:0;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:2px;overflow:hidden;opacity:.6;transition:opacity .2s,border-color .2s}
-.thumb img{display:block;width:100%;aspect-ratio:16/10;object-fit:cover}
+.thumb img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover}
 .thumb span{display:block;font-size:12px;color:var(--soft);padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left}
 .thumb:hover,.thumb[aria-current="true"]{opacity:1;border-color:var(--green)}
 
@@ -360,6 +360,7 @@ dialog.sheet::backdrop{background:rgba(3,5,3,.82);backdrop-filter:blur(3px)}
 .sheet-body h3:first-child{margin-top:0}
 .sheet-body .features{grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
 body.locked{overflow:hidden}
+.sec-head .badge{white-space:nowrap}
 </style>
 </head>
 <body>
