@@ -178,6 +178,35 @@ try {
         json_out(['visitor' => $v, 'sessions' => $sessions, 'events' => $events]);
         break;
     }
+    case 'server': {
+        // Краткое состояние VPS: процессор, память, диск. Читается из /proc (Linux), ничего не запускается.
+        $cpuTimes = function () {
+            $l = @file('/proc/stat', FILE_IGNORE_NEW_LINES)[0] ?? '';
+            $p = array_map('intval', preg_split('/\s+/', trim(substr($l, 3))));
+            return count($p) >= 4 ? [array_sum($p), ($p[3] ?? 0) + ($p[4] ?? 0)] : null;   // всего, простой (idle+iowait)
+        };
+        $a = $cpuTimes(); usleep(250000); $b = $cpuTimes();
+        $cpu = ($a && $b && $b[0] > $a[0]) ? round(100 * (1 - ($b[1] - $a[1]) / ($b[0] - $a[0])), 1) : null;
+        $mem = [];
+        foreach (@file('/proc/meminfo', FILE_IGNORE_NEW_LINES) ?: [] as $l)
+            if (preg_match('/^(\w+):\s+(\d+)/', $l, $m)) $mem[$m[1]] = (int)$m[2] * 1024;
+        $cpuinfo = (string)@file_get_contents('/proc/cpuinfo');
+        preg_match('/^model name\s*:\s*(.+)$/m', $cpuinfo, $mm);
+        $os = '';
+        if (preg_match('/^PRETTY_NAME="?([^"\n]+)/m', (string)@file_get_contents('/etc/os-release'), $om)) $os = $om[1];
+        $load = array_map('floatval', array_slice(explode(' ', (string)@file_get_contents('/proc/loadavg')), 0, 3));
+        $up = (int)(float)@file_get_contents('/proc/uptime');
+        $dbFile = stats_dir() . '/stats.sqlite';
+        json_out([
+            'cpu' => ['usage' => $cpu, 'cores' => max(1, preg_match_all('/^processor\s*:/m', $cpuinfo)), 'model' => trim($mm[1] ?? ''), 'load' => $load],
+            'ram' => ['total' => $mem['MemTotal'] ?? null, 'available' => $mem['MemAvailable'] ?? null],
+            'swap' => ['total' => $mem['SwapTotal'] ?? 0, 'free' => $mem['SwapFree'] ?? 0],
+            'disk' => ['total' => @disk_total_space('/') ?: null, 'free' => @disk_free_space('/') ?: null],
+            'uptime' => $up, 'os' => $os, 'php' => PHP_VERSION,
+            'db' => (@filesize($dbFile) ?: 0) + (@filesize($dbFile . '-wal') ?: 0),
+        ]);
+        break;
+    }
     case 'audit':
         json_out(['list' => rows($db, 'SELECT ts, ip, action, detail FROM audit ORDER BY id DESC LIMIT 300')]);
         break;
