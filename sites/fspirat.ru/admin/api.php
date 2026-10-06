@@ -2,7 +2,8 @@
 /**
  * API админ-панели. Работает только на VPS (fspirat.online), где лежит база;
  * страница админки (admin/index.html) открывается и с fspirat.ru, и с fspirat.online и ходит сюда.
- *   POST ?q=login   {"password": "..."}  → {"token": "..."}
+ *   POST ?q=login   {"password": "...", "device": "..."}  → {"token": "..."}  или (новое устройство) {"need_code": true, "pending": "..."}
+ *   POST ?q=login_code {"pending": "...", "code": "123456"} → {"token": "...", "device": "..."}  (код пришёл в Telegram)
  *   POST ?q=logout  (с токеном)
  *   GET  ?q=summary|live|events|visitor|modplayers|player|downloads|chatlogs|service|audit|backup  (с токеном: Authorization: Bearer ...)
  *   POST ?q=chatlog_delete|chatlog_pin|backup_now|notify_save|notify_test|notify_chats  (с токеном)
@@ -36,6 +37,13 @@ if ($method === 'POST' && $q === 'login') {
         json_out(['error' => 'locked', 'wait' => $wait], 429); exit;
     }
     if ($pw !== '' && password_verify($pw, stats_config()['password_hash'])) {
+        // новое устройство — сначала код из Telegram (если бот уведомлений настроен)
+        if (admin2fa_enabled() && !admin_device_ok($db, is_string($in['device'] ?? null) ? $in['device'] : '')) {
+            $pend = admin_code_start($db, from_site());
+            if ($pend === null) { audit($db, 'login_code_failed', from_site() . ' · ' . $ua); json_out(['error' => 'telegram'], 503); exit; }
+            audit($db, 'login_code_sent', from_site() . ' · ' . $ua);
+            json_out(['need_code' => true, 'pending' => $pend]); exit;
+        }
         audit($db, 'login_ok', from_site() . ' · ' . $ua);
         json_out(['token' => token_issue($db)]);
         finish_response();
@@ -53,6 +61,26 @@ if ($method === 'POST' && $q === 'login') {
         notify('login', '⚠️ Вход в админку заблокирован на ' . intdiv(LOGIN_LOCK_SEC, 60) . ' мин: ' . LOGIN_MAX_FAILS . ' неверных паролей подряд. IP ' . client_ip() . ' · ' . from_site());
     }
     exit;
+}
+if ($method === 'POST' && $q === 'login_code') {
+    $in = json_decode((string)file_get_contents('php://input', false, null, 0, 1024), true);
+    $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200);
+    if ($wait = login_locked($db)) { audit($db, 'login_blocked', from_site() . ' · ' . $ua); json_out(['error' => 'locked', 'wait' => $wait], 429); exit; }
+    $res = admin_code_check($db, (string)($in['pending'] ?? ''), preg_replace('/\D/', '', (string)($in['code'] ?? '')));
+    if ($res === 'ok') {
+        audit($db, 'login_ok', from_site() . ' · код · ' . $ua);
+        json_out(['token' => token_issue($db), 'device' => admin_device_add($db)]);
+        finish_response();
+        notify('login_ok', '🔑 Вход в админку (новое устройство подтверждено): ' . from_site() . ' · IP ' . client_ip());
+        exit;
+    }
+    if ($res === 'bad') {
+        audit($db, 'login_fail', from_site() . ' · неверный код · ' . $ua);
+        $st = $db->prepare("SELECT COUNT(*) FROM audit WHERE action = 'login_fail' AND ip = ? AND ts > ?");
+        $st->execute([client_ip(), time() - LOGIN_LOCK_SEC]);
+        json_out(['error' => 'code', 'left' => max(0, LOGIN_MAX_FAILS - (int)$st->fetchColumn())], 403); exit;
+    }
+    json_out(['error' => 'expired'], 410); exit;
 }
 if (!admin_logged_in($db)) { json_out(['error' => 'auth'], 401); exit; }
 if ($method === 'POST' && $q === 'logout') { audit($db, 'logout', from_site()); token_revoke($db); json_out(['ok' => 1]); exit; }
