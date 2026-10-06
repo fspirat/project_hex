@@ -478,3 +478,76 @@ function login_locked(PDO $db): int
     $st->closeCursor();
     return (int)$n >= LOGIN_MAX_FAILS_ALL ? max(1, (int)$last + LOGIN_LOCK_SEC - time()) : 0;
 }
+
+// ---------------------------------------------------------------------------
+// Подтверждение входа в админку кодом из Telegram (бот уведомлений). Код — только на новом устройстве;
+// подтверждённое устройство помнится 30 дней (ключ в localStorage браузера, в базе — его хэш).
+// Бот не настроен — вход без кода, как раньше.
+
+const ADMIN_DEV_TTL = 30 * 86400;
+const ADMIN_CODE_TTL = 300;
+const ADMIN_CODE_TRIES = 5;
+
+function admin2fa_tables(PDO $db): void
+{
+    $db->exec('CREATE TABLE IF NOT EXISTS admin_devices(hash TEXT PRIMARY KEY, created INTEGER NOT NULL, seen INTEGER NOT NULL, ip TEXT, ua TEXT)');
+    $db->exec('CREATE TABLE IF NOT EXISTS admin_codes(hash TEXT PRIMARY KEY, code TEXT NOT NULL, created INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)');
+}
+
+function admin2fa_enabled(): bool { $c = notify_cfg(); return !empty($c['token']) && !empty($c['chat']); }
+
+function admin_device_ok(PDO $db, string $dev): bool
+{
+    if (!preg_match('/^[a-f0-9]{64}$/', $dev)) return false;
+    admin2fa_tables($db);
+    $st = $db->prepare('SELECT seen FROM admin_devices WHERE hash = ?'); $st->execute([hash('sha256', $dev)]);
+    $seen = $st->fetchColumn(); $st->closeCursor();
+    if ($seen === false || (int)$seen + ADMIN_DEV_TTL < time()) return false;
+    $db->prepare('UPDATE admin_devices SET seen = ? WHERE hash = ?')->execute([time(), hash('sha256', $dev)]);
+    return true;
+}
+
+function admin_device_add(PDO $db): string
+{
+    admin2fa_tables($db);
+    $dev = bin2hex(random_bytes(32));
+    $db->prepare('DELETE FROM admin_devices WHERE seen < ?')->execute([time() - ADMIN_DEV_TTL]);
+    $db->prepare('INSERT INTO admin_devices(hash, created, seen, ip, ua) VALUES(?,?,?,?,?)')
+       ->execute([hash('sha256', $dev), time(), time(), client_ip(), substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200)]);
+    return $dev;
+}
+
+/** Отправить код. Возвращает ключ ожидания (для второго запроса) или null, если Telegram не ответил. */
+function admin_code_start(PDO $db, string $site): ?string
+{
+    $c = notify_cfg();
+    $code = sprintf('%06d', random_int(0, 999999));
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $br = preg_match('~(Edg|OPR|YaBrowser|Firefox|Chrome|Safari)/~', $ua, $m) ? $m[1] : 'браузер';
+    $r = tg_call($c['token'], 'sendMessage', ['chat_id' => $c['chat'], 'text' => "🔐 Код входа в админку fspirat: $code\n\nНовое устройство: $br · IP " . client_ip()
+        . " · $site\nКод действует 5 минут. Если это не ты — никому его не сообщай и смени пароль (setup.php)."]);
+    if (!($r['ok'] ?? false)) return null;
+    admin2fa_tables($db);
+    $pend = bin2hex(random_bytes(32));
+    $db->prepare('DELETE FROM admin_codes WHERE created < ?')->execute([time() - ADMIN_CODE_TTL]);
+    $db->prepare('INSERT INTO admin_codes(hash, code, created) VALUES(?,?,?)')->execute([hash('sha256', $pend), password_hash($code, PASSWORD_DEFAULT), time()]);
+    return $pend;
+}
+
+/** 'ok' | 'bad' (попытка засчитана) | 'expired' */
+function admin_code_check(PDO $db, string $pend, string $code): string
+{
+    if (!preg_match('/^[a-f0-9]{64}$/', $pend)) return 'expired';
+    admin2fa_tables($db);
+    $h = hash('sha256', $pend);
+    $st = $db->prepare('SELECT code FROM admin_codes WHERE hash = ? AND created >= ? AND tries < ?');
+    $st->execute([$h, time() - ADMIN_CODE_TTL, ADMIN_CODE_TRIES]);
+    $hash = $st->fetchColumn(); $st->closeCursor();
+    if ($hash === false) return 'expired';
+    if (!preg_match('/^\d{6}$/', $code) || !password_verify($code, (string)$hash)) {
+        $db->prepare('UPDATE admin_codes SET tries = tries + 1 WHERE hash = ?')->execute([$h]);
+        return 'bad';
+    }
+    $db->prepare('DELETE FROM admin_codes WHERE hash = ?')->execute([$h]);
+    return 'ok';
+}

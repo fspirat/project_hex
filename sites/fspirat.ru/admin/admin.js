@@ -64,17 +64,34 @@
     $('loginView').hidden = true; $('appView').hidden = false;
     show('overview');
   }
+  // Подтверждённое кодом устройство: ключ хранится в браузере 30 дней, код больше не спрашивается.
+  var DEV_KEY = 'fs_admin_device', pending = null;
+  function device(v) { try { if (v === undefined) return localStorage.getItem(DEV_KEY) || ''; if (v) localStorage.setItem(DEV_KEY, v); else localStorage.removeItem(DEV_KEY); } catch (e) {} return v || ''; }
+  function codeStep(on) {
+    $('pwRow').hidden = on; $('codeRow').hidden = !on; $('pw').required = !on; $('code').required = on;
+    $('loginBtn').textContent = on ? 'Подтвердить' : 'Войти';
+    if (on) { $('code').value = ''; $('code').focus(); } else { pending = null; $('pw').focus(); }
+  }
+  $('codeBack').addEventListener('click', function () { codeStep(false); $('loginErr').hidden = true; });
   $('loginForm').addEventListener('submit', function (e) {
     e.preventDefault();
     var btn = $('loginBtn'); btn.disabled = true; $('loginErr').hidden = true;
-    api({ q: 'login' }, { password: $('pw').value }).then(function (r) {
-      token(r.token); startApp();
+    var req = pending ? api({ q: 'login_code' }, { pending: pending, code: $('code').value })
+                      : api({ q: 'login' }, { password: $('pw').value, device: device() });
+    req.then(function (r) {
+      if (r.need_code) { pending = r.pending; codeStep(true); return; }
+      if (r.device) device(r.device);
+      token(r.token); codeStep(false); startApp();
     }).catch(function (err) {
       var d = err.data || {}, msg;
       if (d.error === 'locked') msg = 'Слишком много неверных попыток. Вход с этого адреса закрыт ещё на ' + Math.ceil((d.wait || 900) / 60) + ' мин.';
       else if (d.error === 'password') msg = 'Неверный пароль. Осталось попыток: ' + d.left + '.';
+      else if (d.error === 'code') msg = 'Неверный код. Осталось попыток: ' + d.left + '.';
+      else if (d.error === 'expired') { msg = 'Код истёк — введите пароль ещё раз, придёт новый код.'; codeStep(false); }
+      else if (d.error === 'telegram') msg = 'Пароль верный, но код в Telegram отправить не удалось. Попробуйте через минуту.';
       else msg = 'Сервер статистики не отвечает. Попробуйте позже.';
-      $('loginErr').textContent = msg; $('loginErr').hidden = false; $('pw').select();
+      $('loginErr').textContent = msg; $('loginErr').hidden = false;
+      (pending ? $('code') : $('pw')).select();
     }).then(function () { btn.disabled = false; });
   });
   $('logout').addEventListener('click', function () {

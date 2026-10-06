@@ -15,12 +15,20 @@
   <p class="kicker"><b>&gt;</b> FSPIRAT · admin</p>
   <h1>Админ-<span>панель</span></h1>
   <form id="loginForm" autocomplete="off">
-    <label for="pw">Пароль</label>
-    <input type="password" id="pw" name="password" required autofocus autocomplete="current-password">
+    <div id="pwRow">
+      <label for="pw">Пароль</label>
+      <input type="password" id="pw" name="password" required autofocus autocomplete="current-password">
+    </div>
+    <div id="codeRow" hidden>
+      <p class="sent">📨 Это новое устройство — бот уведомлений прислал в Telegram код из 6 цифр.</p>
+      <label for="code">Код из Telegram</label>
+      <input type="text" id="code" name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" placeholder="000000">
+      <button type="button" class="link" id="codeBack">← ввести пароль заново</button>
+    </div>
     <p class="err" id="loginErr" role="alert" hidden></p>
     <button type="submit" class="accent" id="loginBtn">Войти</button>
   </form>
-  <p class="hint">Все входы и неудачные попытки записываются в журнал. Вход действует, пока открыта вкладка.</p>
+  <p class="hint">Все входы и неудачные попытки записываются в журнал. Вход действует, пока открыта вкладка. С нового устройства — ещё и код из Telegram.</p>
 </main>
 <div id="appView" hidden>
 <header class="top">
