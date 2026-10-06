@@ -30,5 +30,8 @@ jobs:
           # Пока ограничения нет — полный путь (workflow работает и до, и после включения rrsync).
           if [ "$(ssh -o BatchMode=yes deploy@"$SSH_HOST" echo plain 2>/dev/null)" = plain ]; then D=/var/www/fspirat.online/; else D=; fi
           echo "цель: ${D:-корень rrsync (/var/www/fspirat.online)}"
-          rsync -avz --delete --exclude '/router/' \
-            ./sites/fspirat.ru/ deploy@"$SSH_HOST":"$D"
+          # повтор: rrsync не пускает две выкладки одновременно (сайт и страница роутера в одну секунду)
+          for i in 1 2 3; do
+            rsync -avz --delete --exclude '/router/' ./sites/fspirat.ru/ deploy@"$SSH_HOST":"$D" && break
+            [ $i = 3 ] && exit 1; echo "повтор через 20 с"; sleep 20
+          done
