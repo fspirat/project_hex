@@ -148,8 +148,10 @@ const NOTIFY_EVENTS = [
     'disk'     => 'Диск VPS заполнен больше чем на 90%',
     'login'    => 'Вход в админку заблокирован (5 неверных паролей)',
     'login_ok' => 'Успешный вход в админку',
+    'backup'   => 'Ежедневная копия базы — файлом в этот чат (на случай, если сервер пропадёт)',
 ];
-const NOTIFY_DEFAULT = ['player' => true, 'log' => true, 'disk' => true, 'login' => true, 'login_ok' => false];
+const NOTIFY_DEFAULT = ['player' => true, 'log' => true, 'disk' => true, 'login' => true, 'login_ok' => false, 'backup' => true];
+const NOTIFY_MAX_PER_HOUR = 10;   // защита от спама: не больше 10 уведомлений одного вида в час
 
 function notify_cfg(): array
 {
@@ -191,6 +193,8 @@ function notify(string $event, string $text): bool
 {
     $c = notify_cfg();
     if (empty($c['token']) || empty($c['chat']) || !($c['events'][$event] ?? NOTIFY_DEFAULT[$event] ?? false)) return false;
+    // кто угодно может слать запросы на api/ — без лимита бота можно было бы засыпать сообщениями
+    if (($db = stats_db()) && !stats_rate($db, 'nt:' . $event, NOTIFY_MAX_PER_HOUR, 3600)) return false;
     $r = tg_call($c['token'], 'sendMessage', ['chat_id' => $c['chat'], 'text' => $text, 'disable_web_page_preview' => 'true']);
     if (!($r['ok'] ?? false)) error_log('fspirat notify ' . $event . ': ' . ($r['description'] ?? 'нет связи с api.telegram.org'));
     return (bool)($r['ok'] ?? false);
@@ -212,7 +216,11 @@ function backup_dir(): string
     return stats_dir() . '/backups';
 }
 
-/** Копия базы целиком (VACUUM INTO — согласованный снимок без остановки записи). */
+/**
+ * Копия базы целиком (VACUUM INTO — согласованный снимок без остановки записи).
+ * Через отдельное соединение: на основном могут быть незакрытые SELECT, и тогда SQLite
+ * отказывает «cannot VACUUM - SQL statements in progress» (так копии не делались с 05.10).
+ */
 function backup_make(PDO $db, ?string $name = null): ?string
 {
     $dir = backup_dir();
@@ -220,12 +228,36 @@ function backup_make(PDO $db, ?string $name = null): ?string
     $name = $name ?? 'stats-' . date('Y-m-d') . '.sqlite';
     $path = $dir . '/' . $name;
     if (is_file($path)) @unlink($path);
-    $db->exec('VACUUM INTO ' . $db->quote($path));
+    $src = new PDO('sqlite:' . stats_dir() . '/stats.sqlite', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $src->exec('PRAGMA busy_timeout=10000');
+    $src->exec('VACUUM INTO ' . $src->quote($path));
+    $src = null;
     @chmod($path, 0600);
     $all = glob($dir . '/stats-*.sqlite') ?: [];
     rsort($all);
     foreach (array_slice($all, BACKUP_KEEP) as $old) @unlink($old);
     return $path;
+}
+
+/** Копия базы — сжатым файлом в Telegram-чат уведомлений (копия вне сервера). */
+function backup_send(string $path): bool
+{
+    $c = notify_cfg();
+    if (empty($c['token']) || empty($c['chat']) || !($c['events']['backup'] ?? NOTIFY_DEFAULT['backup'])) return false;
+    $gz = gzencode((string)file_get_contents($path), 9);
+    if ($gz === false || strlen($gz) > 45 * 1048576) return false;
+    $b = '----fspirat' . bin2hex(random_bytes(8));
+    $fields = ['chat_id' => $c['chat'], 'caption' => '🗄 Копия базы fspirat за ' . date('d.m.Y') . ' (' . round(strlen($gz) / 1024) . ' КБ). Восстановить: распаковать .gz → /var/lib/fspirat-stats/stats.sqlite',
+               'disable_notification' => 'true'];
+    $body = '';
+    foreach ($fields as $k => $v) $body .= "--$b\r\nContent-Disposition: form-data; name=\"$k\"\r\n\r\n$v\r\n";
+    $body .= "--$b\r\nContent-Disposition: form-data; name=\"document\"; filename=\"" . basename($path) . ".gz\"\r\nContent-Type: application/gzip\r\n\r\n$gz\r\n--$b--\r\n";
+    $raw = @file_get_contents('https://api.telegram.org/bot' . $c['token'] . '/sendDocument', false, stream_context_create(['http' => [
+        'method' => 'POST', 'header' => "Content-Type: multipart/form-data; boundary=$b", 'content' => $body,
+        'timeout' => 30, 'ignore_errors' => true]]));
+    $ok = (bool)(json_decode((string)$raw, true)['ok'] ?? false);
+    if (!$ok) error_log('fspirat backup_send: ' . substr((string)$raw, 0, 200));
+    return $ok;
 }
 
 function stats_housekeeping(PDO $db): void
@@ -242,7 +274,7 @@ function stats_housekeeping(PDO $db): void
                 notify('disk', sprintf("💾 Диск VPS заполнен на %d%%: свободно %.1f ГБ из %.1f ГБ.", $pct, $f / 1073741824, $t / 1073741824));
             }
         }
-        if (!is_file(backup_dir() . '/stats-' . date('Y-m-d') . '.sqlite')) backup_make($db);
+        if (!is_file(backup_dir() . '/stats-' . date('Y-m-d') . '.sqlite') && ($path = backup_make($db))) backup_send($path);
     } catch (Throwable $e) {
         error_log('fspirat housekeeping: ' . $e->getMessage());
     }
@@ -416,7 +448,10 @@ function admin_logged_in(PDO $db): bool
     $r = $st->fetch();
     $now = time();
     if (!$r || $now - $r['created'] > TOKEN_TTL || $now - $r['seen'] > TOKEN_IDLE || !hash_equals($r['pwv'], pw_version())) return false;
-    $db->prepare('UPDATE tokens SET seen = ? WHERE hash = ?')->execute([$now, hash('sha256', $tok)]);
+    if ($now - $r['seen'] > 60) {   // продление; если база занята — не страшно, продлим при следующем запросе
+        try { $db->prepare('UPDATE tokens SET seen = ? WHERE hash = ?')->execute([$now, hash('sha256', $tok)]); }
+        catch (Throwable $e) { error_log('fspirat token touch: ' . $e->getMessage()); }
+    }
     return true;
 }
 
@@ -426,13 +461,20 @@ function token_revoke(PDO $db): void
 }
 
 const LOGIN_MAX_FAILS = 5;
+const LOGIN_MAX_FAILS_ALL = 30;   // со всех адресов вместе: подбор через много IP
 const LOGIN_LOCK_SEC = 900;
 
-/** Сколько секунд ещё заблокирован вход с этого IP (0 — не заблокирован). */
+/** Сколько секунд ещё заблокирован вход с этого IP или для всех (0 — не заблокирован). */
 function login_locked(PDO $db): int
 {
     $st = $db->prepare("SELECT COUNT(*), MAX(ts) FROM audit WHERE action = 'login_fail' AND ip = ? AND ts > ?");
     $st->execute([client_ip(), time() - LOGIN_LOCK_SEC]);
     [$n, $last] = $st->fetch(PDO::FETCH_NUM);
-    return (int)$n >= LOGIN_MAX_FAILS ? max(1, (int)$last + LOGIN_LOCK_SEC - time()) : 0;
+    $st->closeCursor();
+    if ((int)$n >= LOGIN_MAX_FAILS) return max(1, (int)$last + LOGIN_LOCK_SEC - time());
+    $st = $db->prepare("SELECT COUNT(*), MAX(ts) FROM audit WHERE action = 'login_fail' AND ts > ?");
+    $st->execute([time() - LOGIN_LOCK_SEC]);
+    [$n, $last] = $st->fetch(PDO::FETCH_NUM);
+    $st->closeCursor();
+    return (int)$n >= LOGIN_MAX_FAILS_ALL ? max(1, (int)$last + LOGIN_LOCK_SEC - time()) : 0;
 }

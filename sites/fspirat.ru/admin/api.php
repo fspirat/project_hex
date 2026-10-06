@@ -380,8 +380,7 @@ try {
             return is_array($j) ? ['sha' => substr((string)($j['sha'] ?? ''), 0, 40), 'time' => (int)($j['time'] ?? 0), 'run' => (string)($j['run'] ?? '')] : null;
         };
         $deploys = [
-            ['site' => 'fspirat.online (VPS)', 'build' => $read(__DIR__ . '/../api/build.json')],
-            ['site' => 'fspirat.ru (reg.ru)', 'build' => $read('https://fspirat.ru/api/build.json?' . $now)],
+            ['site' => 'fspirat.online и fspirat.ru (VPS)', 'build' => $read(__DIR__ . '/../api/build.json')],
         ];
         // ошибки PHP: последние строки своего журнала
         $errFile = stats_dir() . '/php-errors.log';

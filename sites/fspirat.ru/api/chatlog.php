@@ -16,6 +16,8 @@ const LOG_KEEP_DAYS = 30;
 const LOG_MAX_MESSAGES = 5000;
 const LOG_MAX_BODY = 4 * 1024 * 1024;
 const LOG_URL = 'https://fspirat.online/log/?id=';
+const LOG_DAY_MAX = 300;                    // логов в день со всех адресов
+const LOG_DAY_BYTES = 300 * 1024 * 1024;    // и не больше 300 МБ в день
 
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -64,6 +66,13 @@ foreach ([[6, 600], [40, 86400]] as [$max, $win]) {
         json_out(['error' => 'rate', 'wait' => $win - time() % $win], 429); exit;
     }
 }
+
+// Общий дневной лимит (со всех адресов): прислать лог может кто угодно, не только мод — не даём забить диск.
+$st = $db->prepare('SELECT COUNT(*), IFNULL(SUM(bytes), 0) FROM chatlogs WHERE created >= ?');
+$st->execute([strtotime('today')]);
+[$todayN, $todayB] = $st->fetch(PDO::FETCH_NUM);
+$st->closeCursor();
+if ((int)$todayN >= LOG_DAY_MAX || (int)$todayB >= LOG_DAY_BYTES) { json_out(['error' => 'rate', 'wait' => strtotime('tomorrow') - time()], 429); exit; }
 
 $body = file_get_contents('php://input', false, null, 0, LOG_MAX_BODY + 1);
 if ($body === false || strlen($body) > LOG_MAX_BODY) { json_out(['error' => 'size'], 413); exit; }
