@@ -25,5 +25,6 @@ jobs:
           echo "$SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
-          rsync -avz --delete \
+          # router/ — страница роутера из репозитория fspirat-router: её не трогаем и не удаляем.
+          rsync -avz --delete --exclude '/router/' \
             ./sites/fspirat.ru/ deploy@"$SSH_HOST":/var/www/fspirat.online/
