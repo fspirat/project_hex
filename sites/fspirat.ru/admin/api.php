@@ -360,28 +360,32 @@ try {
         break;
     }
     case 'downloads': {
-        // Скачивания файлов мода с GitHub (кэш на час — GitHub ограничивает число запросов).
-        $cache = stats_dir() . '/gh-releases.json';
-        $data = json_decode((string)@file_get_contents($cache), true);
-        if (!is_array($data) || ($data['at'] ?? 0) < time() - 3600 || isset($_GET['fresh'])) {
-            $raw = @file_get_contents('https://api.github.com/repos/fspirat/project_hex/releases?per_page=30', false, stream_context_create(['http' => [
-                'timeout' => 8, 'ignore_errors' => true,
-                'header' => "User-Agent: fspirat-admin\r\nAccept: application/vnd.github+json\r\n"]]));
-            $rel = is_string($raw) ? json_decode($raw, true) : null;
-            if (is_array($rel) && array_is_list($rel)) {
-                $list = [];
-                foreach ($rel as $r) {
-                    $assets = [];
-                    foreach ($r['assets'] ?? [] as $a) $assets[] = ['name' => (string)$a['name'], 'n' => (int)$a['download_count']];
-                    $list[] = ['tag' => (string)($r['tag_name'] ?? ''), 'date' => strtotime((string)($r['published_at'] ?? '')) ?: 0, 'assets' => $assets];
-                }
-                $data = ['at' => time(), 'releases' => $list];
-                @file_put_contents($cache, json_encode($data, JSON_UNESCAPED_UNICODE));
-            } elseif (!is_array($data)) {
-                json_out(['error' => 'github'], 502); break;
+        // Скачивания мода: с нашего сервера (api/dl.php) + сколько было на GitHub до переезда (dl_base, один раз).
+        dl_tables($db);
+        if (!$db->query('SELECT COUNT(*) FROM dl_base')->fetchColumn()) {
+            $rel = json_decode((string)@file_get_contents(stats_dir() . '/gh-releases.json'), true)['releases'] ?? null;
+            if (!is_array($rel)) {
+                $raw = @file_get_contents('https://api.github.com/repos/fspirat/project_hex/releases?per_page=100', false, stream_context_create(['http' => [
+                    'timeout' => 8, 'ignore_errors' => true, 'header' => "User-Agent: fspirat-admin\r\nAccept: application/vnd.github+json\r\n"]]));
+                $gh = is_string($raw) ? json_decode($raw, true) : null;
+                $rel = is_array($gh) && array_is_list($gh) ? array_map(fn($r) => ['assets' => array_map(fn($a) => ['name' => (string)$a['name'], 'n' => (int)$a['download_count']], $r['assets'] ?? [])], $gh) : null;
+            }
+            if (is_array($rel)) {
+                $sum = ['_github' => 0];
+                foreach ($rel as $r) foreach ($r['assets'] ?? [] as $a) if (preg_match('/^(fstweak|fslog)-/', $a['name'])) $sum[$a['name']] = ($sum[$a['name']] ?? 0) + (int)$a['n'];
+                $st = $db->prepare('INSERT OR REPLACE INTO dl_base(file, n) VALUES(?, ?)');
+                foreach ($sum as $k => $v) $st->execute([$k, $v]);
             }
         }
-        json_out($data);
+        $base = []; foreach (rows($db, 'SELECT file, n FROM dl_base WHERE file != ?', ['_github']) as $r) $base[$r['file']] = (int)$r['n'];
+        $site = []; foreach (rows($db, 'SELECT file, SUM(n) n FROM dl_days GROUP BY file') as $r) $site[$r['file']] = (int)$r['n'];
+        $files = array_unique(array_merge(array_keys($base), array_keys($site)));
+        sort($files);
+        json_out([
+            'files' => array_map(fn($f) => ['file' => $f, 'github' => $base[$f] ?? 0, 'site' => $site[$f] ?? 0], $files),
+            'days' => rows($db, 'SELECT day, SUM(n) n FROM dl_days WHERE day >= ? GROUP BY day ORDER BY day', [gmdate('Y-m-d', time() - 29 * 86400)]),
+            'today' => (int)$db->query("SELECT COALESCE(SUM(n), 0) FROM dl_days WHERE day = '" . gmdate('Y-m-d') . "'")->fetchColumn(),
+        ]);
         break;
     }
     case 'service': {

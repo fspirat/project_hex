@@ -90,3 +90,11 @@ jobs:
           name: FSTWEAK ${{ inputs.release_tag || github.ref_name }}
           files: dist/*.jar
           generate_release_notes: true
+
+  # Файлы релиза — на свой сервер (fspirat.ru/api/dl.php, счётчик скачиваний)
+  publish:
+    needs: release
+    uses: ./.github/workflows/downloads.yml
+    with:
+      tag: ${{ inputs.release_tag || github.ref_name }}
+    secrets: inherit

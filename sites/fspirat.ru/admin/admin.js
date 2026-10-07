@@ -476,24 +476,25 @@
       box.append(h('div', { class: 'sub-h', text: g[1] }), ul);
     });
   }
-  function loadDownloads(fresh) {
-    return api({ q: 'downloads', fresh: fresh ? 1 : '' }).then(function (r) {
+  function loadDownloads() {
+    return api({ q: 'downloads' }).then(function (r) {
       var box = $('downloads'); box.textContent = '';
-      var rel = (r.releases || []).filter(function (x) { return x.assets.some(function (a) { return /^fstweak-/.test(a.name); }); });
-      $('dlInfo').textContent = 'данные GitHub на ' + time(r.at).slice(0, 5);
-      if (!rel.length) { box.appendChild(h('p', { class: 'empty', text: 'Релизов пока нет.' })); return; }
-      var total = 0, tb = h('tbody');
-      rel.forEach(function (x) {
-        var files = x.assets.filter(function (a) { return /^fstweak-/.test(a.name); }), sum = files.reduce(function (a, f) { return a + f.n; }, 0);
-        total += sum;
-        tb.appendChild(h('tr', null, h('td', null, h('div', { class: 'ev', text: x.tag }), h('small', { class: 'muted', text: x.date ? date(x.date) : '' })),
-          h('td', null, files.map(function (f) { return h('span', { class: 'tag', text: f.name.replace(/^fstweak-|\.jar$/g, '') + ': ' + num(f.n) }); })),
-          h('td', { class: 't', text: num(sum) })));
+      var files = (r.files || []).filter(function (f) { return /^fstweak-/.test(f.file); });
+      $('dlInfo').textContent = 'с сервера fspirat.ru · сегодня ' + num(r.today || 0);
+      if (!files.length) { box.appendChild(h('p', { class: 'empty', text: 'Скачиваний пока нет.' })); return; }
+      var tg = 0, ts = 0, tb = h('tbody');
+      files.forEach(function (f) {
+        tg += f.github; ts += f.site;
+        tb.appendChild(h('tr', null, h('td', null, h('div', { class: 'ev', text: f.file.replace(/^fstweak-|\.jar$/g, '') })),
+          h('td', { class: 't', text: num(f.site) }), h('td', { class: 't', text: num(f.github) }), h('td', { class: 't', text: num(f.site + f.github) })));
       });
-      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Версия' }), h('th', { text: 'По версиям Minecraft' }), h('th', { text: 'Всего' }))), tb));
-      box.appendChild(h('p', { class: 'muted', text: 'Всего скачиваний FSTWEAK: ' + num(total) + '. Обновляется раз в час.' }));
-    }).catch(function (e) { if (e.message !== 'auth') { $('downloads').textContent = 'GitHub сейчас не отвечает — попробуйте позже.'; } });
+      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Minecraft' }), h('th', { text: 'С сервера' }), h('th', { text: 'GitHub (раньше)' }), h('th', { text: 'Всего' }))), tb));
+      var days = (r.days || []).map(function (d) { return d.day.slice(8, 10) + '.' + d.day.slice(5, 7) + ': ' + num(d.n); }).join(' · ');
+      box.appendChild(h('p', { class: 'muted', text: 'Всего скачиваний FSTWEAK: ' + num(tg + ts) + ' (с сервера ' + num(ts) + ', с GitHub до переезда ' + num(tg) + '). Повторное скачивание с одного адреса за сутки не считается.' }));
+      if (days) box.appendChild(h('p', { class: 'muted', text: 'По дням (30 дней): ' + days }));
+    }).catch(function (e) { if (e.message !== 'auth') { $('downloads').textContent = 'Не удалось загрузить счётчик — попробуйте позже.'; } });
   }
+
 
   // ---------- карточка игрока ----------
   var playerBack = 'mod';
