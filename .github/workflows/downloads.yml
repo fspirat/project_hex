@@ -1,0 +1,58 @@
+name: Publish downloads
+
+# Файлы мода последнего релиза → сервер (/var/www/fspirat.online/dl/files/): с них качают по ссылкам
+# fspirat.ru/api/dl.php?f=… (счётчик скачиваний — во вкладке «Скачивания» админки).
+# Запускается после релиза (из «Build mod») или вручную: Actions → Publish downloads → Run workflow.
+on:
+  push:                    # первый раз — сразу после слияния (и при правке этого файла)
+    branches: [main]
+    paths: ['.github/workflows/downloads.yml']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Тег релиза (пусто — последний)"
+        required: false
+        default: ""
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: false
+        default: ""
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download release files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          mkdir -p out/dl/files && ln -s out/dl/files files
+          gh release download ${TAG:+"$TAG"} --repo "$GITHUB_REPOSITORY" --pattern 'fstweak-*.jar' --dir files
+          ls -la files
+
+      - name: Upload to server
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          # ключ deploy ограничен rrsync (корень — /var/www/fspirat.online); без ограничения — полный путь
+          if [ "$(ssh -o BatchMode=yes deploy@"$SSH_HOST" echo plain 2>/dev/null)" = plain ]; then D=/var/www/fspirat.online/; else D=; fi
+          for i in 1 2 3; do
+            rsync -av out/ deploy@"$SSH_HOST":"$D" && break      # без --delete: остальной сайт не трогаем
+            [ $i = 3 ] && exit 1; echo "повтор через 20 с"; sleep 20
+          done
+
+      - name: Check
+        run: |
+          for f in files/*.jar; do n=$(basename "$f")
+            echo "$n: $(curl -s -o /dev/null -w '%{http_code} %{size_download} байт' "https://fspirat.ru/dl/files/$n") · ссылка скачивания: $(curl -s -o /dev/null -w '%{http_code} → %{redirect_url}' "https://fspirat.ru/api/dl.php?f=$n&check=1")"
+          done

@@ -551,3 +551,12 @@ function admin_code_check(PDO $db, string $pend, string $code): string
     $db->prepare('DELETE FROM admin_codes WHERE hash = ?')->execute([$h]);
     return 'ok';
 }
+
+/** Скачивания мода с нашего сервера (api/dl.php): по дням и файлам; dl_seen — кто уже скачал сегодня (хэш адреса);
+ *  dl_base — сколько было скачано с GitHub до переезда (заполняется один раз). */
+function dl_tables(PDO $db): void
+{
+    $db->exec('CREATE TABLE IF NOT EXISTS dl_days(day TEXT NOT NULL, file TEXT NOT NULL, n INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(day, file));
+               CREATE TABLE IF NOT EXISTS dl_seen(day TEXT NOT NULL, file TEXT NOT NULL, who TEXT NOT NULL, PRIMARY KEY(day, file, who));
+               CREATE TABLE IF NOT EXISTS dl_base(file TEXT PRIMARY KEY, n INTEGER NOT NULL)');
+}
