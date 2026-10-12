@@ -1,9 +1,9 @@
 {
-  "version": "1.2.2",
-  "url": "https://fspirat.ru/fstweak/",
+  "version": "1.2.3",
+  "url": "https://fspirat.xyz/fstweak/",
   "notes": {
-    "ru": "Исправлены мелкие ошибки.",
-    "en": "Minor bug fixes.",
-    "uk": "Виправлено дрібні помилки."
+    "ru": "Новый адрес сайта — fspirat.xyz: логи /log и проверка обновлений идут туда.",
+    "en": "New site address — fspirat.xyz: /log and update checks now use it.",
+    "uk": "Нова адреса сайту — fspirat.xyz: логи /log і перевірка оновлень працюють через неї."
   }
 }

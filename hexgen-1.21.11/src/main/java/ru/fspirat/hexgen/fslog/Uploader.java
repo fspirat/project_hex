@@ -14,7 +14,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 
-/** Отправка лога на fspirat.online в фоне (игра не подвисает). */
+/** Отправка лога на fspirat.xyz в фоне (игра не подвисает). */
 final class Uploader {
     private Uploader() {}
 

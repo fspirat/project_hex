@@ -5,7 +5,7 @@
   "fslog.uploading": "Зберігаю %s повід. …",
   "fslog.done": "Збережено %s повід.:",
   "fslog.failed": "Не вдалося зберегти: %s",
-  "fslog.error.network": "немає зв'язку з fspirat.online",
+  "fslog.error.network": "немає зв'язку з fspirat.xyz",
   "fslog.error.rate": "забагато завантажень, зачекайте %s с",
   "fslog.error.size": "завеликий лог, спробуйте /log 1000",
   "fslog.error.server": "помилка сервера",

@@ -3,12 +3,12 @@
   "id": "fslog",
   "version": "${version}",
   "name": "FSLOG",
-  "description": "Логгер чата: запоминает весь чат и по команде /log (или /chatlog) сохраняет его на fspirat.online — в чат приходит готовая ссылка. /log 200 — последние 200 сообщений, /log clear — очистить.",
+  "description": "Логгер чата: запоминает весь чат и по команде /log (или /chatlog) сохраняет его на fspirat.xyz — в чат приходит готовая ссылка. /log 200 — последние 200 сообщений, /log clear — очистить.",
   "authors": [
     "fspirat"
   ],
   "contact": {
-    "homepage": "https://fspirat.online/"
+    "homepage": "https://fspirat.xyz/"
   },
   "license": "MIT",
   "icon": "assets/fslog/icon.png",

@@ -26,9 +26,9 @@
 
   if (window.top !== window.self) { try { window.top.location = window.location.href; } catch (e) {} }
 
-  // Данные лежат на VPS. С fspirat.online — свой адрес, с fspirat.ru — полный адрес VPS.
-  var LOCAL = /^(www\.)?fspirat\.online$|^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-  var API = LOCAL ? 'api.php' : 'https://fspirat.online/admin/api.php';
+  // Данные лежат на VPS. API админки открыт на fspirat.xyz (и пока на fspirat.online) — там свой адрес; с других адресов — fspirat.xyz.
+  var LOCAL = /^(www\.)?fspirat\.(xyz|online)$|^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+  var API = LOCAL ? 'api.php' : 'https://fspirat.xyz/admin/api.php';
   var TOKEN_KEY = 'fs_admin_token';
   function token(v) {
     try { if (v === undefined) return sessionStorage.getItem(TOKEN_KEY) || ''; if (v) sessionStorage.setItem(TOKEN_KEY, v); else sessionStorage.removeItem(TOKEN_KEY); } catch (e) {}
@@ -480,7 +480,7 @@
     return api({ q: 'downloads' }).then(function (r) {
       var box = $('downloads'); box.textContent = '';
       var files = (r.files || []).filter(function (f) { return /^fstweak-/.test(f.file); });
-      $('dlInfo').textContent = 'с сервера fspirat.ru · сегодня ' + num(r.today || 0);
+      $('dlInfo').textContent = 'с сервера fspirat.xyz · сегодня ' + num(r.today || 0);
       if (!files.length) { box.appendChild(h('p', { class: 'empty', text: 'Скачиваний пока нет.' })); return; }
       var tg = 0, ts = 0, tb = h('tbody');
       files.forEach(function (f) {
@@ -558,7 +558,7 @@
   $('modQ').addEventListener('input', renderMod);
 
   // ---------- чат-логи FSLOG ----------
-  var LOG_VIEW = 'https://fspirat.online/log/?id=';
+  var LOG_VIEW = 'https://fspirat.xyz/log/?id=';
   function loadChatlogs() {
     return api({ q: 'chatlogs' }).then(function (r) {
       $('clN').textContent = r.count ? '· ' + r.count : '';

@@ -173,7 +173,7 @@
   "fslog.uploading": "Saving %s messages…",
   "fslog.done": "Saved %s messages:",
   "fslog.failed": "Could not save: %s",
-  "fslog.error.network": "cannot reach fspirat.online",
+  "fslog.error.network": "cannot reach fspirat.xyz",
   "fslog.error.rate": "too many uploads, wait %s s",
   "fslog.error.size": "log is too big, try /log 1000",
   "fslog.error.server": "server error",

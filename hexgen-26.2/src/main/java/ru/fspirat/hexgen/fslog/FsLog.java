@@ -4,7 +4,7 @@ import net.fabricmc.loader.api.FabricLoader;
 
 /**
  * FSLOG — логгер чата: запоминает весь входящий чат и по команде /log выгружает его
- * на fspirat.online, а в чат приходит готовая ссылка.
+ * на fspirat.xyz, а в чат приходит готовая ссылка.
  *
  * Всё лежит в пакете ru.fspirat.fslog и запускается одним вызовом {@link #init()},
  * поэтому позже его можно встроить в FSTWEAK: скопировать пакет и вызвать FsLog.init()
@@ -13,7 +13,7 @@ import net.fabricmc.loader.api.FabricLoader;
 public final class FsLog {
     private FsLog() {}
 
-    public static final String ENDPOINT = "https://fspirat.online/api/chatlog.php";
+    public static final String ENDPOINT = "https://fspirat.xyz/api/chatlog.php";
 
     private static boolean started;
 

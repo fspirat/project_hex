@@ -1,7 +1,7 @@
 <?php
 /**
  * Чат-логи мода FSLOG.
- *   POST          — мод присылает сообщения чата → {"id": "...", "url": "https://fspirat.online/log/?id=..."}
+ *   POST          — мод присылает сообщения чата → {"id": "...", "url": "https://fspirat.xyz/log/?id=..."}
  *   GET ?id=...   — страница log/ получает лог для показа
  * Хранится в той же базе, что и статистика (/var/lib/fspirat-stats), 30 дней; закреплённые в админке — пока их не открепят.
  * IP загрузившего не сохраняется — только его хэш с секретом для ограничения частоты.
@@ -15,7 +15,7 @@ require __DIR__ . '/lib/stats.php';
 const LOG_KEEP_DAYS = 30;
 const LOG_MAX_MESSAGES = 5000;
 const LOG_MAX_BODY = 4 * 1024 * 1024;
-const LOG_URL = 'https://fspirat.online/log/?id=';
+const LOG_URL = 'https://fspirat.xyz/log/?id=';
 const LOG_DAY_MAX = 300;                    // логов в день со всех адресов
 const LOG_DAY_BYTES = 300 * 1024 * 1024;    // и не больше 300 МБ в день
 
@@ -23,7 +23,7 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, nofollow');
 
-// Страницы сайта (fspirat.ru / fspirat.online) могут читать логи; чужим сайтам — отказ.
+// Страницы сайта (fspirat.xyz и старые fspirat.ru / fspirat.online) могут читать логи; чужим сайтам — отказ.
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 $extra = array_filter(explode(',', getenv('FSPIRAT_STATS_ORIGINS') ?: ''));
 if ($origin !== '') {

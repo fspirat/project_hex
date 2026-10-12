@@ -173,7 +173,7 @@
   "fslog.uploading": "Сохраняю %s сообщ. …",
   "fslog.done": "Сохранено %s сообщ.:",
   "fslog.failed": "Не удалось сохранить: %s",
-  "fslog.error.network": "нет связи с fspirat.online",
+  "fslog.error.network": "нет связи с fspirat.xyz",
   "fslog.error.rate": "слишком много загрузок, подождите %s с.",
   "fslog.error.size": "слишком большой лог, попробуйте /log 1000",
   "fslog.error.server": "ошибка сервера",

@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://fspirat.online; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; connect-src 'self' https://fspirat.xyz; font-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>FSPIRAT · Админ-панель</title>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body class="login">
-<!-- Страница одинаковая на fspirat.ru и fspirat.online; данные приходят с fspirat.online/admin/api.php -->
+<!-- Страница одинаковая на всех наших доменах; данные приходят со своего адреса admin/api.php (главный домен — fspirat.xyz) -->
 <main class="login-box" id="loginView">
   <p class="kicker"><b>&gt;</b> FSPIRAT · admin</p>
   <h1>Админ-<span>панель</span></h1>
@@ -53,6 +53,7 @@
       </div>
       <select id="hostFilter" aria-label="Сайт">
         <option value="">Оба сайта</option>
+        <option value="fspirat.xyz">fspirat.xyz</option>
         <option value="fspirat.ru">fspirat.ru</option>
         <option value="fspirat.online">fspirat.online</option>
       </select>
