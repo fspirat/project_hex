@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var API = /^(www\.)?fspirat\.online$|^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/api/chatlog.php' : 'https://fspirat.online/api/chatlog.php';
+  var API = /^(www\.)?fspirat\.(xyz|online|ru)$|^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/api/chatlog.php' : 'https://fspirat.xyz/api/chatlog.php';
   var id = new URLSearchParams(location.search).get('id') || '';
   var log = null, kind = 'all', query = '';
 

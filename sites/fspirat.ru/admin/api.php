@@ -1,7 +1,7 @@
 <?php
 /**
- * API админ-панели. Работает только на VPS (fspirat.online), где лежит база;
- * страница админки (admin/index.html) открывается и с fspirat.ru, и с fspirat.online и ходит сюда.
+ * API админ-панели. Работает только на VPS (fspirat.xyz; на переходный период и fspirat.online), где лежит база;
+ * страница админки (admin/index.html) ходит сюда со своего же домена.
  *   POST ?q=login   {"password": "...", "device": "..."}  → {"token": "..."}  или (новое устройство) {"need_code": true, "pending": "..."}
  *   POST ?q=login_code {"pending": "...", "code": "123456"} → {"token": "...", "device": "..."}  (код пришёл в Telegram)
  *   POST ?q=logout  (с токеном)
@@ -179,7 +179,7 @@ $off = (int)date('Z');   // смещение часового пояса (Мос
 function host_filter(string $col, array &$args): string
 {
     $h = $_GET['host'] ?? '';
-    if (!in_array($h, ['fspirat.ru', 'fspirat.online'], true)) return '';
+    if (!in_array($h, ['fspirat.xyz', 'fspirat.ru', 'fspirat.online'], true)) return '';
     $args[] = $h;
     return " AND $col = ?";
 }
@@ -392,7 +392,7 @@ try {
         $now = time();
         // SSL-сертификаты: сколько дней до окончания
         $ssl = [];
-        foreach (['fspirat.ru', 'fspirat.online'] as $host) {
+        foreach (['fspirat.xyz', 'fspirat.online', 'fspirat.ru'] as $host) {
             $ctx = stream_context_create(['ssl' => ['capture_peer_cert' => true, 'verify_peer' => false, 'verify_peer_name' => false, 'SNI_enabled' => true, 'peer_name' => $host]]);
             $sock = @stream_socket_client('ssl://' . $host . ':443', $errno, $errstr, 6, STREAM_CLIENT_CONNECT, $ctx);
             $info = null;
@@ -412,7 +412,7 @@ try {
             return is_array($j) ? ['sha' => substr((string)($j['sha'] ?? ''), 0, 40), 'time' => (int)($j['time'] ?? 0), 'run' => (string)($j['run'] ?? '')] : null;
         };
         $deploys = [
-            ['site' => 'fspirat.online и fspirat.ru (VPS)', 'build' => $read(__DIR__ . '/../api/build.json')],
+            ['site' => 'fspirat.xyz (VPS)', 'build' => $read(__DIR__ . '/../api/build.json')],
         ];
         // ошибки PHP: последние строки своего журнала
         $errFile = stats_dir() . '/php-errors.log';

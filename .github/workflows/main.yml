@@ -91,7 +91,7 @@ jobs:
           files: dist/*.jar
           generate_release_notes: true
 
-  # Файлы релиза — на свой сервер (fspirat.ru/api/dl.php, счётчик скачиваний)
+  # Файлы релиза — на свой сервер (fspirat.xyz/api/dl.php, счётчик скачиваний)
   publish:
     needs: release
     uses: ./.github/workflows/downloads.yml

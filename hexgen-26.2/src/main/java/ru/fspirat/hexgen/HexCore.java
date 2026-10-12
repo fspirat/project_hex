@@ -7,7 +7,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
-/** Логика генератора без зависимостей от Minecraft — та же, что на fspirat.ru/hex_generator. */
+/** Логика генератора без зависимостей от Minecraft — та же, что на fspirat.xyz/hex_generator. */
 public final class HexCore {
     private HexCore() {}
 

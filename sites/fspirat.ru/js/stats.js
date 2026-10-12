@@ -1,12 +1,13 @@
 /* Статистика посещений fspirat — анонимно, без cookies.
  * Посетитель — случайный номер в localStorage, никаких личных данных и содержимого форм.
- * События уходят на свой сервер (fspirat.online/api/t.php), сторонних счётчиков нет.
+ * События уходят на свой сервер (/api/t.php своего домена, главный — fspirat.xyz), сторонних счётчиков нет.
  * Другие скрипты могут сообщить действие: window.fsTrack('gen.copy', {fmt:'item'}). */
 (function () {
   'use strict';
   var me = document.currentScript;
-  var EP = (me && me.getAttribute('data-endpoint')) || 'https://fspirat.online/api/t.php';
-  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) EP = '/api/t.php';   // локальная проверка
+  var EP = (me && me.getAttribute('data-endpoint')) || 'https://fspirat.xyz/api/t.php';
+  // свои домены (одна папка сайта на сервере) и локальная проверка — свой адрес
+  if (/^(www\.)?fspirat\.(xyz|online|ru)$|^(localhost|127\.0\.0\.1)$/.test(location.hostname)) EP = '/api/t.php';
   var SESSION_GAP = 30 * 60 * 1000, PING = 60 * 1000, MAX_EVENTS = 400;
   var sent = 0;
 

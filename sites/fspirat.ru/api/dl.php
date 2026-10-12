@@ -19,7 +19,7 @@ $path = __DIR__ . '/../dl/files/' . $f;
 if (!preg_match('/^(fstweak|fslog)-[0-9][0-9.]*\.jar$/', $f) || !is_file($path)) {
     http_response_code(404);
     header('Content-Type: text/plain; charset=utf-8');
-    echo "Файл не найден. Страница мода: https://fspirat.ru/fstweak/\n";
+    echo "Файл не найден. Страница мода: https://fspirat.xyz/fstweak/\n";
     exit;
 }
 

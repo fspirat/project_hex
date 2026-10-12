@@ -20,14 +20,14 @@ import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.Style;
 
 /**
- * Связь с fspirat.online: при заходе в мир и раз в 10 минут мод сообщает ник, версии и сервер
+ * Связь с fspirat.xyz: при заходе в мир и раз в 10 минут мод сообщает ник, версии и сервер
  * (список игроков во вкладке «FSTWEAK» админки) и узнаёт последнюю версию мода.
  * Если вышла новая — один раз за запуск игры пишет об этом в чат.
  */
 final class UpdateCheck {
     private UpdateCheck() {}
 
-    private static final String ENDPOINT = "https://fspirat.online/api/mod.php";
+    private static final String ENDPOINT = "https://fspirat.xyz/api/mod.php";
     private static final int HEARTBEAT_TICKS = 20 * 60 * 10;
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     private static boolean notified;
@@ -79,7 +79,7 @@ final class UpdateCheck {
                 String latest = a.has("version") ? a.get("version").getAsString() : "";
                 if (latest.isEmpty() || compare(latest, mine) <= 0) return;
                 notified = true;
-                String url = a.has("url") ? a.get("url").getAsString() : "https://fspirat.ru/fstweak/";
+                String url = a.has("url") ? a.get("url").getAsString() : "https://fspirat.xyz/fstweak/";
                 String notes = a.has("notes") ? a.get("notes").getAsString() : "";
                 mc.execute(() -> mc.gui.hud.getChat().addClientSystemMessage(message(latest, mine, url, notes)));
             } catch (RuntimeException ignored) {

@@ -54,4 +54,4 @@ if (!$db) { fwrite(STDERR, "Не удалось открыть базу. Уст�
 $db->prepare('INSERT INTO audit(ts, ip, action, detail) VALUES(?,?,?,?)')->execute([time(), 'console', empty($old) ? 'setup' : 'password_changed', '']);
 
 echo empty($old) ? "Готово: статистика настроена в $dir\n" : "Готово: пароль изменён.\n";
-echo "Админка: https://fspirat.online/admin/\n";
+echo "Админка: https://fspirat.xyz/admin/\n";

@@ -2,7 +2,7 @@
 /**
  * FSTWEAK: мод сообщает, кто в игре (ник, версии, сервер), и узнаёт последнюю версию.
  *   POST {"nick":"...","mod":"1.2","mc":"1.21.11","server":"...","lang":"ru_ru","join":1,"use":{"copy":2}}
- *   → {"version":"1.2","url":"https://fspirat.ru/fstweak/","notes":"..."}
+ *   → {"version":"1.2","url":"https://fspirat.xyz/fstweak/","notes":"..."}
  * Последняя версия и текст «что нового» — в fstweak-version.json рядом.
  * Данные лежат в базе статистики (/var/lib/fspirat-stats), видны во вкладке «FSTWEAK» админки.
  */
@@ -23,7 +23,7 @@ function answer(array $latest, string $lang): void
     $notes = $latest['notes'] ?? [];
     json_out([
         'version' => (string)($latest['version'] ?? ''),
-        'url' => (string)($latest['url'] ?? 'https://fspirat.ru/fstweak/'),
+        'url' => (string)($latest['url'] ?? 'https://fspirat.xyz/fstweak/'),
         'notes' => (string)($notes[$lang] ?? $notes['en'] ?? $notes['ru'] ?? ''),
     ]);
     exit;
@@ -79,7 +79,7 @@ if ($db && preg_match('/^[A-Za-z0-9_]{1,16}$/', $nick)) {
 $notes = $latest['notes'] ?? [];
 json_out([
     'version' => (string)($latest['version'] ?? ''),
-    'url' => (string)($latest['url'] ?? 'https://fspirat.ru/fstweak/'),
+    'url' => (string)($latest['url'] ?? 'https://fspirat.xyz/fstweak/'),
     'notes' => (string)($notes[$lang] ?? $notes['en'] ?? $notes['ru'] ?? ''),
 ]);
 finish_response();

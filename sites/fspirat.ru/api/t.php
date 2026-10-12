@@ -1,6 +1,6 @@
 <?php
 /**
- * Приём событий статистики с fspirat.ru и fspirat.online (js/stats.js шлёт их через sendBeacon).
+ * Приём событий статистики с fspirat.xyz (и старых fspirat.ru, fspirat.online) (js/stats.js шлёт их через sendBeacon).
  * Всегда отвечает 204 без тела — посторонним нечего узнать из ответа.
  * Без cookies; посетитель — случайный номер из браузера, IP не сохраняется.
  */
@@ -88,7 +88,7 @@ try {
             $rh = parse_url($in['r'], PHP_URL_HOST);
             if (is_string($rh)) {
                 $rh = strtolower(preg_replace('~^www\.~', '', $rh));
-                $own = ['fspirat.ru', 'fspirat.online'];
+                $own = ['fspirat.xyz', 'fspirat.ru', 'fspirat.online'];
                 if (!in_array($rh, $own, true)) $refHost = mb_substr($rh, 0, 100);
             }
         }

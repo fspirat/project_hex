@@ -17,11 +17,14 @@ if (!defined('FS_STATS')) { http_response_code(404); exit; }
 
 const STATS_KEEP_DAYS = 90;
 const STATS_TZ = 'Europe/Moscow';
+// Главный домен — fspirat.xyz; fspirat.online и fspirat.ru оставлены на переходный период
+// (их страницы перенаправляются на fspirat.xyz, а API мода работает по старым адресам).
 const TRACK_ORIGINS = [
+    'https://fspirat.xyz', 'https://www.fspirat.xyz',
     'https://fspirat.ru', 'https://www.fspirat.ru',
     'https://fspirat.online', 'https://www.fspirat.online',
 ];
-const ADMIN_HOSTS = ['fspirat.online', 'www.fspirat.online'];
+const ADMIN_HOSTS = ['fspirat.xyz', 'www.fspirat.xyz', 'fspirat.online', 'www.fspirat.online'];
 
 date_default_timezone_set(STATS_TZ);
 
@@ -403,7 +406,7 @@ function admin_headers(): void
 }
 
 /*
- * Вход по токену, а не по cookie: страница админки открывается и с fspirat.ru, и с fspirat.online,
+ * Вход по токену, а не по cookie: страница админки может открываться с разных наших доменов (fspirat.xyz, fspirat.online, fspirat.ru),
  * а данные лежат на VPS. Cookie между разными сайтами браузеры режут, токен в заголовке — нет.
  * Токен хранится во вкладке (sessionStorage), в базе — только его хэш.
  * Живёт 12 часов, без действий — 2 часа; смена пароля (setup.php) завершает все входы.
