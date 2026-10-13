@@ -65,7 +65,9 @@ $cfg = stats_config();
 try {
     // Защита от флуда: по IP (хэш с секретом, меняется каждый день — сам IP не хранится) и по сессии
     $ipKey = 'ip:' . substr(hash('sha256', $cfg['secret'] . date('Y-m-d') . client_ip()), 0, 20);
-    if (!stats_rate($db, $ipKey, 240, 60) || !stats_rate($db, 's:' . $sid, 3000, 86400)) done();
+    // 120 событий в минуту с адреса: обычному посетителю хватает с запасом (пинг раз в минуту + действия), а
+    // с одного адреса больше не накачать сотни тысяч записей в сутки (аудит 14.10.2026, H1; было 240)
+    if (stats_disk_full() || !stats_rate($db, $ipKey, 120, 60) || !stats_rate($db, 's:' . $sid, 3000, 86400)) done();
 
     $now = time();
     $db->beginTransaction();

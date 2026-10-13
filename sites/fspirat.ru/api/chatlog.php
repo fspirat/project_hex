@@ -17,7 +17,7 @@ const LOG_MAX_MESSAGES = 5000;
 const LOG_MAX_BODY = 4 * 1024 * 1024;
 const LOG_URL = 'https://fspirat.xyz/log/?id=';
 const LOG_DAY_MAX = 300;                    // логов в день со всех адресов
-const LOG_DAY_BYTES = 300 * 1024 * 1024;    // и не больше 300 МБ в день
+const LOG_DAY_BYTES = 50 * 1024 * 1024;     // и не больше 50 МБ в день (было 300 МБ: за 30 дней хранения — до 9 ГБ; аудит H1)
 
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
@@ -66,6 +66,9 @@ foreach ([[6, 600], [40, 86400]] as [$max, $win]) {
         json_out(['error' => 'rate', 'wait' => $win - time() % $win], 429); exit;
     }
 }
+
+// База или диск переполнены — чат-логи не принимаются (stats_disk_full, аудит 14.10.2026, H1).
+if (stats_disk_full()) { json_out(['error' => 'full'], 507); exit; }
 
 // Общий дневной лимит (со всех адресов): прислать лог может кто угодно, не только мод — не даём забить диск.
 $st = $db->prepare('SELECT COUNT(*), IFNULL(SUM(bytes), 0) FROM chatlogs WHERE created >= ?');

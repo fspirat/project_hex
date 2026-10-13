@@ -32,13 +32,15 @@ if ($method === 'POST' && $q === 'login') {
     $in = json_decode((string)file_get_contents('php://input', false, null, 0, 2048), true);
     $pw = is_array($in) && is_string($in['password'] ?? null) ? $in['password'] : '';
     $ua = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 200);
-    if ($wait = login_locked($db)) {
+    $dev = is_string($in['device'] ?? null) ? $in['device'] : '';
+    $known = admin2fa_enabled() && admin_device_ok($db, $dev);   // подтверждённое устройство владельца (аудит H2)
+    if ($wait = login_locked($db, $known)) {
         audit($db, 'login_blocked', from_site() . ' · ' . $ua);
         json_out(['error' => 'locked', 'wait' => $wait], 429); exit;
     }
     if ($pw !== '' && password_verify($pw, stats_config()['password_hash'])) {
         // новое устройство — сначала код из Telegram (если бот уведомлений настроен)
-        if (admin2fa_enabled() && !admin_device_ok($db, is_string($in['device'] ?? null) ? $in['device'] : '')) {
+        if (admin2fa_enabled() && !$known) {
             $pend = admin_code_start($db, from_site());
             if ($pend === null) { audit($db, 'login_code_failed', from_site() . ' · ' . $ua); json_out(['error' => 'telegram'], 503); exit; }
             audit($db, 'login_code_sent', from_site() . ' · ' . $ua);
