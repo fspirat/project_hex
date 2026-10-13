@@ -309,6 +309,16 @@ function stats_disk_full(): bool
     return stats_db_bytes() > $max || ($free !== false && $free < STATS_DISK_MIN);
 }
 
+/**
+ * Транзакция сразу на запись (BEGIN IMMEDIATE). Обычная (DEFERRED) сначала читает, а при первой записи SQLite в WAL
+ * не ждёт очереди, если кто-то записал между чтением и записью, — сразу «database is locked». t.php при этом всё равно
+ * отвечал 204, и событие пропадало молча: на копии при всплеске 1000 пользователей — 40 из 15 990 (аудит 14.10.2026, H6).
+ * IMMEDIATE берёт право записи в начале, а занятость ждёт по busy_timeout.
+ */
+function tx_begin(PDO $db): void { $db->exec('BEGIN IMMEDIATE'); }
+function tx_commit(PDO $db): void { $db->exec('COMMIT'); }
+function tx_rollback(PDO $db): void { try { $db->exec('ROLLBACK'); } catch (Throwable $e) { /* транзакции уже нет */ } }
+
 /** Ограничение частоты: не больше $max событий за $window секунд по ключу. */
 function stats_rate(PDO $db, string $key, int $max, int $window): bool
 {

@@ -70,7 +70,7 @@ try {
     if (stats_disk_full() || !stats_rate($db, $ipKey, 120, 60) || !stats_rate($db, 's:' . $sid, 3000, 86400)) done();
 
     $now = time();
-    $db->beginTransaction();
+    tx_begin($db);
 
     $st = $db->prepare('SELECT vid FROM sessions WHERE sid = ?');
     $st->execute([$sid]);
@@ -79,7 +79,7 @@ try {
     if ($ev === 'ping') {
         // «я ещё на сайте» — только продлеваем сессию, в журнал не пишем
         if ($sess) $db->prepare('UPDATE sessions SET last_seen = ? WHERE sid = ?')->execute([$now, $sid]);
-        $db->commit();
+        tx_commit($db);
         done();
     }
 
@@ -107,7 +107,7 @@ try {
                       VALUES(?,?,?,?,?,?,?,?,?,?,?,?,0,?)')
            ->execute([$sid, $vid, $now, $now, $host, $path, $path, $refHost, $source, $device, $browser, $os, $visit]);
     } elseif ($sess['vid'] !== $vid) {
-        $db->rollBack();
+        tx_rollback($db);
         done();
     }
 
@@ -116,11 +116,11 @@ try {
     $db->prepare('UPDATE visitors SET last_seen = ? WHERE vid = ?')->execute([$now, $vid]);
     $db->prepare('INSERT INTO events(ts, vid, sid, host, path, ev, data) VALUES(?,?,?,?,?,?,?)')
        ->execute([$now, $vid, $sid, $host, $path, $ev, $data]);
-    $db->commit();
+    tx_commit($db);
 
     if (random_int(1, 300) === 1) stats_cleanup($db);
 } catch (Throwable $e) {
-    if ($db->inTransaction()) $db->rollBack();
+    tx_rollback($db);
     error_log('fspirat-stats: ' . $e->getMessage());
 }
 http_response_code(204);
