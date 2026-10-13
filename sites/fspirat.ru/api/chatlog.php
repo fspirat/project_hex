@@ -39,7 +39,7 @@ chatlog_table($db);
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
 if ($method === 'GET') {
-    $id = (string)($_GET['id'] ?? '');
+    $id = (is_string($_GET['id'] ?? null) ? $_GET['id'] : '');
     if (!preg_match('/^[A-Za-z0-9]{10}$/', $id)) { json_out(['error' => 'notfound'], 404); exit; }
     $st = $db->prepare('SELECT * FROM chatlogs WHERE id = ? AND (created >= ? OR pinned = 1)');
     $st->execute([$id, time() - LOG_KEEP_DAYS * 86400]);

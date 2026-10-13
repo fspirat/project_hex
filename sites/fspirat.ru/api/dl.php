@@ -14,7 +14,7 @@ require __DIR__ . '/lib/stats.php';
 header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 
-$f = (string)($_GET['f'] ?? '');
+$f = (is_string($_GET['f'] ?? null) ? $_GET['f'] : '');
 $path = __DIR__ . '/../dl/files/' . $f;
 if (!preg_match('/^(fstweak|fslog)-[0-9][0-9.]*\.jar$/', $f) || !is_file($path)) {
     http_response_code(404);

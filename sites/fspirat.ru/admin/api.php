@@ -165,7 +165,7 @@ if ($method !== 'GET') { json_out(['error' => 'method'], 405); exit; }
 
 // Скачать резервную копию базы (файл, а не JSON).
 if ($q === 'backup') {
-    $name = (string)($_GET['name'] ?? '');
+    $name = (is_string($_GET['name'] ?? null) ? $_GET['name'] : '');
     $path = backup_dir() . '/' . $name;
     if (!preg_match('/^stats-[0-9-]{10,17}\.sqlite$/', $name) || !is_file($path)) { json_out(['error' => 'notfound'], 404); exit; }
     audit($db, 'backup_downloaded', $name);
@@ -277,7 +277,7 @@ try {
         }
         if (preg_match('/^[a-z][a-z0-9_.:-]{0,39}$/', $_GET['ev'] ?? '')) { $where[] = 'e.ev = ?'; $a[] = $_GET['ev']; }
         else $where[] = "e.ev != 'ping'";
-        if (($p = trim((string)($_GET['path'] ?? ''))) !== '') { $where[] = "e.path LIKE ? ESCAPE '\\'"; $a[] = addcslashes(mb_substr($p, 0, 200), '%_\\') . '%'; }
+        if (($p = trim((is_string($_GET['path'] ?? null) ? $_GET['path'] : ''))) !== '') { $where[] = "e.path LIKE ? ESCAPE '\\'"; $a[] = addcslashes(mb_substr($p, 0, 200), '%_\\') . '%'; }
         if (preg_match('/^[a-f0-9]{1,16}$/', strtolower(ltrim($_GET['vid'] ?? '', '#')))) { $where[] = 'e.vid LIKE ?'; $a[] = strtolower(ltrim($_GET['vid'], '#')) . '%'; }
         if ((int)($_GET['before'] ?? 0) > 0) { $where[] = 'e.id < ?'; $a[] = (int)$_GET['before']; }
         $hf = host_filter('e.host', $a);
@@ -288,7 +288,7 @@ try {
         break;
     }
     case 'visitor': {
-        $vid = strtolower((string)($_GET['vid'] ?? ''));
+        $vid = strtolower((is_string($_GET['vid'] ?? null) ? $_GET['vid'] : ''));
         if (!preg_match('/^[a-f0-9]{16}$/', $vid)) { json_out(['error' => 'bad'], 400); break; }
         $v = rows($db, 'SELECT * FROM visitors WHERE vid = ?', [$vid])[0] ?? null;
         if (!$v) { json_out(['error' => 'notfound'], 404); break; }
@@ -348,7 +348,7 @@ try {
         break;
     }
     case 'player': {
-        $nick = (string)($_GET['nick'] ?? '');
+        $nick = (is_string($_GET['nick'] ?? null) ? $_GET['nick'] : '');
         if (!preg_match('/^[A-Za-z0-9_]{1,16}$/', $nick)) { json_out(['error' => 'bad'], 400); break; }
         mod_tables($db); chatlog_table($db);
         $p = rows($db, 'SELECT * FROM mod_players WHERE nick = ?', [$nick])[0] ?? null;
