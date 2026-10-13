@@ -228,6 +228,11 @@ function backup_make(PDO $db, ?string $name = null): ?string
 {
     $dir = backup_dir();
     if (!is_dir($dir) && !@mkdir($dir, 0700)) return null;
+    $free = @disk_free_space($dir);
+    if ($free !== false && $free < 2 * stats_db_bytes() + STATS_DISK_MIN) {   // копия не должна заполнить диск (H1)
+        error_log('fspirat backup: мало места на диске — копия не сделана');
+        return null;
+    }
     $name = $name ?? 'stats-' . date('Y-m-d') . '.sqlite';
     $path = $dir . '/' . $name;
     if (is_file($path)) @unlink($path);
@@ -282,6 +287,37 @@ function stats_housekeeping(PDO $db): void
         error_log('fspirat housekeeping: ' . $e->getMessage());
     }
 }
+
+/**
+ * Защита диска сервера (аудит 14.10.2026, H1): публичные t.php и chatlog.php принимают данные от кого угодно,
+ * а диск NL общий для всех проектов (сайт, VPN, вход роутера, /vds). База больше STATS_DB_MAX или на диске
+ * меньше STATS_DISK_MIN свободно — новые события и чат-логи не принимаются (сайт и админка работают).
+ */
+const STATS_DB_MAX = 1024 * 1048576;      // 1 ГБ (переопределяется FSPIRAT_STATS_DB_MAX — для тестов)
+const STATS_DISK_MIN = 2048 * 1048576;    // 2 ГБ свободно
+
+function stats_db_bytes(): int
+{
+    $f = stats_dir() . '/stats.sqlite';
+    return (int)@filesize($f) + (int)@filesize($f . '-wal');
+}
+
+function stats_disk_full(): bool
+{
+    $free = @disk_free_space(stats_dir());
+    $max = (int)(getenv('FSPIRAT_STATS_DB_MAX') ?: STATS_DB_MAX);
+    return stats_db_bytes() > $max || ($free !== false && $free < STATS_DISK_MIN);
+}
+
+/**
+ * Транзакция сразу на запись (BEGIN IMMEDIATE). Обычная (DEFERRED) сначала читает, а при первой записи SQLite в WAL
+ * не ждёт очереди, если кто-то записал между чтением и записью, — сразу «database is locked». t.php при этом всё равно
+ * отвечал 204, и событие пропадало молча: на копии при всплеске 1000 пользователей — 40 из 15 990 (аудит 14.10.2026, H6).
+ * IMMEDIATE берёт право записи в начале, а занятость ждёт по busy_timeout.
+ */
+function tx_begin(PDO $db): void { $db->exec('BEGIN IMMEDIATE'); }
+function tx_commit(PDO $db): void { $db->exec('COMMIT'); }
+function tx_rollback(PDO $db): void { try { $db->exec('ROLLBACK'); } catch (Throwable $e) { /* транзакции уже нет */ } }
 
 /** Ограничение частоты: не больше $max событий за $window секунд по ключу. */
 function stats_rate(PDO $db, string $key, int $max, int $window): bool
@@ -467,14 +503,19 @@ const LOGIN_MAX_FAILS = 5;
 const LOGIN_MAX_FAILS_ALL = 30;   // со всех адресов вместе: подбор через много IP
 const LOGIN_LOCK_SEC = 900;
 
-/** Сколько секунд ещё заблокирован вход с этого IP или для всех (0 — не заблокирован). */
-function login_locked(PDO $db): int
+/**
+ * Сколько секунд ещё заблокирован вход с этого IP или для всех (0 — не заблокирован).
+ * $knownDevice — вход с подтверждённого устройства владельца: общий лимит (со всех адресов) на него не действует,
+ * иначе 30 чужих неверных паролей закрывали админку и владельцу (аудит 14.10.2026, H2). Лимит по IP — как раньше.
+ */
+function login_locked(PDO $db, bool $knownDevice = false): int
 {
     $st = $db->prepare("SELECT COUNT(*), MAX(ts) FROM audit WHERE action = 'login_fail' AND ip = ? AND ts > ?");
     $st->execute([client_ip(), time() - LOGIN_LOCK_SEC]);
     [$n, $last] = $st->fetch(PDO::FETCH_NUM);
     $st->closeCursor();
     if ((int)$n >= LOGIN_MAX_FAILS) return max(1, (int)$last + LOGIN_LOCK_SEC - time());
+    if ($knownDevice) return 0;
     $st = $db->prepare("SELECT COUNT(*), MAX(ts) FROM audit WHERE action = 'login_fail' AND ts > ?");
     $st->execute([time() - LOGIN_LOCK_SEC]);
     [$n, $last] = $st->fetch(PDO::FETCH_NUM);
