@@ -161,6 +161,7 @@ main:focus { outline: none; }
   color: var(--text);
   text-decoration: none;
 }
+.brand { min-width: 44px; }
 .brand-mark { width: 28px; height: 28px; }
 .brand-name { font: 400 16px/24px var(--pixel); }
 .site-nav ul { display: flex; }
@@ -231,6 +232,7 @@ main:focus { outline: none; }
   font: 400 16px/24px var(--pixel);
   color: var(--accent);
 }
+.eyebrow > span { min-width: 0; }
 .eyebrow::before {
   content: "";
   flex: none;
@@ -251,7 +253,7 @@ h1 {
 /* Самое длинное слово «возможностей» — 9em (288 px при 32 px). Если колонка текста уже (узкий экран,
    увеличение страницы в Safari, полоса прокрутки) — кегль 24 px, чтобы слово оставалось целым.
    Меряем саму колонку (container query); медиазапрос — запасной путь для старых браузеров */
-@media (max-width: 719px) {
+@media (max-width: 1023.98px) {
   .hero-copy { container-type: inline-size; }
 }
 @media (max-width: 319.98px) {
@@ -343,7 +345,7 @@ h1 {
 .text-link .px-arrow { transition: transform var(--t) var(--ease); }
 @media (hover: hover) { .text-link:hover .px-arrow { transform: translateX(3px); } }
 
-@media (max-width: 879px) {
+@media (max-width: 559.98px) {
   .actions .btn { flex: 1 1 100%; }
 }
 
@@ -419,15 +421,13 @@ h1 {
 @media (min-width: 720px) {
   h1 { font-size: 40px; line-height: 48px; }
   .hero { padding: 16px 0 48px; }
-  /* Колонка текста не уже самого длинного неразрывного слова заголовка (min-content):
-     слово не рвётся ни при какой ширине окна, полосе прокрутки или подмене шрифта — сцена просто чуть уже */
-  .hero-grid {
-    grid-template-columns: minmax(min-content, 1.25fr) minmax(0, 1fr);
-    gap: 32px;
-  }
-  .hero-scene { justify-content: flex-end; }
-  .scene { height: auto; width: min(100%, 440px); }
+  /* Планшеты (720–1023): одна колонка — текст, под ним персонаж. В две колонки заголовок
+     здесь не помещается без висящего «Больше» и пятой строки */
+  .scene { height: 360px; }
   .motion-toggle { right: 4%; bottom: 5%; }
+}
+@container (min-width: 550px) {
+  .h1-keep { white-space: nowrap; }
 }
 @media (min-width: 880px) {
   .lead { margin-top: 24px; }
@@ -437,7 +437,11 @@ h1 {
    подстраивается — заголовок всегда в 4 строки: 40 px до 1199, 48 px с 1200 */
 @media (min-width: 1024px) {
   .h1-keep { white-space: nowrap; }
+  /* Колонка текста не уже самой длинной строки заголовка (min-content): ничего не рвётся
+     ни при какой ширине окна, полосе прокрутки или подмене шрифта — сцена просто чуть уже */
   .hero-grid { grid-template-columns: minmax(min-content, 3fr) minmax(0, 2fr); gap: 48px; }
+  .hero-scene { justify-content: flex-end; }
+  .scene { height: auto; width: min(100%, 440px); }
 }
 @media (min-width: 1200px) {
   .hero { padding: 32px 0 48px; }
@@ -740,13 +744,26 @@ h2 {
   .gen-chip { width: 32px; height: 32px; }
   /* Две равные карточки, превью одной высоты (одинаковые пропорции 908/568). Колонки равные на всех ширинах:
      при 7/5 у FSTWEAK описание и признаки переносились иначе, чем у генератора, и ритм карточек расходился */
-  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gen-demo { min-height: 0; aspect-ratio: 908 / 568; padding: 16px; }
 }
+/* Две колонки — с 1024. На планшетах карточка в пол-экрана слишком узкая: признаки и заголовок
+   генератора переносятся иначе, чем у FSTWEAK, и у одной из карточек над кнопкой остаётся пустая полоса */
 @media (min-width: 1024px) {
+  .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gen-demo { padding: 24px; }
+  .card-body { padding: 24px 24px 0; }
+  .card-foot { padding: 24px 24px 24px; }
+  .chips li { padding: 4px 6px; }
+}
+/* 1037–1099: признаки генератора иначе встают в 2 строки при 1 у FSTWEAK */
+@media (min-width: 1037px) and (max-width: 1099.98px) {
+  .chips { gap: 4px; }
+  .chips li { padding: 4px; }
+}
+@media (min-width: 1280px) {
   .card-body { padding: 32px 32px 0; }
   .card-foot { padding: 24px 32px 32px; }
+  .chips li { padding: 4px 8px; }
 }
 /* ───────── Контакты ───────── */
 .contacts { padding-bottom: 48px; }
