@@ -1,7 +1,6 @@
 /* fspirat.xyz — главная. «Изумрудная мастерская».
- * Пиксельный шрифт: «Minecraft Rus» (© 2004–2012 BOGDAN Software) — тот же файл, что был встроен в прежнюю главную.
- * Шрифт выровнен по сетке 8×8: чёткие размеры — кратные 8 px (16/24/32/40/48). Жирного начертания нет —
- * поэтому везде font-weight:400 и font-synthesis:none. Нет «–» (U+2013) и стрелок «→ ←»: в пиксельном тексте не используем. */
+ * Шрифт «Minecraft Rus» (© 2004–2012 BOGDAN Software, файл с прежней главной) на сетке 8×8: чёткие кегли кратны 8 px.
+ * Жирного нет — везде font-weight:400 и font-synthesis:none. «–» и стрелки «→ ←» в пиксельном тексте не используем. */
 
 @font-face {
   font-family: "Minecraft";
@@ -10,7 +9,7 @@
   font-style: normal;
   font-display: swap;
 }
-/* Метрически близкая замена на время подгрузки (ширина знака Minecraft ≈ 0.75em, у моноширинных ≈ 0.6em) */
+/* замена на время подгрузки: знак Minecraft ≈ 0.75em, моноширинный ≈ 0.6em */
 @font-face {
   font-family: "Minecraft Fallback";
   src: local("Menlo"), local("Menlo-Regular"), local("Consolas"), local("Courier New"), local("CourierNewPSMT");
@@ -22,6 +21,7 @@
 
 :root {
   color-scheme: dark;
+  --header-h: 60px;
   --bg: #070B09;
   --bg-2: #0B120E;
   --surface: #101812;
@@ -57,8 +57,10 @@ html {
   text-size-adjust: 100%;
   background: var(--bg);
 }
+/* Плавная прокрутка — только после загрузки (.smooth ставит home.js): /#contacts открывается сразу на месте,
+   без «проезда» через hero, во время которого начинал качаться ролик */
 @media (prefers-reduced-motion: no-preference) {
-  html { scroll-behavior: smooth; }
+  html.smooth { scroll-behavior: smooth; }
 }
 
 body {
@@ -76,7 +78,7 @@ body {
 }
 
 img, svg, video { display: block; max-width: 100%; }
-/* атрибут hidden сильнее любых display выше: скрытое действительно выходит из отрисовки */
+/* [hidden] сильнее любого display выше */
 [hidden] { display: none !important; }
 a { color: inherit; }
 p { margin: 0; }
@@ -108,7 +110,7 @@ main:focus { outline: none; }
   padding-right: max(var(--pad), env(safe-area-inset-right, 0px));
 }
 
-/* ───────── Skip link ───────── */
+/* ── Skip link ── */
 .skip-link {
   position: absolute;
   left: var(--pad);
@@ -123,29 +125,83 @@ main:focus { outline: none; }
 }
 .skip-link:focus { transform: none; }
 
-/* ───────── Фон: приглушённый пейзаж по краям, спокойный центр ───────── */
+/* ── Фон hero: «изумрудные руины» — отдельная композиция для ПК и для телефона (исходники PNG — вне сайта).
+   Только за шапкой и hero, ниже — ровный --bg: нижний край картинки растворяется маской (цвет её края ≈ #050A07,
+   не точно --bg). Слой — первый ребёнок .hero, z-index −1: под текстом, над фоном html ── */
+.hero { position: relative; }
 .backdrop {
   position: absolute;
-  inset: 0 0 auto 0;
-  height: 1040px;
+  left: 0;
+  right: 0;
   z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 46% 62% at 34% 42%, rgba(7, 11, 9, .82), rgba(7, 11, 9, 0) 72%),
-    url("img/bg-landscape.webp") center top / cover no-repeat;
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 58%, transparent 100%);
-          mask-image: linear-gradient(to bottom, #000 0, #000 58%, transparent 100%);
+  background-repeat: no-repeat;
 }
-@media (max-width: 719px) {
+/* ПК и горизонтальный экран: широкий кадр от верха страницы (над шапкой) до 120 px ниже hero. Тёмная зона кадра
+   (18–58 % ширины) — под текстом, светлая поляна (62–82 %) — за персонажем; по вертикали поляна на высоте его тела */
+.backdrop {
+  top: calc(-1 * var(--header-h, 60px));
+  bottom: -120px;
+  /* за ссылками шапки в кадре светлое небо (контраст «Проекты» 1.8–2.6:1) — полоса затемнения сверху */
+  background-image:
+    linear-gradient(to bottom, rgba(7, 11, 9, .85) 0, rgba(7, 11, 9, .6) var(--header-h, 60px), rgba(7, 11, 9, 0) calc(var(--header-h, 60px) + 72px)),
+    url("img/bg-ruins-desktop.webp");
+  background-size: 100% 100%, cover;
+  background-position: 0 0, 50% 55%;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 72%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 0, #000 72%, transparent 100%);
+}
+/* Телефон и планшет вертикально: высокий кадр во всю ширину, привязан к низу hero так, что поляна кадра
+   (центр на 67 % высоты) приходится на тело персонажа (39 % высоты сцены). Низ сцены срезан на 28 %, поэтому тело
+   выше низа hero на pb + 0.33 × сцена; поляна выше низа кадра на 0.33 × 1.7787 × ширина */
+@media (max-width: 1023.98px) and (orientation: portrait) {
   .backdrop {
-    height: 760px;
-    background:
-      radial-gradient(ellipse 80% 40% at 30% 30%, rgba(7, 11, 9, .7), rgba(7, 11, 9, 0) 75%),
-      url("img/bg-landscape.webp") 18% top / auto 100% no-repeat;
+    top: auto;
+    bottom: calc(var(--hero-pb) + .33 * var(--sh-base) - .587 * 100vw);
+    aspect-ratio: 940 / 1672;
+    background-image: url("img/bg-ruins-mobile.webp");
+    background-size: 100% 100%;
+    background-position: 0 0;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 78%, transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 16%, #000 78%, transparent 100%);
   }
 }
+/* Планшет вертикально: за текстом стволы и туман кадра («Связаться» 2.9:1) — мягкое затемнение под колонкой текста.
+   .hero-copy здесь — контейнер (свой слой), ::before с z-index −1 ложится между фоном и текстом */
+@media (min-width: 560px) and (max-width: 1023.98px) and (orientation: portrait) {
+  .hero-copy::before {
+    content: "";
+    position: absolute;
+    inset: -48px calc(-1 * var(--pad)) -40px;   /* по бокам — ровно до краёв экрана: шире дало бы прокрутку вбок */
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(farthest-side, rgba(7, 11, 9, .8), rgba(7, 11, 9, .72) 62%, rgba(7, 11, 9, 0));
+  }
+  .hero-copy { position: relative; }
+}
+/* ПК: hero стал ниже (низ кадра персонажа срезан), и текст поднялся к листве левой колонны кадра (метка 4.0:1 при
+   1280×800) — то же мягкое затемнение под колонкой текста, слабее. Влево за край экрана — прокрутки не даёт */
+@media (min-width: 1024px) {
+  .hero-copy { position: relative; }
+  .hero-copy::before {
+    content: "";
+    position: absolute;
+    inset: -112px -64px -56px -120px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(closest-side, rgba(7, 11, 9, .62), rgba(7, 11, 9, .45) 62%, rgba(7, 11, 9, 0));
+  }
+}
+/* Контрастные темы Windows: градиент браузер убирает, а фото (url) рисует. На светлой теме системная рамка
+   фокуса тёмная — на тёмном фото её не видно (≈ 1.3:1). Фото — украшение, без него остаётся системный фон */
+@media (forced-colors: active) {
+  .backdrop { display: none; }
+  /* квадраты-маркеры нарисованы фоном — в контрастной теме фон заменяется и они пропадают (как в site.css) */
+  .eyebrow::before, .section-head::before, .footer-block { forced-color-adjust: none; background: CanvasText; }
+  :focus-visible { outline-color: Highlight; }
+}
 
-/* ───────── Шапка ───────── */
+/* ── Шапка ── */
 .header-row {
   display: flex;
   align-items: center;
@@ -161,16 +217,24 @@ main:focus { outline: none; }
   color: var(--text);
   text-decoration: none;
 }
-.brand { min-width: 44px; }
-.brand-mark { width: 28px; height: 28px; }
-.brand-name { font: 400 16px/24px var(--pixel); }
-.site-nav ul { display: flex; }
+/* знак не сжимается: при крупных интервалах (WCAG 1.4.12) переносятся ссылки, а не наезжают на «fspirat» */
+.brand { flex: none; min-width: 44px; }
+/* Знак — голова персонажа из скина владельца (лицо + второй слой, 8×8) в тонкой белой рамке, рядом адрес
+   пиксельными заглавными с шагом в пиксель шрифта (2 px), как у плашек Minecraft. SVG — чёткий при любой плотности */
+.brand-face { display: block; width: 24px; height: 24px; image-rendering: pixelated; box-shadow: 0 0 0 1px #FFFFFF; }
+.brand-name { font: 400 16px/24px var(--pixel); text-transform: uppercase; letter-spacing: 2px; color: var(--accent-bright); transition: color var(--t) var(--ease); }
+.brand:hover .brand-name { color: #D4FF9A; }
+/* «.xyz» — только с 720 px: на телефоне адрес целиком сталкивался со ссылками шапки (до ≈ 456 px), там просто «FSPIRAT» */
+@media (max-width: 719.98px) { .brand-tld { display: none; } }
+.site-nav ul { display: flex; flex-wrap: wrap; justify-content: flex-end; }
+/* до 375 px ссылки ближе (12 px), свободное место — у знака, иначе «fspirat Проекты Контакты» читается
+   одной фразой; 376–399 — 20 px, с 400 — 28 px. Зона нажатия ≥ 44×44 */
 .site-nav a {
   position: relative;
   display: inline-flex;
   align-items: center;
   min-height: 44px;
-  padding: 0 8px;
+  padding: 0 6px;
   font: 400 16px/24px var(--pixel);
   color: var(--muted);
   text-decoration: none;
@@ -180,7 +244,7 @@ main:focus { outline: none; }
 .site-nav a::after {
   content: "";
   position: absolute;
-  left: 8px; right: 8px; bottom: 8px;
+  left: 6px; right: 6px; bottom: 8px;
   height: 2px;
   background: var(--accent);
   transform: scaleX(0);
@@ -191,8 +255,11 @@ main:focus { outline: none; }
 .site-nav a:hover::after, .site-nav a:focus-visible::after { transform: scaleX(1); }
 .site-nav li:last-child a::after { right: 0; }
 
+@media (min-width: 376px) and (max-width: 399.98px) {
+  .site-nav a { padding: 0 10px; }
+  .site-nav a::after { left: 10px; right: 10px; }   /* у последней ссылки справа 0 — правило выше сильнее */
+}
 @media (min-width: 400px) {
-  .brand-mark { width: 32px; height: 32px; }
   .site-nav ul { gap: 4px; }
   .site-nav a { padding: 0 12px; }
   .site-nav a::after { left: 12px; right: 12px; }
@@ -200,24 +267,32 @@ main:focus { outline: none; }
   .site-nav li:last-child a::after { right: 0; }
 }
 @media (min-width: 720px) {
+  :root { --header-h: 72px; }
   .header-row { min-height: 72px; }
   .brand { gap: 12px; }
-  .brand-mark { width: 40px; height: 40px; }
-  .brand-name { font-size: 24px; line-height: 32px; }
+  .brand-face { width: 32px; height: 32px; }
   .site-nav ul { gap: 8px; }
   .site-nav a { padding: 0 12px; }
   .site-nav a::after { left: 12px; right: 12px; }
 }
-@media (max-width: 359px) {
+/* до 388 px — только голова: «FSPIRAT» заглавными с разрядкой иначе сталкивается с «Проекты Контакты» */
+@media (max-width: 387.98px) {
   .brand-name {
     position: absolute; width: 1px; height: 1px; overflow: hidden;
     clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
   }
 }
 
-/* ───────── Hero ───────── */
-.hero { padding: 16px 0 32px; }
-/* Одна колонка, которая никогда не шире экрана (minmax(0, …)): при сильном увеличении текст переносится, а не обрезается */
+/* ── Hero ──
+   --sh-base — высота сцены персонажа (кадр 4:5); --hero-pb — отступ под hero. Оба нужны и сцене, и фону (.backdrop) */
+/* Телефон: не выше 300 px (ширина 240): на iPhone ×3 это 720 точек — файл анимации 720, без растяжения и без
+   перехода на 900 (+0.45 МБ). Крупнее персонаж выглядит за счёт срезанных пустых полей кадра (см. .scene) */
+.hero {
+  --sh-base: clamp(270px, 77vw, 300px);
+  --hero-pb: 16px;
+  padding: 16px 0 var(--hero-pb);
+}
+/* minmax(0, …): колонка не шире экрана, при увеличении текст переносится, а не обрезается */
 .hero-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -249,20 +324,26 @@ h1 {
   line-height: 40px;
   letter-spacing: 0;
   color: var(--text);
+  text-wrap: balance;
 }
-/* Самое длинное слово «возможностей» — 9em (288 px при 32 px). Если колонка текста уже (узкий экран,
-   увеличение страницы в Safari, полоса прокрутки) — кегль 24 px, чтобы слово оставалось целым.
-   Меряем саму колонку (container query); медиазапрос — запасной путь для старых браузеров */
+/* «возможностей» = 9em (288 px при 32 px). Колонка уже (узкий экран, увеличение страницы на iPhone «aA»:
+   ×1.25 — 280 px, ×2 — 163 px) — кегль по ширине колонки: слово целое, а заголовок при любом увеличении
+   на экране не мельче, чем без него (ступени 24 и 16 px делали его при ×1.25–2 меньше, чем при 100 %, и не
+   крупнее текста под ним). Дробный кегль здесь только при увеличении, где пиксель шрифта ≥ 13 точек экрана, —
+   не мылится. Межстрочный 1em + 8 px, как у всех кеглей заголовков (32/40, 24/32, 16/24).
+   Меряем колонку (container query); заголовки разделов — свою (.section-head), см. h2 */
 @media (max-width: 1023.98px) {
-  .hero-copy { container-type: inline-size; }
-}
-@media (max-width: 319.98px) {
-  h1 { font-size: 24px; line-height: 32px; }
+  .hero-copy, .section-head { container-type: inline-size; }
 }
 @container (max-width: 287.98px) {
-  h1 { font-size: 24px; line-height: 32px; }
+  h1 { font-size: clamp(16px, 100cqw / 9.25, 32px); line-height: calc(1em + 8px); }
 }
-.h1-line { display: block; text-wrap: balance; }
+/* без container queries (Safari < 16): то же по ширине экрана, колонка = экран − 2 × 16 px */
+@supports not (width: 1cqw) {
+  @media (max-width: 319.98px) {
+    h1 { font-size: clamp(16px, (100vw - 32px) / 9.25, 32px); line-height: calc(1em + 8px); }
+  }
+}
 .h1-accent { color: var(--accent-bright); }
 .lead {
   max-width: 34em;
@@ -280,7 +361,7 @@ h1 {
   margin-top: 24px;
 }
 
-/* Кнопки — «блочные», с внутренним скосом как у игровых кнопок и жёсткой тенью */
+/* кнопки «блочные»: внутренний скос, как у игровых, и жёсткая тень */
 .btn {
   position: relative;
   display: inline-flex;
@@ -318,8 +399,8 @@ h1 {
     inset 0 -4px 0 rgba(0, 0, 0, .28),
     var(--shadow);
 }
-/* Кнопка-действие карточки (.card-cta) не сдвигается сама: её ::after растянут на всю карточку,
-   а transform сделал бы кнопку контейнером для ::after и сжал зону нажатия до неё. Карточка реагирует целиком — ниже. */
+/* .card-cta не сдвигается: transform сделал бы кнопку контейнером для ::after (он растянут на карточку)
+   и сжал зону нажатия. Реагирует вся карточка — ниже */
 .btn:not(.card-cta):active { transform: translate(2px, 2px); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25), 2px 2px 0 rgba(0, 0, 0, .55); }
 @media (hover: hover) {
   .btn-primary:not(.card-cta):hover { background: #8DCB47; transform: translate(-2px, -2px); box-shadow: inset 0 2px 0 rgba(255,255,255,.3), inset 0 -4px 0 rgba(0,0,0,.22), var(--shadow-up); }
@@ -341,6 +422,9 @@ h1 {
   transition: color var(--t) var(--ease), text-decoration-color var(--t) var(--ease);
 }
 .text-link:hover { text-decoration-color: var(--accent-bright); }
+/* в hero ссылка и метка над ней стоят над светлым туманом и листвой кадра (планшет вертикально: 3.5–3.9:1) —
+   тёмный ореол вокруг букв */
+.hero .text-link, .hero .eyebrow { text-shadow: 0 0 2px #070B09, 0 0 6px rgba(7, 11, 9, .9), 0 0 12px rgba(7, 11, 9, .7); }
 .px-arrow { flex: none; width: 10px; height: 14px; }
 .text-link .px-arrow { transition: transform var(--t) var(--ease); }
 @media (hover: hover) { .text-link:hover .px-arrow { transform: translateX(3px); } }
@@ -349,32 +433,35 @@ h1 {
   .actions .btn { flex: 1 1 100%; }
 }
 
-/* Сцена персонажа: без карточки, островок в тёмном пространстве */
-.hero-scene { display: flex; justify-content: center; }
+/* Сцена: парящий персонаж без карточки, кадр 4:5. Не шире колонки (125cqw = колонка × 5/4): при увеличении ×2 на iPhone
+   (≈ 195 px) сцена 200×250 давала прокрутку вбок.
+   В кадре пусто сверху (персонаж и бабочка — с 9.7 % высоты) и снизу (тени под ним нет, всё кончается на 67.6 %):
+   срезаем эти поля отрицательными отступами (−8 % и −28 % высоты) — сцена крупнее, а места занимает меньше.
+   Ничего не обрезается: поля прозрачные, overflow не скрыт */
+.hero-scene { display: flex; justify-content: center; container-type: inline-size; }
 .scene {
+  --sh: var(--sh-base);
   position: relative;
-  height: clamp(250px, 76vw, 300px);
+  height: var(--sh);
+  max-width: 100%;
   aspect-ratio: 4 / 5;
+  margin: calc(var(--sh) * -.08) 0 calc(var(--sh) * -.28);
 }
-.scene-glow {
-  position: absolute;
-  inset: 6% -6% 14%;
-  background: radial-gradient(closest-side, rgba(54, 199, 139, .20), rgba(54, 199, 139, .07) 52%, rgba(54, 199, 139, 0) 100%);
+@supports (width: 1cqw) {
+  .scene { --sh: min(var(--sh-base), 125cqw); }
 }
-/* Тень под островком. Фон вокруг почти чёрный, затемнять нечего, поэтому два слоя:
-   снизу — слабая изумрудная «подсветка пола», шире блока; поверх — тёмный эллипс вдоль нижних рёбер блока
-   (в кадре они идут от x 24 % до 74 %, y 82–94 %): из-под блока видна тёмная полоса контакта на светлом полу */
-.scene-shadow {
+/* Персонаж парит без тени: связь с лесом даёт свет самого рендера (изумрудный контровой свет со стороны поляны,
+   зелёный отражённый снизу). Сам он в кадре 10–68 % по высоте во всех кадрах цикла. За ним — лёгкая тёмная вуаль
+   (18 %), а не свечение: она чуть приглушает детали леса за силуэтом, и тёмная сторона фигуры не сливается со
+   стволами (доля силуэта со слабым контрастом к фону: ПК 20 → 14 %, телефон 14 → 11 %) */
+.scene-veil {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 78%;
-  bottom: 0;
-  background:
-    radial-gradient(32% 32% at 50% 68%, rgba(0, 0, 0, .92), rgba(0, 0, 0, .92) 50%, rgba(0, 0, 0, 0) 100%),
-    radial-gradient(46% 45% at 49% 58%, rgba(54, 199, 139, .28), rgba(54, 199, 139, .12) 55%, rgba(54, 199, 139, 0) 100%);
+  inset: 2% -4% 26%;
+  background: radial-gradient(closest-side, rgba(7, 11, 9, .18) 55%, rgba(7, 11, 9, 0) 100%);
 }
 .scene-media { position: absolute; inset: 0; }
+/* полоса, где сам персонаж: по ней home.js решает, что он на экране и ролик пора качать */
+.scene-probe { position: absolute; inset: 10% 0 33%; pointer-events: none; }
 .scene-media > img,
 .scene-media > video {
   position: absolute;
@@ -384,72 +471,85 @@ h1 {
   object-fit: contain;
 }
 .scene-motion { opacity: 0; }
+/* скрытое видео — .001, а не 0: при 0 Chrome/Edge не держат слой, и при смене «постер → ролик» сцена
+   1–2 кадра пустая. Картинку (WebKit) ждёт decode() */
+video.scene-motion { opacity: .001; }
 .scene.is-live .scene-motion { opacity: 1; }
 .scene.is-live .scene-poster { opacity: 0; }
-
-.motion-toggle {
-  position: absolute;
-  right: -4px;
-  bottom: 2px;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 1px solid var(--border);
-  background: rgba(16, 24, 18, .88);
-  color: var(--muted);
-  cursor: pointer;
-  transition: color var(--t) var(--ease), border-color var(--t) var(--ease), background-color var(--t) var(--ease);
+/* Смена «постер ↔ движение» — растворением 0.2 с, а не скачком: анимированный WebP (Safari, iPhone) нельзя
+   перемотать, после паузы он продолжает не с кадра 0, как постер, и поза с бабочкой сменились бы рывком.
+   Верхний слой появляется сразу, нижний гаснет с задержкой 0.12 с — персонаж посередине не просвечивает
+   (home.js ждёт 0.36 с). Ролику (он продолжает с кадра 0 = постер) не мешает. «Уменьшить движение» — без него */
+@media (prefers-reduced-motion: no-preference) {
+  .scene-poster, .scene-motion { transition: opacity .2s linear .12s; }
+  .scene.is-live .scene-motion, .scene:not(.is-live) .scene-poster { transition-delay: 0s; }
 }
-.motion-toggle:hover { color: var(--text); border-color: var(--border-strong); background: var(--surface-raised); }
-/* значок — inline SVG на целочисленной сетке (crispEdges): чёткий при любом дробном положении кнопки.
-   «Пауза» — две полосы, «пуск» — пиксельный треугольник 12×14 */
-.motion-icon { width: 12px; height: 14px; }
-.motion-toggle .ico-play,
-.motion-toggle[data-state="off"] .ico-pause { display: none; }
-.motion-toggle[data-state="off"] .ico-play { display: block; }
 
 @media (min-width: 560px) {
   .lead { font-size: 18px; }
 }
-/* одна колонка: 40 px — только когда «Больше возможностей» (550 px) помещается в строку, иначе 32 px */
+/* одна колонка: 40 px, только если «Больше возможностей» (550 px) влезает в строку */
 @container (min-width: 550px) {
   h1 { font-size: 40px; line-height: 48px; }
 }
 @media (min-width: 720px) {
   h1 { font-size: 40px; line-height: 48px; }
-  .hero { padding: 16px 0 48px; }
-  /* Планшеты (720–1023): одна колонка — текст, под ним персонаж. В две колонки заголовок
-     здесь не помещается без висящего «Больше» и пятой строки */
-  .scene { height: 360px; }
-  .motion-toggle { right: 4%; bottom: 5%; }
+  /* 720–1023: одна колонка. Сцена 320×400 до 808 px, дальше растёт до 384×480 к 962 px */
+  .hero { --sh-base: clamp(400px, 52vw - 20px, 480px); --hero-pb: 24px; }
 }
+/* «Больше возможностей» не рвётся, пока влезает (inline-block); при крупных интервалах (WCAG 1.4.12)
+   переносится внутри себя, а не вылезает за экран */
 @container (min-width: 550px) {
-  .h1-keep { white-space: nowrap; }
+  .h1-keep { display: inline-block; }
 }
 @media (min-width: 880px) {
   .lead { margin-top: 24px; }
   .actions { margin-top: 32px; gap: 16px; }
 }
-/* Десктоп: «Больше возможностей» держится одной строкой, колонка текста (3/2, но не уже этой строки)
-   подстраивается — заголовок всегда в 4 строки: 40 px до 1199, 48 px с 1200 */
+/* Низкие экраны (≤ 500 px высоты, 560–1023 ширины: телефоны горизонтально, окно ПК при увеличении 175–250 %).
+   Плотнее отступы и межстрочный заголовка (1em + 4 px), сцена не выше экрана. Планшеты и окна ПК ≥ 1024
+   не затрагиваются */
+@media (min-width: 560px) and (max-width: 1023.98px) and (max-height: 500px) {
+  :root { --pad: 20px; }
+  :root { --header-h: 48px; }
+  .header-row { min-height: 48px; }
+  .hero { padding-top: 0; }
+  .eyebrow { margin-bottom: 4px; }
+  h1 { line-height: calc(1em + 4px); }
+  .lead { margin-top: 8px; }
+  .actions { margin-top: 12px; }
+  .hero { --sh-base: 280px; }
+}
+@supports (height: 1svh) {
+  @media (min-width: 560px) and (max-width: 1023.98px) and (max-height: 500px) {
+    .hero { --sh-base: clamp(220px, 100svh - 48px, 300px); }
+  }
+}
+/* Телефон горизонтально (грубый указатель): обе кнопки на первом экране даже при 304 px высоты — заголовок
+   32 px с межстрочным 36 px (с 720 в 2 строки при полях 20 px, уже 716 px — в 3), текст 16 px. Окну ПК при
+   увеличении кегль не уменьшаем: иначе при переходе 150 → 200 % заголовок на экране мельчал (72 → 64 px) */
+@media (min-width: 560px) and (max-width: 1023.98px) and (max-height: 500px) and (pointer: coarse) {
+  h1 { font-size: 32px; line-height: 36px; }
+  .lead { font-size: 16px; line-height: 24px; }
+}
+/* ПК: «Больше возможностей» в одну строку, «в Minecraft.» — второй: 40 px до 1199, 48 px с 1200 */
 @media (min-width: 1024px) {
+  .hero { --hero-pb: 48px; }
   .h1-keep { white-space: nowrap; }
-  /* Колонка текста не уже самой длинной строки заголовка (min-content): ничего не рвётся
-     ни при какой ширине окна, полосе прокрутки или подмене шрифта — сцена просто чуть уже */
+  /* колонка текста не уже строки заголовка (min-content): ничего не рвётся, сцена просто чуть уже */
   .hero-grid { grid-template-columns: minmax(min-content, 3fr) minmax(0, 2fr); gap: 48px; }
   .hero-scene { justify-content: flex-end; }
-  .scene { height: auto; width: min(100%, 440px); }
+  /* низ кадра пустой (с 67.6 % высоты): срезаем 25 % высоты (= 31.25 % ширины) — тело по центру с текстом,
+     до «Проектов» ближе */
+  .scene { height: auto; width: min(100%, 440px); margin: 0 0 calc(min(100%, 440px) * -.3125); }
 }
 @media (min-width: 1200px) {
-  .hero { padding: 32px 0 48px; }
+  .hero { padding-top: 32px; }
   h1 { font-size: 48px; line-height: 56px; }
   .eyebrow { margin-bottom: 24px; }
 }
 
-/* ───────── Заголовки разделов ───────── */
+/* ── Заголовки разделов ── */
 .section { padding: 32px 0; scroll-margin-top: 8px; }
 .section-head {
   position: relative;
@@ -491,19 +591,27 @@ h2 {
   font: 400 16px/24px var(--pixel);
   color: var(--muted);
 }
+/* в узкой колонке (увеличение) — как H1 (см. h1), но не крупнее 24 px: заголовок раздела не крупнее H1 */
+@container (max-width: 287.98px) {
+  h2 { font-size: clamp(16px, 100cqw / 9.25, 24px); line-height: calc(1em + 8px); }
+}
+@supports not (width: 1cqw) {
+  @media (max-width: 319.98px) {
+    h2 { font-size: clamp(16px, (100vw - 32px) / 9.25, 24px); line-height: calc(1em + 8px); }
+  }
+}
 @media (min-width: 720px) {
   .section { padding: 48px 0; }
   h2 { font-size: 32px; line-height: 40px; }
   .section-head { margin-bottom: 32px; padding-bottom: 16px; }
 }
 
-/* ───────── Карточки проектов ───────── */
+/* ── Карточки проектов ── */
 .cards {
   display: grid;
   gap: 24px;
 }
-/* Карточка: превью / текст / действие. Ссылка-действие растянута на всю карточку (.card-cta::after),
-   поэтому карточка целиком — одна цель нажатия, без вложенных интерактивных элементов */
+/* Карточка: превью / текст / действие. .card-cta::after растянут на всю карточку — одна цель нажатия */
 .card {
   position: relative;
   display: flex;
@@ -559,8 +667,7 @@ h2 {
   font-size: 24px;
   line-height: 32px;
 }
-/* общая ширина строки описаний (24em): оба описания — ровный блок в 2 строки на любой ширине карточки,
-   поэтому высота текста у соседних карточек совпадает */
+/* общая ширина описаний (24em): оба в 2 строки, высота текста у соседних карточек совпадает */
 .card-desc {
   max-width: 24em;
   color: var(--text-2);
@@ -575,18 +682,26 @@ h2 {
   margin-top: 4px;
 }
 .chips li {
+  max-width: 100%;   /* длинный признак переносится внутри себя, а не вылезает */
   padding: 4px 8px;
   border: 1px solid var(--border);
   background: rgba(7, 11, 9, .45);
   font: 400 16px/24px var(--pixel);
   color: var(--muted);
 }
-/* действие прижато к низу карточки: если соседняя карточка выше, свободное место — одно, над кнопкой */
+/* ≈ 195–250 px (увеличение ×1.75–2 на iPhone): «градиентов» и «Предпросмотр» шире карточки.
+   Пиксель шрифта здесь ≥ 5 точек экрана — 12 px не мылится */
+@media (max-width: 259.98px) {
+  .card-title { font-size: 16px; line-height: 24px; }
+  .chips li { padding: 4px 6px; font-size: 12px; line-height: 16px; }
+}
+/* действие прижато к низу: свободное место — над кнопкой */
 .card-foot {
   margin-top: auto;
   padding: 24px 16px;
 }
-.card-cta { width: 100%; }
+/* до 560 px — во всю ширину, как кнопки hero */
+@media (max-width: 559.98px) { .card-cta { width: 100%; } }
 .card .card-cta { position: static; }   /* ::after позиционируется от .card, а не от кнопки */
 .card-cta::after {
   content: "";
@@ -599,10 +714,9 @@ h2 {
   .card-foot { padding: 24px; }
 }
 
-/* Две карточки рядом: subgrid выравнивает между ними только строки «превью / текст / действие».
-   Внутри текста ритм свой (12/12/16/24) и не растягивается, если у соседа другие переносы */
+/* две карточки рядом: subgrid ровняет строки «превью / текст / действие», ритм внутри текста свой */
 @supports (grid-template-rows: subgrid) {
-  @media (min-width: 720px) {
+  @media (min-width: 1024px) {
     .card { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; }
     .card-foot { align-self: end; }
   }
@@ -679,7 +793,6 @@ h2 {
   line-height: calc(var(--u) * 10);
   white-space: nowrap;
 }
-.mc-lore { margin-top: calc(var(--u) * 2); }
 .mc-line span {
   color: var(--c);
   text-shadow: var(--u) var(--u) 0 rgba(0, 0, 0, .6);
@@ -721,36 +834,88 @@ h2 {
   color: var(--text-2);
   letter-spacing: .02em;
 }
-/* очень узко (сильное увеличение страницы): образцы в 2 столбца, чтобы HEX-коды не наезжали друг на друга,
-   а подсказка без слота с мечом — чтобы строка «Выкован в Крае» не обрезалась */
+/* узко (увеличение): образцы в 2 столбца, чтобы HEX-коды не наезжали; без слота — чтобы «Меч дракона»
+   не обрезался (слот 36 + 8 + подсказка 140 = 184 px) */
 @container (max-width: 243.98px) {
   .gen-swatches { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
-@container (max-width: 213.98px) {
+@container (max-width: 183.98px) {
   .mc-slot { display: none; }
 }
+/* ≈ 187 px (iPhone mini/SE, увеличение ×2): подсказка 140 px не влезает — «пиксель» 1.5 px */
+@container (max-width: 139.98px) {
+  .gen-demo-inner { --u: 1.5px; }
+}
+/* контрастные темы Windows: демо — картинка, его цвета и есть смысл; HEX-коды — системный текст */
+@media (forced-colors: active) {
+  .mc-slot, .mc-tooltip, .gen-bar, .gen-chip { forced-color-adjust: none; }
+}
 
-/* — превью мода: реальный скриншот — */
+/* — превью мода: настоящее окно мода (вырезано из скриншота по рамке, 716×492) на спокойном фоне карточки,
+   как у генератора: без травяного поля вокруг — */
+.shot {
+  padding: 16px;
+  background:
+    radial-gradient(ellipse 70% 90% at 50% 0%, rgba(54, 199, 139, .09), rgba(54, 199, 139, 0) 70%),
+    linear-gradient(rgba(255, 255, 255, .025) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(255, 255, 255, .025) 1px, transparent 1px) 0 0 / 24px 24px,
+    var(--bg-2);
+}
 .shot img {
   width: 100%;
   height: auto;
-  aspect-ratio: 908 / 568;
-  object-fit: cover;
+  aspect-ratio: 716 / 492;
+  filter: drop-shadow(4px 4px 0 rgba(0, 0, 0, .55));
 }
 
 @media (min-width: 720px) {
-  .card-cta { width: auto; }
   .gen-swatches code { font-size: 14px; }
   .gen-chip { width: 32px; height: 32px; }
-  /* Две равные карточки, превью одной высоты (одинаковые пропорции 908/568). Колонки равные на всех ширинах:
-     при 7/5 у FSTWEAK описание и признаки переносились иначе, чем у генератора, и ритм карточек расходился */
+  /* равные колонки (при 7/5 тексты карточек переносились по-разному); оба превью в пропорциях 908/568,
+     окно мода вписано с полями 16 px (object-fit: contain, тень — по самой картинке) */
   .gen-demo { min-height: 0; aspect-ratio: 908 / 568; padding: 16px; }
+  .shot { position: relative; aspect-ratio: 908 / 568; }
+  .shot img { position: absolute; inset: 16px; width: calc(100% - 32px); height: calc(100% - 32px); aspect-ratio: auto; object-fit: contain; }
 }
-/* Две колонки — с 1024. На планшетах карточка в пол-экрана слишком узкая: признаки и заголовок
-   генератора переносятся иначе, чем у FSTWEAK, и у одной из карточек над кнопкой остаётся пустая полоса */
+/* 560–1023: карточки друг под другом, превью ограниченной высоты (в пропорции 908/568 во всю ширину
+   карточка была почти в экран, образец терялся, FSTWEAK выходил выше генератора). В широком ряду карточка
+   горизонтальная (ниже). Ряд меряем самим рядом — с учётом safe area iPhone */
+@media (min-width: 560px) and (max-width: 1023.98px) {
+  .cards { container: cards / inline-size; }
+  .card-preview { height: clamp(288px, 30vw + 72px, 336px); }
+  /* превью во всю ширину (≥ 486 px) — крупная подсказка; в горизонтальной карточке телефона — 2 px */
+  @container (min-width: 480px) { .gen-demo-inner { --u: 3px; } }
+  /* у генератора — как минимум: при WCAG 1.4.12 превью растёт, а не обрезает подсказку и HEX-коды */
+  .gen-demo { height: auto; min-height: clamp(288px, 30vw + 72px, 336px); aspect-ratio: auto; }
+  .shot { position: relative; aspect-ratio: auto; }   /* высота — от .card-preview */
+  .shot img { position: absolute; inset: 16px; width: calc(100% - 32px); height: calc(100% - 32px); aspect-ratio: auto; object-fit: contain; }
+}
+/* Горизонтальная карточка: колонка текста 400 px («Генератор градиентов» в строку), превью тянется
+   на высоту текста (≈ 350 px). С 840 px ряда превью ≈ 440–556 px */
+@container cards (min-width: 840px) {
+  .card { display: grid; grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: auto 1fr; }
+  .card-preview { grid-row: 1 / 3; height: auto; min-height: 0; border-bottom: 0; border-right: 1px solid var(--border); }
+  .card-body, .card-foot { grid-column: 2; }
+  .gen-demo-inner { --u: 3px; }   /* превью ≥ 440 px — крупная подсказка */
+}
+/* телефон горизонтально: карточка горизонтальная с 520 px ряда (иначе скриншот выше экрана);
+   до 700 px превью и текст поровну, дальше текст 400 px */
+@media (max-height: 500px) {
+  @container cards (min-width: 520px) {
+    .card { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto 1fr; }
+    .card-preview { grid-row: 1 / 3; height: auto; min-height: 0; border-bottom: 0; border-right: 1px solid var(--border); }
+    .card-body, .card-foot { grid-column: 2; }
+  }
+  @container cards (min-width: 700px) {
+    .card { grid-template-columns: minmax(0, 1fr) 400px; }
+  }
+}
+/* две колонки с 1024: в пол-планшета карточки переносились по-разному, над кнопкой оставалась пустота */
 @media (min-width: 1024px) {
   .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .gen-demo { padding: 24px; }
+  /* крупная подсказка с 1024, а не с 1228, где контейнер дорастает до 520 */
+  .gen-demo-inner { --u: 3px; }
   .card-body { padding: 24px 24px 0; }
   .card-foot { padding: 24px 24px 24px; }
   .chips li { padding: 4px 6px; }
@@ -765,7 +930,7 @@ h2 {
   .card-foot { padding: 24px 32px 32px; }
   .chips li { padding: 4px 8px; }
 }
-/* ───────── Контакты ───────── */
+/* ── Контакты ── */
 .contacts { padding-bottom: 48px; }
 @media (min-width: 720px) { .contacts { padding-bottom: 64px; } }
 .socials {
@@ -788,8 +953,11 @@ h2 {
   text-decoration: none;
   transition: transform var(--t) var(--ease), box-shadow var(--t) var(--ease), border-color var(--t) var(--ease), background-color var(--t) var(--ease);
 }
+/* Значки — свои пиксельные пиктограммы 14×14 (пиксель значка = 2 px, как пиксель шрифта) в утопленном «слоте»
+   инвентаря. В покое приглушены; при наведении (и фокусе с клавиатуры, и нажатии) — цвета сервиса ярче, слот
+   подсвечивается его цветом: рамка, лёгкое свечение. Цвета частей значка — переменные: .po контур, .pf заливка,
+   .ps тень, .ph блик, .pw светлое, .pe деталь */
 .social-ico {
-  --brand: #E8EEE6;
   flex: none;
   display: grid;
   place-items: center;
@@ -797,24 +965,29 @@ h2 {
   height: 44px;
   background: var(--bg);
   border: 1px solid var(--border);
-  box-shadow: inset 2px 2px 0 rgba(255, 255, 255, .04), inset -2px -2px 0 rgba(0, 0, 0, .5);
-  color: var(--text);
-  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease), color var(--t) var(--ease);
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .55), inset -2px -2px 0 rgba(255, 255, 255, .04);
+  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease), box-shadow var(--t) var(--ease);
 }
-.social-ico svg { width: 22px; height: 22px; }
-.social--telegram .social-ico { --brand: #26A5E4; }
-.social--steam .social-ico { --brand: #2A475E; }
-.social--discord .social-ico { --brand: #5865F2; }
-.social--twitch .social-ico { --brand: #9146FF; }
+.px-ico { display: block; width: 28px; height: 28px; overflow: visible; }
+.px-ico rect { transition: fill var(--t) var(--ease); }
+.px-ico .po { fill: var(--i-o); }
+.px-ico .pf { fill: var(--i-f); }
+.px-ico .ps { fill: var(--i-s); }
+.px-ico .ph { fill: var(--i-h); }
+.px-ico .pw { fill: var(--i-w); }
+.px-ico .pe { fill: var(--i-e); }
+.social--telegram { --glow: 42, 171, 238;  --i-o: #0B1A22; --i-f: #2E6F8E; --i-s: #25566E; --i-h: #5E93AD; --i-w: #8FB3C4; --i-e: #0B1A22; }
+.social--steam    { --glow: 102, 192, 244; --i-o: #081019; --i-f: #2E5677; --i-s: #25475F; --i-h: #6D8DA6; --i-w: #C3D2DE; --i-e: #081019; }
+.social--discord  { --glow: 88, 101, 242; --glow-a: .26;  --i-o: #0F1022; --i-f: #434A93; --i-s: #363C78; --i-h: #5F66A8; --i-w: #B3B7D6; --i-e: #0F1022; }
+.social--twitch   { --glow: 145, 70, 255;  --i-o: #140C22; --i-f: #6A45A8; --i-s: #553889; --i-h: #8A6CC0; --i-w: #B5A9CC; --i-e: #6A45A8; }
 .social-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .social-name { font: 400 16px/24px var(--pixel); }
+/* ник не обрезается: в узкой плитке переносится */
 .social-handle {
   font-size: 15px;
   line-height: 20px;
   color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .social-go {
   flex: none;
@@ -830,7 +1003,7 @@ h2 {
   border-color: rgba(127, 191, 58, .5);
   background: linear-gradient(180deg, rgba(127, 191, 58, .10), rgba(127, 191, 58, .02)), var(--surface);
 }
-.social--primary .social-ico { background: var(--accent); border-color: #0B1608; color: var(--accent-ink); }
+.social--primary .social-ico { border-color: rgba(127, 191, 58, .6); }
 .social--primary .social-go { color: var(--accent); }
 @media (hover: hover) {
   .social:hover {
@@ -838,13 +1011,42 @@ h2 {
     border-color: rgba(127, 191, 58, .55);
     box-shadow: var(--shadow-up);
   }
-  .social:hover .social-ico { background: var(--brand); border-color: var(--brand); color: #fff; }
+
   .social:hover .social-go { transform: translateX(3px); color: var(--accent-bright); }
 }
 
-/* телефоны: 2×2, содержимое плитки — столбиком */
+/* «Активация» значка: при наведении, фокусе с клавиатуры и нажатии (на телефоне наведения нет) */
+.social:is(:hover, :focus-visible, :active) .social-ico {
+  background: linear-gradient(rgba(var(--glow), .16), rgba(var(--glow), .16)), var(--bg);
+  border-color: rgb(var(--glow));
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .45), inset -2px -2px 0 rgba(255, 255, 255, .06),
+              0 0 0 1px rgba(var(--glow), .35), 0 0 14px rgba(var(--glow), var(--glow-a, .35));
+}
+/* на сенсорных экранах «залипшее» наведение после касания не держит подсветку */
+@media (hover: none) {
+  .social:hover:not(:active):not(:focus-visible) .social-ico { background: var(--bg); border-color: var(--border); box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .55), inset -2px -2px 0 rgba(255, 255, 255, .04); }
+}
+.social--telegram:is(:hover, :focus-visible, :active) { --i-o: #06121A; --i-f: #2AABEE; --i-s: #1C86C2; --i-h: #7FCDF5; --i-w: #F4FBFF; }
+.social--steam:is(:hover, :focus-visible, :active)    { --i-o: #050A10; --i-f: #2C8BD0; --i-s: #2271A8; --i-h: #B8E3FB; --i-w: #FFFFFF; }
+.social--discord:is(:hover, :focus-visible, :active)  { --i-o: #0A0B1C; --i-f: #5865F2; --i-s: #4450D0; --i-h: #8F98FF; --i-w: #FFFFFF; }
+.social--twitch:is(:hover, :focus-visible, :active)   { --i-o: #0E0718; --i-f: #9146FF; --i-s: #7232D9; --i-h: #B88CFF; --i-w: #FFFFFF; --i-e: #9146FF; }
+@media (hover: none) {
+  .social--telegram:hover:not(:active):not(:focus-visible) { --i-o: #0B1A22; --i-f: #2E6F8E; --i-s: #25566E; --i-h: #5E93AD; --i-w: #8FB3C4; }
+  .social--steam:hover:not(:active):not(:focus-visible)    { --i-o: #081019; --i-f: #2E5677; --i-s: #25475F; --i-h: #6D8DA6; --i-w: #C3D2DE; }
+  .social--discord:hover:not(:active):not(:focus-visible)  { --i-o: #0F1022; --i-f: #434A93; --i-s: #363C78; --i-h: #5F66A8; --i-w: #B3B7D6; }
+  .social--twitch:hover:not(:active):not(:focus-visible)   { --i-o: #140C22; --i-f: #6A45A8; --i-s: #553889; --i-h: #8A6CC0; --i-w: #B5A9CC; --i-e: #6A45A8; }
+}
+/* контрастные темы Windows: значок — картинка, его цвета и есть смысл */
+@media (forced-colors: active) {
+  .px-ico { forced-color-adjust: none; }
+}
+
+/* телефоны: 2×2, плитка столбиком; уже 280 px (увеличение на iPhone) — один столбец, плитка тоже
+   столбиком, иначе «Telegram» рвался */
 @media (min-width: 340px) and (max-width: 559px) {
   .socials { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 279.98px), (min-width: 340px) and (max-width: 559px) {
   .social {
     flex-direction: column;
     align-items: flex-start;
@@ -862,7 +1064,7 @@ h2 {
   .social { min-height: 80px; padding: 16px; }
 }
 
-/* ───────── Подвал ───────── */
+/* ── Подвал ── */
 .site-footer {
   border-top: 1px dashed var(--border);
 }
@@ -889,17 +1091,16 @@ h2 {
   box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .25);
 }
 
-/* ───────── Появление: текст виден сразу; персонаж мягко «встаёт» на место (только с JS и без запрета движения) ───────── */
+/* ── Появление: персонаж мягко «встаёт» (только с JS и без запрета движения) ──
+   Один раз за визит: .enter ставит скрипт в <head>, home.js снимает его после анимации — иначе смена
+   системной настройки запускала её заново и сцена мигала */
 @media (prefers-reduced-motion: no-preference) {
-  .js .hero-scene { animation: rise .5s var(--ease) .05s both; }
+  .enter .hero-scene { animation: rise .5s var(--ease) .05s both; }
 }
 @keyframes rise {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
-/* Любые декоративные циклы помечаются .loop и замирают кнопкой паузы */
-.motion-off .loop { animation-play-state: paused !important; }
-
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
