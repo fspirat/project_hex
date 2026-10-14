@@ -210,9 +210,27 @@ let S;
 try{ S=JSON.parse(store.get(STATE_KEY,"null")); }catch(e){ S=null; }
 if(!S||!S.name||!Array.isArray(S.lore)) S=DEFAULT_STATE();
 { const d=DEFAULT_STATE(); for(const k in d) if(S[k]===undefined||typeof S[k]!==typeof d[k]) S[k]=d[k]; }
+/* Испорченные вложенные поля (стиль без fmt, строка без style и т. п.) чиним на месте: добавляем только недостающее,
+   остальное сохранённое состояние не трогаем. Раньше редактор падал с TypeError и оставался пустым. */
+function fixStyle(st,colors){
+  if(!st||typeof st!=="object"||Array.isArray(st)) return newStyle(colors);
+  if(!Array.isArray(st.stops)||!st.stops.length) st.stops=[...colors];
+  if(!st.fmt||typeof st.fmt!=="object"||Array.isArray(st.fmt)) st.fmt={l:false,o:false,n:false,m:false,k:false};
+  return st;
+}
+function fixText(t,colors){
+  if(!t||typeof t!=="object"||Array.isArray(t)) t={text:typeof t==="string"?t:""};
+  if(typeof t.text!=="string") t.text="";
+  t.style=fixStyle(t.style,colors);
+  return t;
+}
+S.name=fixText(S.name,PALETTES[0].colors); S.sponsor=fixText(S.sponsor,PALETTES[0].colors); S.nickT=fixText(S.nickT,["AAAAAA","FFFFFF"]);
+S.lore=S.lore.map(ln=>fixText(ln,PALETTES[5].colors));
 let active="name"; // "name", "sponsor" или индекс строки описания
 let mine=[];
 try{ mine=JSON.parse(store.get(TPL_KEY,"[]")); if(!Array.isArray(mine)) mine=[]; }catch(e){ mine=[]; }
+// Палитры старого генератора могли сохраниться со строчными буквами HEX («ff0000») — приводим к заглавным, а не выбрасываем.
+mine.forEach(p=>{ if(p&&Array.isArray(p.c)&&!p.c.every(valid)&&p.c.every(c=>typeof c==="string"&&valid(c.toUpperCase()))) p.c=p.c.map(c=>c.toUpperCase()); });
 mine=mine.filter(p=>p&&typeof p.n==="string"&&Array.isArray(p.c)&&p.c.every(valid));
 const allPalettes = () => PALETTES.concat(mine.map(p=>({name:p.n,colors:p.c,own:true})));
 const targetObj = t => t==="name" ? S.name : t==="sponsor" ? S.sponsor : t==="nick" ? S.nickT : S.lore[t];
@@ -236,7 +254,10 @@ function card(p,onPick,isActive){
 }
 const isOn = (style,p) => p.codes ? legOf(style).join("")===p.codes.join("")
   : style.mode==="gradient"&&p.colors.length===style.stops.length&&p.colors.every((c,i)=>c===style.stops[i]);
-function applyPalette(t,p){ track("gen.palette",{name:p.name||"",own:p.own?1:0,classic:p.codes?1:0}); const st=targetObj(t).style; if(p.codes){ st.legacy=[...p.codes]; return; } st.mode="gradient"; st.stops=[...p.colors]; }
+function applyPalette(t,p){ track("gen.palette",{name:p.name||"",own:p.own?1:0,classic:p.codes?1:0}); const st=targetObj(t).style; if(p.codes){ st.legacy=[...p.codes]; return; }
+  if(!p.colors.length) return;                                   // пустая сохранённая палитра (c:[]) — применять нечего
+  if(p.colors.length===1&&!isSponsor()){ st.mode="solid"; st.stops=[p.colors[0],st.stops[1]||p.colors[0]]; return; }   // один цвет вне /sponsor — как «Один цвет»
+  st.mode="gradient"; st.stops=[...p.colors]; }
 
 let palCat="all", palQuery="", palOpen=false;
 function renderCats(){
@@ -278,8 +299,9 @@ function renderPalettes(){
   mine.filter(pr=>!q||pr.n.toLowerCase().includes(q)).forEach(pr=>{
     const idx=mine.indexOf(pr);
     const w=document.createElement("div"); w.className="pwrap";
-    const p={name:pr.n,colors:pr.c};
-    w.appendChild(card(p,p=>{applyPalette(active,p);refresh();mineMsg("Применена палитра «"+p.name+"»");},isOn(st,p)));
+    const p={name:pr.n,colors:pr.c,own:true};
+    w.appendChild(card(p,p=>{applyPalette(active,p);refresh();
+      if(p.colors.length) mineMsg("Применена палитра «"+p.name+"»"); else mineMsg("Палитра «"+p.name+"» пустая — в ней нет цветов",true);},isOn(st,p)));
     const d=document.createElement("button"); d.type="button"; d.className="del"; d.textContent="✕";
     d.setAttribute("aria-label","Удалить палитру "+pr.n);
     let armed=false,timer=null;
@@ -330,7 +352,7 @@ function palButton(t){
         const c=document.createElement("button"); c.type="button"; c.className="chip"; c.textContent=label;
         c.setAttribute("aria-selected",popCat===id); c.addEventListener("click",()=>{ popCat=id; fill(); });
         chips.appendChild(c); });
-      const list = popCat==="mine" ? mine.map(p=>({name:p.n,colors:p.c}))
+      const list = popCat==="mine" ? mine.map(p=>({name:p.n,colors:p.c,own:true}))
         : PALETTES.filter(p=>popCat==="all"||PAL_CAT[p.name]===popCat);
       const g=document.createElement("div"); g.className="mini-grid";
       list.forEach(p=>g.appendChild(card(p,p=>{applyPalette(t,p);closePop();refresh();},isOn(targetObj(t).style,p))));
@@ -775,16 +797,24 @@ function cmdRow(num,line){
   const c=document.createElement("code"); c.textContent=line.full;
   const l=document.createElement("span"); l.className="len"; l.textContent=line.len+" / "+line.limit;
   l.classList.toggle("over",line.len>line.limit); l.classList.toggle("warn-len",line.len<=line.limit&&line.len>line.limit*.85);
+  const why=document.createElement("span"); why.className="len-why"+(line.len>line.limit?" is-over":line.len>line.limit*.85?" is-near":"");
+  why.textContent = line.len>line.limit ? "длиннее лимита на "+(line.len-line.limit) : line.len>line.limit*.85 ? "почти предел" : "";
+  why.hidden=!why.textContent;
   const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Копировать";
   b.addEventListener("click",()=>copyText(line.full,b,"Копировать"));
-  r.append(n,c,l,b); return r;
+  r.append(n,c,l,why,b); return r;
 }
 let lastAll="";
 async function copyText(t,btn,label){
   track("gen.copy",{fmt:S.cmd,len:t.length,all:btn.id==="copyAll"?1:0});
-  try{ await navigator.clipboard.writeText(t); }
-  catch(e){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }
-  btn.textContent="Скопировано"; setTimeout(()=>btn.textContent=label,1400);
+  let ok=false;
+  try{ await navigator.clipboard.writeText(t); ok=true; }
+  catch(e){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta);
+    try{ ta.select(); ok=document.execCommand("copy")===true; }catch(_){ ok=false; } finally{ ta.remove(); } }
+  // «Скопировано» — только если браузер подтвердил копирование; иначе честно говорим, и команда строки выделяется для ручного копирования.
+  if(!ok){ const code=btn.closest(".cmd")?.querySelector("code");
+    if(code){ const r=document.createRange(), s=getSelection(); r.selectNodeContents(code); s.removeAllRanges(); s.addRange(r); } }
+  btn.textContent=ok?"Скопировано":"Не удалось скопировать"; setTimeout(()=>btn.textContent=label,ok?1400:3000);
 }
 function renderCommands(){
   const box=$("cmds"); box.innerHTML="";
@@ -820,6 +850,7 @@ $("copyAll").addEventListener("click",()=>{ if(lastAll) copyText(lastAll,$("copy
 
 /* ================= Смена формата ================= */
 let lastEndSynced=null;
+let modeAtStartup=true;   // при загрузке страницы сохранённый цвет ника не перезаписывается (раньше сбрасывался на конечный цвет)
 function syncNickToEnd(force){
   const st=S.sponsor.style.stops, end=st[st.length-1];
   if(!valid(end)) return;
@@ -846,7 +877,7 @@ function applyMode(){
     }
     if(typeof active==="number"&&(!showLore()||active>=S.lore.length)) active="name";
   }
-  if(sp){ S.sponsor.style.mode="gradient"; syncNickToEnd(true); }
+  if(sp){ S.sponsor.style.mode="gradient"; syncNickToEnd(!modeAtStartup); }
   else { const st=cur(); if(st.mode==="gradient"&&st.stops.length<2) st.stops.push(st.stops[0]);
     if(st.stops.length>6) st.stops=st.stops.slice(0,5).concat(st.stops[st.stops.length-1]); }
   refresh();
@@ -900,6 +931,13 @@ function rememberSym(sym){
   recentSyms=[sym,...recentSyms.filter(x=>x!==sym)].slice(0,30);
   store.set(RECENT_KEY,JSON.stringify(recentSyms));
 }
+let symHintTimer=null;
+function symFull(max){
+  const h=document.querySelector("#symPop .sym-hint"); if(!h) return;
+  if(!h.dataset.idle) h.dataset.idle=h.textContent;
+  h.textContent="Символ не помещается: в поле не больше "+max+" знаков. Удалите что-нибудь или выберите другое поле."; h.classList.add("err");
+  clearTimeout(symHintTimer); symHintTimer=setTimeout(()=>{ h.textContent=h.dataset.idle; h.classList.remove("err"); },4000);
+}
 function addSym(sym){
   const cell=document.createElement("div"); cell.className="sym-cell";
   const on=favSyms.includes(sym);
@@ -919,6 +957,8 @@ function addSym(sym){
     if(!t) t = showName() ? $("name") : document.querySelector(".lore-row input[type=text]");
     if(!t) return;
     const same=t===lastInput&&lastSel, a=same?lastSel[0]:t.value.length, e=same?lastSel[1]:a;
+    // maxlength поля (80) действует и на символы: если символ не помещается, поле не меняется, а подсказка говорит почему.
+    if(t.maxLength>0&&t.value.length-(e-a)+sym.length>t.maxLength){ symFull(t.maxLength); return; }
     t.value=t.value.slice(0,a)+sym+t.value.slice(e);
     t.focus(); t.setSelectionRange(a+sym.length,a+sym.length); lastSel=[a+sym.length,a+sym.length];
     t.dispatchEvent(new Event("input"));
@@ -946,11 +986,17 @@ function update(){
   if(isSponsor()) syncNickToEnd(false);
   $("warn").textContent = isClassic() ? (legOf(cur()).length ? "" : "Выберите хотя бы один цвет.")
     : !cur().stops.every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
+    : !allOk ? badTargets(all)+": каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !nickOk ? "Цвет ника должен состоять из 6 символов HEX, например FD2177." : "";
   renderPreview();
   if(!allOk||!nickOk){ $("cmds").innerHTML='<p class="none">Исправьте цвета выше — команды появятся здесь.</p>'; lastAll=""; $("copyAll").disabled=true; $("outNote").textContent=""; }
   else renderCommands();
   save();
+}
+/** Названия целей с неверным HEX — для подсказки, когда ошибка не в редактируемой строке. */
+function badTargets(all){
+  return all.filter(t=>!t.style.stops.every(valid)).map(t=>t===S.name?$("nameLabel").textContent:t===S.nickT?"Цвет ника"
+    :t===S.sponsor?"Префикс sponsor":"Строка "+(S.lore.indexOf(t)+1)).join(", ");
 }
 function refresh(){ closePop(); renderText(); renderStops(); renderPalettes(); update(); }
 addEventListener("resize",()=>renderPreview());
@@ -1225,4 +1271,4 @@ $("cmdName").value=S.cmdName; $("cmdLore").value=S.cmdLore; $("tpl").value=S.tpl
 $("nickName").value=S.nick; $("nickHex").value=S.nickHex; if(valid(S.nickHex)) $("nickPick").value="#"+S.nickHex;
 lastEndSynced=S.sponsor.style.stops[S.sponsor.style.stops.length-1];
 $("name").value=S.name.text;
-applyMode();
+applyMode(); modeAtStartup=false;

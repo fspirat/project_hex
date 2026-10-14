@@ -364,3 +364,7 @@ button[disabled]:hover{transform:none;border-color:var(--line);box-shadow:2px 2p
 @keyframes reveal{to{opacity:1;transform:none}}
 @media(max-width:560px){.status{display:none}.sec-meta{display:none}.pal-btn{min-width:0;max-width:none;flex:1}.lore-row{flex-wrap:wrap}.lore-row input[type=text]{flex:1 1 calc(100% - 30px)}.lore-row .pal-wrap:not(.font-wrap){flex:1;display:flex;min-width:0}.lore-row .pal-wrap:not(.font-wrap) .pal-btn{width:100%;min-width:0}.lore-row .font-wrap{margin-left:28px}.lore-row{row-gap:6px}.name-row{flex-wrap:wrap}.name-row .pal-wrap{flex:1 1 100%;display:flex}.chain .node{font-size:12px;padding:2px 4px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.reveal{opacity:1;transform:none}.particles{display:none}}
+/* шаг 2: слова рядом со счётчиком длины и подсказка «символ не помещается» */
+.cmd .len-why{flex:none;font-size:14px;color:#ffd24d}
+.cmd .len-why.is-over{color:#ff6b6b}
+.sym-hint.err{color:#ff6b6b}
