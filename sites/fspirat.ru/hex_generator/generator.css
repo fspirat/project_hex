@@ -802,3 +802,7 @@ video.allay-motion { opacity: .001; }
   .gen-field { margin-top: 12px; }
   #fmtBlock { margin-top: 12px; }
 }
+
+/* шаг 2b: заметки «не применён #…» под цветами и «коды выбраны вручную» в /colors */
+.stops-note, .leg-note { margin: 8px 0 0; padding: 6px 10px; color: var(--text-2); border-left: 4px solid var(--warn); background: rgba(255, 210, 77, .06); }
+.stops-note:empty, .leg-note:empty { display: none; }

@@ -122,6 +122,8 @@ const $ = id => document.getElementById(id);
 const track = (e,d) => { try{ if(window.fsTrack) window.fsTrack(e,d); }catch(_){} };
 const clean = h => (h||"").replace(/[^0-9a-f]/gi,"").slice(0,6).toUpperCase();
 const valid = h => /^[0-9A-F]{6}$/.test(h);
+/** Цвета, которые реально участвуют: в режиме «Один цвет» — только первый (остальные скрыты и хранятся на потом). */
+const shownStops = st => st.mode==="solid" ? [st.stops[0]] : st.stops;
 const toRgb = h => [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
 const mix = (a,b,t) => { const A=toRgb(a),B=toRgb(b);
   return A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,"0")).join("").toUpperCase(); };
@@ -166,11 +168,21 @@ const CLASSIC=[
 const nearestLeg = h => { const A=toRgb(h); let best="f",bd=1e9;
   for(const [c,hx] of Object.entries(LEG)){ const B=toRgb(hx), d=A.reduce((s,v,i)=>s+(v-B[i])**2,0); if(d<bd){bd=d;best=c;} } return best; };
 /** Коды /colors для цели: если их ещё нет — берём ближайшие к её HEX-цветам. */
+/* Коды, выведенные из HEX и с тех пор не тронутые, помним в памяти (WeakMap, в хранилище ничего нового):
+   такие коды следуют за HEX-цветами; выбранные вручную — сохраняются (об этом говорит #legNote). */
+const legAuto=new WeakMap();
+function deriveLeg(st){
+  const src=(st.mode==="solid"?[st.stops[0]]:st.stops).filter(valid).map(nearestLeg);
+  const out=src.filter((c,i)=>i===0||c!==src[i-1]).slice(0,LEG_MAX);
+  return out.length?out:["f"];
+}
 function legOf(st){
   if(!Array.isArray(st.legacy)||!st.legacy.every(c=>LEG[c])){
-    const src=(st.mode==="solid"?[st.stops[0]]:st.stops).filter(valid).map(nearestLeg);
-    st.legacy=src.filter((c,i)=>i===0||c!==src[i-1]).slice(0,LEG_MAX);
-    if(!st.legacy.length) st.legacy=["f"];
+    st.legacy=deriveLeg(st); legAuto.set(st,st.legacy.join(""));
+  } else {
+    const now=st.legacy.join("");
+    if(!legAuto.has(st)&&now===deriveLeg(st).join("")) legAuto.set(st,now);   // сохранённые раньше и совпадающие с HEX
+    if(legAuto.get(st)===now){ const d=deriveLeg(st); if(d.join("")!==now){ st.legacy=d; legAuto.set(st,d.join("")); } }
   }
   return st.legacy;
 }
@@ -254,7 +266,10 @@ function card(p,onPick,isActive){
 const isOn = (style,p) => p.codes ? legOf(style).join("")===p.codes.join("")
   : style.mode==="gradient"&&p.colors.length===style.stops.length&&p.colors.every((c,i)=>c===style.stops[i]);
 function applyPalette(t,p){ track("gen.palette",{name:p.name||"",own:p.own?1:0,classic:p.codes?1:0}); const st=targetObj(t).style; if(p.codes){ st.legacy=[...p.codes]; return; }
+  stopsNote("");
   if(!p.colors.length) return;                                   // пустая сохранённая палитра (c:[]) — применять нечего
+  if(p.colors.length>maxStops()){ const keep=p.colors.slice(0,maxStops()-1).concat(p.colors[p.colors.length-1]);
+    st.mode="gradient"; st.stops=keep; stopsNote(trimNote(p.colors,keep,"В палитре «"+p.name+"»")); return; }   // 7 цветов там, где можно до 6
   if(p.colors.length===1&&!isSponsor()){ st.mode="solid"; st.stops=[p.colors[0],st.stops[1]||p.colors[0]]; return; }   // один цвет вне /sponsor — как «Один цвет»
   st.mode="gradient"; st.stops=[...p.colors]; }
 
@@ -410,7 +425,7 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(openPop){ cons
 
 /* ================= Название и строки описания ================= */
 /** Смена цели: перерисовываем редактор цвета, но не поля текста — чтобы не терять фокус и открытый popup. */
-function setActive(t){ closePop(); active=t; markActive(); renderStops(); renderPalettes(); update(); }
+function setActive(t){ closePop(); active=t; stopsNote(""); markActive(); renderStops(); renderPalettes(); update(); }
 function markActive(){
   $("nameTarget").classList.toggle("active",active==="name");
   $("nickTarget").classList.toggle("active",active==="nick");
@@ -478,6 +493,8 @@ function renderClassic(){
     g.appendChild(b);
   });
   [...g.children].forEach(b=>b.disabled=cs.length>=LEG_MAX);
+  const ln=$("legNote"); if(ln){ const own=legAuto.get(st)!==cs.join("")&&deriveLeg(st).join("")!==cs.join("");
+    ln.textContent=own?"Коды /colors выбраны вручную — они сохраняются и не меняются вместе с HEX-цветами.":""; }
   $("legRev").disabled=cs.length<2; $("legClear").disabled=!cs.length;
   document.querySelectorAll("#fmt button").forEach(b=>b.setAttribute("aria-pressed",!!st.fmt[b.dataset.c]));
 }
@@ -559,7 +576,7 @@ document.querySelectorAll("#fmt button").forEach(b=>b.addEventListener("click",(
 /* ================= Сохранение своей палитры ================= */
 $("savePal").addEventListener("click",()=>{
   const st=cur();
-  if(!st.stops.every(valid)){ $("warn").textContent="Сначала исправь цвета: каждый должен быть из 6 символов HEX."; return; }
+  if(!shownStops(st).every(valid)){ $("warn").textContent="Сначала исправь цвета: каждый должен быть из 6 символов HEX."; return; }
   const cols = st.mode==="solid" ? [st.stops[0],st.stops[0]] : st.stops;
   $("dlgBar").style.background=css(cols);
   $("dlgName").value="Моя палитра "+(mine.length+1); $("dlgErr").textContent="";
@@ -710,7 +727,7 @@ function renderPreview(){
   }
   if(isSponsorEdit()){
     const d=line(), st=S.name.style, ns=S.nickT.style;
-    if(!st.stops.every(valid)||!ns.stops.every(valid)) return;
+    if(!shownStops(st).every(valid)||!shownStops(ns).every(valid)) return;
     // Префикс и ник — каждый со своим градиентом, как в команде.
     const paint=(text,style)=>{ const ch=[...text], n=ch.length;
       ch.forEach((c,i)=>d.appendChild(glyphEl(c, style.mode==="solid"?style.stops[0]:colorAt(style.stops,n>1?i/(n-1):0), style.fmt))); };
@@ -720,9 +737,9 @@ function renderPreview(){
     return;
   }
   const nm=line();
-  if(showName()){ if(S.name.text && S.name.style.stops.every(valid)) renderLine(nm,S.name.text,S.name.style); }
+  if(showName()){ if(S.name.text && shownStops(S.name.style).every(valid)) renderLine(nm,S.name.text,S.name.style); }
   else plain(nm,"Paper","#fff");
-  if(showLore()) S.lore.forEach(ln=>{ const d=line(); if(ln.style.stops.every(valid)) renderLine(d,ln.text,ln.style); });
+  if(showLore()) S.lore.forEach(ln=>{ const d=line(); if(shownStops(ln.style).every(valid)) renderLine(d,ln.text,ln.style); });
   const sub=line(); sub.className="line sub"; sub.textContent="minecraft:paper";
 }
 
@@ -765,7 +782,7 @@ function formatOther(kind,text,style){
   glyphs.forEach(g=>{ if(started&&plainSpace(g.c)){ out+=" "; return; } out+=color(g.hex)+codes+g.c; started=true; });
   return out;
 }
-const withCmd = (cmd,body) => cmd ? cmd.trim()+" "+body : body;
+const withCmd = (cmd,body) => cmd&&cmd.trim() ? cmd.trim()+" "+body : body;   // только пробелы — без команды
 /** Классические цвета: &c текст &6 текст … — после каждого цвета повторяются коды формата (цвет их сбрасывает). */
 function classicBody(text,style){
   const cs=legOf(style), codes=onFmt(style).map(k=>"&"+k).join(""), chars=[...text];
@@ -784,7 +801,8 @@ function buildLine(isName,t){
     : other ? formatOther(other,text,t.style) : ageMagic(text,t.style);
   const full=withCmd(cmd,body);
   // Для /itemname и /itemlore лимит считается по тексту после команды, как в генераторе.
-  return {full,len:cmd in LIMITS?body.length:full.length,limit};
+  // тело без команды считается только у самих /itemname и /itemlore (свой ключ LIMITS), не у префикса fmt:* («toString» и т. п.)
+  return {full,len:!other&&Object.prototype.hasOwnProperty.call(LIMITS,cmd)?body.length:full.length,limit};
 }
 function sponsorLine(){
   return {full:"/sponsor prefix "+sponsorColors().map(c=>"{#"+c+"}").join("")+" {#"+nickColor()+"}",limit:256};
@@ -887,7 +905,7 @@ function applyMode(){
   }
   if(sp){ S.sponsor.style.mode="gradient"; syncNickToEnd(!modeAtStartup); }
   else { const st=cur(); if(st.mode==="gradient"&&st.stops.length<2) st.stops.push(st.stops[0]);
-    if(st.stops.length>6) st.stops=st.stops.slice(0,5).concat(st.stops[st.stops.length-1]); }
+    if(st.stops.length>6){ const was=st.stops; st.stops=was.slice(0,5).concat(was[was.length-1]); stopsNote(trimNote(was,st.stops,"Было")); } }
   refresh();
 }
 $("cmd").addEventListener("change",()=>{ S.cmd=$("cmd").value; applyMode(); track("gen.format",{fmt:S.cmd}); });
@@ -989,11 +1007,11 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("symPop").hidde
 
 function update(){
   const all = isSponsor() ? [S.sponsor] : isSponsorEdit() ? [S.name,S.nickT] : [...(showName()?[S.name]:[]),...(showLore()?S.lore:[])];
-  const allOk=isClassic() ? true : all.every(t=>t.style.stops.every(valid));
+  const allOk=isClassic() ? true : all.every(t=>shownStops(t.style).every(valid));
   const nickOk=!isSponsor()||valid(nickColor());
   if(isSponsor()) syncNickToEnd(false);
   $("warn").textContent = isClassic() ? (legOf(cur()).length ? "" : "Выбери хотя бы один цвет.")
-    : !cur().stops.every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
+    : !shownStops(cur()).every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !allOk ? badTargets(all)+": каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !nickOk ? "Цвет ника должен состоять из 6 символов HEX, например FD2177." : "";
   renderPreview();
@@ -1003,7 +1021,7 @@ function update(){
 }
 /** Названия целей с неверным HEX — для подсказки, когда ошибка не в редактируемой строке. */
 function badTargets(all){
-  return all.filter(t=>!t.style.stops.every(valid)).map(t=>t===S.name?$("nameLabel").textContent:t===S.nickT?"Цвет ника"
+  return all.filter(t=>!shownStops(t.style).every(valid)).map(t=>t===S.name?$("nameLabel").textContent:t===S.nickT?"Цвет ника"
     :t===S.sponsor?"Префикс sponsor":"Строка "+(S.lore.indexOf(t)+1)).join(", ");
 }
 function refresh(){ closePop(); renderText(); renderStops(); renderPalettes(); update(); }
@@ -1392,7 +1410,7 @@ function copyAnnounce(ok,all){
 /* --- предпросмотр для чтения с экрана: обычный текст строк (сама подсказка aria-hidden — в ней буква на span) --- */
 (function(){
   const tt=$("tooltip"), ul=$("previewText"); if(!tt||!ul) return;
-  const ok=st=>st&&Array.isArray(st.stops)&&st.stops.every(valid);
+  const ok=st=>st&&Array.isArray(st.stops)&&shownStops(st).every(valid);
   const say=(t,st)=>!ok(st)?"(цвета с ошибкой)":!t.trim()?"(пустая строка)":isClassic()&&st.fmt&&st.fmt.k?"(скрытый текст)":t;
   function fill(){
     const items=[];
@@ -1538,3 +1556,10 @@ function copyAnnounce(ok,all){
   }
   apply();
 })();
+
+/* ===== Шаг 2b: заметка под цветами, когда палитра длиннее, чем позволяет режим ===== */
+function stopsNote(t){ const n=$("stopsNote"); if(n) n.textContent=t||""; }
+function trimNote(all,keep,lead){
+  const lost=all.filter((c,i)=>i>=keep.length-1&&i<all.length-1);
+  return lead+" "+all.length+" цветов, а здесь можно до "+keep.length+(lost.length>1?": не применены ":": не применён ")+lost.map(c=>"#"+c).join(", ")+".";
+}
