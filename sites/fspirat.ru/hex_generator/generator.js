@@ -1,4 +1,3 @@
-try{ document.getElementById("favicon").href=document.querySelector(".back img").src; }catch(e){}
 /* ================= Палитры — единый источник для карточек, preview, команд и сохранения ================= */
 const PALETTES = [
   {name:"fspirat",         colors:["7FBF3A","D4FF9A"]},
@@ -265,8 +264,8 @@ function renderCats(){
   const q=palQuery.trim().toLowerCase();
   const count=c=>c==="mine"?mine.length:PALETTES.filter(p=>c==="all"||PAL_CAT[p.name]===c).length;
   CATS.concat([["mine","★ Мои"]]).forEach(([id,label])=>{
-    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("role","tab");
-    b.setAttribute("aria-selected",palCat===id); b.textContent=label;
+    const b=document.createElement("button"); b.type="button"; b.className="chip";
+    b.setAttribute("aria-pressed",palCat===id); b.textContent=label;
     const n=document.createElement("span"); n.className="cnt"; n.textContent=count(id); b.appendChild(n);
     b.addEventListener("click",()=>{ setTab(id); });
     box.appendChild(b);
@@ -327,35 +326,36 @@ function palButton(t){
   const wrap=document.createElement("div"); wrap.className="pal-wrap";
   const st=targetObj(t).style;
   const b=document.createElement("button"); b.type="button"; b.className="pal-btn small"; b.setAttribute("aria-expanded","false");
-  b.setAttribute("aria-haspopup","true"); b.title="Палитра строки";
+  b.setAttribute("aria-controls","palPop"); b.title="Палитра строки";
   b.innerHTML='<span class="sw"></span><span class="nm"></span><span class="ar">▼</span>';
   if(isClassic()){ const cs=legOf(st); b.querySelector(".sw").style.background=cs.length?cssHard(cs):"transparent"; b.querySelector(".nm").textContent=legacyName(st); }
   else { b.querySelector(".sw").style.background=css(st.mode==="solid"?[st.stops[0]]:st.stops);
     b.querySelector(".nm").textContent=st.mode==="solid"?"#"+st.stops[0]:paletteName(st); }
+  b.setAttribute("aria-label","Палитра: "+targetName(t)+" — "+b.querySelector(".nm").textContent);
   b.addEventListener("click",e=>{
     e.stopPropagation();
     const was=openPop&&openPop.btn===b; closePop(); if(was) return;
     if(active!==t) setActive(t);
-    const pop=document.createElement("div"); pop.className="pal-pop"; pop.setAttribute("role","dialog");
+    const pop=document.createElement("div"); pop.className="pal-pop"; pop.id="palPop"; pop.setAttribute("role","group"); pop.setAttribute("aria-label","Палитры: "+targetName(t));
     // Фильтр по категориям прямо в popup — чтобы не листать весь список.
     let popCat="all";
-    const chips=document.createElement("div"); chips.className="chips pop-chips"; pop.appendChild(chips);
+    const chips=document.createElement("div"); chips.className="chips pop-chips"; chips.setAttribute("role","group"); chips.setAttribute("aria-label","Категории палитр"); pop.appendChild(popHead("Палитра: "+targetName(t),b)); pop.appendChild(chips);
     const body=document.createElement("div"); pop.appendChild(body);
     const fill=()=>{
       chips.innerHTML=""; body.innerHTML="";
       if(isClassic()){
         const g=document.createElement("div"); g.className="mini-grid";
-        CLASSIC.forEach(p=>g.appendChild(card(p,p=>{applyPalette(t,p);closePop();refresh();},isOn(targetObj(t).style,p))));
+        CLASSIC.forEach(p=>g.appendChild(card(p,p=>{applyPalette(t,p);closePop();refresh();refocusPal(t);},isOn(targetObj(t).style,p))));
         body.appendChild(g); return;
       }
       CATS.concat(mine.length?[["mine","★ Мои"]]:[]).forEach(([id,label])=>{
         const c=document.createElement("button"); c.type="button"; c.className="chip"; c.textContent=label;
-        c.setAttribute("aria-selected",popCat===id); c.addEventListener("click",()=>{ popCat=id; fill(); });
+        c.setAttribute("aria-pressed",popCat===id); c.addEventListener("click",()=>{ popCat=id; fill(); chips.querySelector('[aria-pressed="true"]')?.focus(); });
         chips.appendChild(c); });
       const list = popCat==="mine" ? mine.map(p=>({name:p.n,colors:p.c,own:true}))
         : PALETTES.filter(p=>popCat==="all"||PAL_CAT[p.name]===popCat);
       const g=document.createElement("div"); g.className="mini-grid";
-      list.forEach(p=>g.appendChild(card(p,p=>{applyPalette(t,p);closePop();refresh();},isOn(targetObj(t).style,p))));
+      list.forEach(p=>g.appendChild(card(p,p=>{applyPalette(t,p);closePop();refresh();refocusPal(t);},isOn(targetObj(t).style,p))));
       body.appendChild(g);
     };
     fill();
@@ -363,11 +363,12 @@ function palButton(t){
     const solid=document.createElement("button"); solid.type="button"; solid.className="small"; solid.textContent="Один цвет";
     solid.addEventListener("click",()=>{ const s=targetObj(t).style; s.mode="solid"; closePop(); refresh(); $("stops").querySelector("input[type=text]")?.focus(); });
     const more=document.createElement("button"); more.type="button"; more.className="small"; more.textContent="Настроить цвета…";
-    more.addEventListener("click",()=>{ closePop(); $("modeGrad").scrollIntoView({behavior:"smooth",block:"center"}); });
-    if(isClassic()){ solid.hidden=true; more.onclick=null; more.addEventListener("click",()=>{ closePop(); $("legGrid").scrollIntoView({behavior:"smooth",block:"center"}); }); }
+    more.addEventListener("click",()=>{ closePop(); $("modeGrad").scrollIntoView({behavior:motionAllowed()?"smooth":"auto",block:"center"}); $("modeGrad").focus({preventScroll:true}); });
+    if(isClassic()){ solid.hidden=true; more.onclick=null; more.addEventListener("click",()=>{ closePop(); $("legGrid").scrollIntoView({behavior:motionAllowed()?"smooth":"auto",block:"center"}); $("legGrid").querySelector("button:not([disabled])")?.focus({preventScroll:true}); }); }
     foot.append(solid,more); pop.appendChild(foot);
     pop.addEventListener("click",e=>e.stopPropagation());
     wrap.appendChild(pop); b.setAttribute("aria-expanded","true"); openPop={pop,btn:b};
+    placePop(pop); (chips.querySelector('[aria-pressed="true"]')||pop.querySelector("button"))?.focus({preventScroll:true});
   });
   wrap.appendChild(b);
   return wrap;
@@ -377,34 +378,35 @@ function fontButton(t){
   const wrap=document.createElement("div"); wrap.className="pal-wrap font-wrap";
   const st=targetObj(t).style, own=!!st.font;
   const b=document.createElement("button"); b.type="button"; b.className="font-btn small"+(own?" own":"");
-  b.setAttribute("aria-haspopup","true"); b.setAttribute("aria-expanded","false");
+  b.setAttribute("aria-controls","fontPop"); b.setAttribute("aria-expanded","false");
   const label=v=>[...$("font").options].find(o=>o.value===v)?.textContent||v;
   b.textContent=convert("Aa",fontOf(st));
-  b.title="Шрифт строки: "+(own?label(st.font):"как в общем списке ("+label(S.font)+")");
+  b.title="Шрифт строки: "+(own?label(st.font):"как в общем списке ("+label(S.font)+")"); b.setAttribute("aria-label","Шрифт строки "+(t+1)+": "+(own?label(st.font):"как в общем списке"));
   b.addEventListener("click",e=>{
     e.stopPropagation();
     const was=openPop&&openPop.btn===b; closePop(); if(was) return;
     if(active!==t) setActive(t);
-    const pop=document.createElement("div"); pop.className="pal-pop font-pop"; pop.setAttribute("role","dialog");
-    const h=document.createElement("h4"); h.textContent="Шрифт строки "+(t+1); pop.appendChild(h);
+    const pop=document.createElement("div"); pop.className="pal-pop font-pop"; pop.id="fontPop"; pop.setAttribute("role","group"); pop.setAttribute("aria-label","Шрифт строки "+(t+1));
+    pop.appendChild(popHead("Шрифт строки "+(t+1),b));
     const opt=(value,text,sample)=>{
       const o=document.createElement("button"); o.type="button"; o.className="font-opt";
       o.setAttribute("aria-pressed",(st.font||"")===value);
       o.innerHTML='<span class="smp"></span><span class="lbl"></span>';
       o.children[0].textContent=sample; o.children[1].textContent=text;
-      o.addEventListener("click",()=>{ if(value) st.font=value; else delete st.font; closePop(); refresh(); });
+      o.addEventListener("click",()=>{ if(value) st.font=value; else delete st.font; closePop(); refresh(); refocusFont(t); });
       pop.appendChild(o);
     };
     opt("","Как в общем списке — "+label(S.font),convert("Aa",S.font));
     [...$("font").options].forEach(o=>opt(o.value,o.textContent,convert("Aa",o.value)));
     pop.addEventListener("click",e=>e.stopPropagation());
     wrap.appendChild(pop); b.setAttribute("aria-expanded","true"); openPop={pop,btn:b};
+    placePop(pop); (pop.querySelector('.font-opt[aria-pressed="true"]')||pop.querySelector(".font-opt"))?.focus({preventScroll:true});
   });
   wrap.appendChild(b);
   return wrap;
 }
 document.addEventListener("click",closePop);
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(openPop){ const b=openPop.btn; closePop(); b.focus(); } else if(!$("dlg").hidden) closeDlg(); } });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ if(openPop){ const b=openPop.btn; closePop(); b.focus(); } else if($("dlg").open) closeDlg(); } });
 
 /* ================= Название и строки описания ================= */
 /** Смена цели: перерисовываем редактор цвета, но не поля текста — чтобы не терять фокус и открытый popup. */
@@ -461,7 +463,7 @@ $("addLore").addEventListener("click",()=>{
 function roleOf(i,n){ return i===0?"Начало":i===n-1?"Конец":"Середина"; }
 function renderClassic(){
   const st=cur(), cs=legOf(st), seq=$("legSeq"); seq.innerHTML="";
-  if(!cs.length){ const e=document.createElement("span"); e.className="empty-seq"; e.textContent="Нажмите на цвет ниже, чтобы добавить"; seq.appendChild(e); }
+  if(!cs.length){ const e=document.createElement("span"); e.className="empty-seq"; e.textContent="Нажми на цвет ниже, чтобы добавить"; seq.appendChild(e); }
   cs.forEach((c,i)=>{
     const ch=document.createElement("span"); ch.className="leg-chip"; ch.title=LEG_NAME[c];
     ch.innerHTML=`<span class="sq"></span><span></span><button type="button" aria-label="Убрать цвет">✕</button>`;
@@ -557,16 +559,16 @@ document.querySelectorAll("#fmt button").forEach(b=>b.addEventListener("click",(
 /* ================= Сохранение своей палитры ================= */
 $("savePal").addEventListener("click",()=>{
   const st=cur();
-  if(!st.stops.every(valid)){ $("warn").textContent="Сначала исправьте цвета: каждый должен быть из 6 символов HEX."; return; }
+  if(!st.stops.every(valid)){ $("warn").textContent="Сначала исправь цвета: каждый должен быть из 6 символов HEX."; return; }
   const cols = st.mode==="solid" ? [st.stops[0],st.stops[0]] : st.stops;
   $("dlgBar").style.background=css(cols);
   $("dlgName").value="Моя палитра "+(mine.length+1); $("dlgErr").textContent="";
-  $("dlg").hidden=false; setTimeout(()=>{ $("dlgName").focus(); $("dlgName").select(); },30);
+  openModal($("dlg")); setTimeout(()=>{ $("dlgName").focus(); $("dlgName").select(); },30);
 });
-function closeDlg(){ $("dlg").hidden=true; }
+function closeDlg(){ $("dlg").close(); }
 function confirmDlg(){
   const name=$("dlgName").value.trim().slice(0,24);
-  if(!name){ $("dlgErr").textContent="Введите название."; return; }
+  if(!name){ $("dlgErr").textContent="Введи название."; return; }
   const st=cur(), cols = st.mode==="solid" ? [st.stops[0],st.stops[0]] : [...st.stops];
   const i=mine.findIndex(p=>p.n.toLowerCase()===name.toLowerCase());
   if(i>=0) mine[i]={n:name,c:cols}; else mine.push({n:name,c:cols});
@@ -664,7 +666,12 @@ function makeGlyph(ch,hex,f){
 /* ================= Предпросмотр ================= */
 /** Один символ цветом hex (без «#») с форматированием f. */
 const OBF="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghkmnopqrstuvwxyz0123456789#$%&?@";
-setInterval(()=>document.querySelectorAll(".obf").forEach(e=>{ e.textContent=OBF[Math.floor(Math.random()*OBF.length)]; }),70);
+let obfTimer=null;
+function setObfRunning(on){
+  if(on&&!obfTimer) obfTimer=setInterval(()=>document.querySelectorAll(".obf").forEach(e=>{ e.textContent=OBF[Math.floor(Math.random()*OBF.length)]; }),70);
+  else if(!on&&obfTimer){ clearInterval(obfTimer); obfTimer=null; }
+}
+setObfRunning(!matchMedia("(prefers-reduced-motion: reduce)").matches);
 function glyphEl(c,hex,f){
   if(f.k&&isClassic()&&c!==" "){ const sp=document.createElement("span"); sp.className="obf"; sp.textContent=OBF[0];
     sp.style.color="#"+hex; sp.style.textShadow=`${U()}px ${U()}px 0 ${shade(hex)}`; if(f.l) sp.style.fontWeight="700"; return sp; }
@@ -802,7 +809,7 @@ function cmdRow(num,line){
   why.hidden=!why.textContent;
   const b=document.createElement("button"); b.type="button"; b.className="small"; b.textContent="Копировать";
   b.addEventListener("click",()=>copyText(line.full,b,"Копировать"));
-  r.append(n,c,l,why,b); return r;
+  r.append(n,l,why,b,c); return r;
 }
 let lastAll="";
 async function copyText(t,btn,label){
@@ -815,15 +822,16 @@ async function copyText(t,btn,label){
   if(!ok){ const code=btn.closest(".cmd")?.querySelector("code");
     if(code){ const r=document.createRange(), s=getSelection(); r.selectNodeContents(code); s.removeAllRanges(); s.addRange(r); } }
   btn.textContent=ok?"Скопировано":"Не удалось скопировать"; setTimeout(()=>btn.textContent=label,ok?1400:3000);
+  copyAnnounce(ok,btn.id==="copyAll");
 }
 function renderCommands(){
   const box=$("cmds"); box.innerHTML="";
-  const h=t=>{ const e=document.createElement("h4"); e.textContent=t; box.appendChild(e); };
+  const h=t=>{ const e=document.createElement("h3"); e.textContent=t; box.appendChild(e); };
   const none=t=>{ const p=document.createElement("p"); p.className="none"; p.textContent=t; box.appendChild(p); };
   const lines=[];
   const add=(num,l)=>{ lines.push(l.full); box.appendChild(cmdRow(num,l)); };
   if(isSponsor()){ h("Префикс:"); add("",sponsorLine()); }
-  else if(isSponsorEdit()){ h("Префикс:"); if(S.name.text.trim()) add("",sponsorEditLine()); else none("Введите текст префикса."); }
+  else if(isSponsorEdit()){ h("Префикс:"); if(S.name.text.trim()) add("",sponsorEditLine()); else none("Введи текст префикса."); }
   else {
     if(showName()){ h(base()==="item"||base()==="/itemname"?"Название:":"Текст:");
       if(S.name.text.trim()) add("",buildLine(true,S.name)); else none("Текст не задан."); }
@@ -837,8 +845,8 @@ function renderCommands(){
   $("outNote").textContent =
       isSponsor() ? "Префикс sponsor из 7 букв: каждая буква получает свой цвет из градиента, в конце через пробел идёт цвет ника."
     : isSponsorEdit() ? "Первый градиент — цвет префикса, второй (в конце команды) — цвет ника. Цвет ника меняется кнопкой «Цвет ника» выше."
-    : isClassic() ? "Только цвета из /colors (&0–&f) и коды формата — доступно обычным игрокам. "+(base()==="am-raw"?"Пустая строка описания — &k.":"Вводите по очереди, держа предмет в руке; пустая строка описания — /itemlore &k.")
-    : S.cmd==="item" ? "Вводите по очереди, держа предмет в руке: сначала /itemname, потом строки описания по порядку. Пустая строка описания — /itemlore &k (пропуск строки)."
+    : isClassic() ? "Только цвета из /colors (&0–&f) и коды формата — доступно обычным игрокам. "+(base()==="am-raw"?"Пустая строка описания — &k.":"Вводи по очереди, держа предмет в руке; пустая строка описания — /itemlore &k.")
+    : S.cmd==="item" ? "Вводи по очереди, держа предмет в руке: сначала /itemname, потом строки описания по порядку. Пустая строка описания — /itemlore &k (пропуск строки)."
     : S.cmd==="/itemlore" ? "Каждая строка — отдельная команда /itemlore, по порядку. Пустая строка — /itemlore &k (пропуск строки)."
     : other==="minimessage" ? "MiniMessage сам распределяет градиент по тексту — результат получается короче."
     : other==="console" ? "Формат с § — для консоли и конфигов: в чат игры такой текст отправить нельзя."
@@ -910,9 +918,9 @@ function renderSymTabs(){
   const box=$("symTabs"); box.innerHTML="";
   const tabs=[["fav","★ Избранные"+(favSyms.length?" "+favSyms.length:"")],["recent","⟲ Недавние"]].concat(SYM_CATS.map((c,i)=>[i,c[0]]));
   tabs.forEach(([id,label])=>{
-    const b=document.createElement("button"); b.type="button"; b.className="chip"; b.setAttribute("role","tab");
-    b.setAttribute("aria-selected",symCat===id); b.textContent=label;
-    b.addEventListener("click",()=>{ symCat=id; renderSymTabs(); renderSyms(); });
+    const b=document.createElement("button"); b.type="button"; b.className="chip";
+    b.setAttribute("aria-pressed",symCat===id); b.textContent=label;
+    b.addEventListener("click",()=>{ symCat=id; renderSymTabs(); renderSyms(); $("symTabs").querySelector('[aria-pressed="true"]')?.focus(); });
     box.appendChild(b);
   });
 }
@@ -921,8 +929,8 @@ function renderSyms(){
   const list = symCat==="fav" ? favSyms : symCat==="recent" ? recentSyms : [...SYM_CATS[symCat][1]];
   if((symCat==="fav"||symCat==="recent")&&!list.length){
     const e=document.createElement("p"); e.className="sym-empty";
-    e.textContent= symCat==="fav" ? "Здесь пока пусто. Наведите на символ в любой вкладке и нажмите ☆ в его углу — он появится здесь."
-      : "Здесь появятся символы, которые вы недавно вставляли.";
+    e.textContent= symCat==="fav" ? "Здесь пока пусто. Нажми ☆ в углу любого символа — он появится здесь."
+      : "Здесь появятся недавно вставленные символы.";
     box.appendChild(e); return;
   }
   list.forEach(addSym);
@@ -935,7 +943,7 @@ let symHintTimer=null;
 function symFull(max){
   const h=document.querySelector("#symPop .sym-hint"); if(!h) return;
   if(!h.dataset.idle) h.dataset.idle=h.textContent;
-  h.textContent="Символ не помещается: в поле не больше "+max+" знаков. Удалите что-нибудь или выберите другое поле."; h.classList.add("err");
+  h.textContent="Символ не помещается: в поле не больше "+max+" знаков. Удали что-нибудь или выбери другое поле."; h.classList.add("err");
   clearTimeout(symHintTimer); symHintTimer=setTimeout(()=>{ h.textContent=h.dataset.idle; h.classList.remove("err"); },4000);
 }
 function addSym(sym){
@@ -984,12 +992,12 @@ function update(){
   const allOk=isClassic() ? true : all.every(t=>t.style.stops.every(valid));
   const nickOk=!isSponsor()||valid(nickColor());
   if(isSponsor()) syncNickToEnd(false);
-  $("warn").textContent = isClassic() ? (legOf(cur()).length ? "" : "Выберите хотя бы один цвет.")
+  $("warn").textContent = isClassic() ? (legOf(cur()).length ? "" : "Выбери хотя бы один цвет.")
     : !cur().stops.every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !allOk ? badTargets(all)+": каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !nickOk ? "Цвет ника должен состоять из 6 символов HEX, например FD2177." : "";
   renderPreview();
-  if(!allOk||!nickOk){ $("cmds").innerHTML='<p class="none">Исправьте цвета выше — команды появятся здесь.</p>'; lastAll=""; $("copyAll").disabled=true; $("outNote").textContent=""; }
+  if(!allOk||!nickOk){ $("cmds").innerHTML='<p class="none">Исправь цвета — команды появятся здесь.</p>'; lastAll=""; $("copyAll").disabled=true; $("outNote").textContent=""; }
   else renderCommands();
   save();
 }
@@ -1010,8 +1018,8 @@ addEventListener("resize",()=>renderPreview());
  *    берётся наименьшее число цветов, которое даёт такой же результат. */
 const shot={W:0,H:0,data:null,sel:null,lines:[],thr:null,drag:null};
 const shotMsg=(t,cls)=>{ const m=$("shotMsg"); m.textContent=t||""; m.className="shot-msg"+(cls?" "+cls:""); };
-function openShot(){ $("shotDlg").hidden=false; shotMsg(""); if(shot.data) renderShotLines(); setTimeout(()=>$("shotClose").focus(),30); }
-function closeShot(){ $("shotDlg").hidden=true; }
+function openShot(){ openModal($("shotDlg")); shotMsg(""); if(shot.data) renderShotLines(); setTimeout(()=>$("shotClose").focus(),30); }
+function closeShot(){ $("shotDlg").close(); }
 function loadShot(file){
   if(!file||!/^image\//.test(file.type)){ shotMsg("Это не картинка. Нужен PNG, JPG или WEBP.","err"); return; }
   const url=URL.createObjectURL(file), img=new Image();
@@ -1023,7 +1031,7 @@ function loadShot(file){
     Object.assign(shot,{W,H,data:g.getImageData(0,0,W,H).data,sel:null,thr:null,src:c,fresh:true});
     const v=$("shotCanvas"); v.width=W; v.height=H;
     $("shotWork").hidden=false; $("shotDrop").classList.add("mini");
-    $("shotDropText").innerHTML="<b>Ctrl+V</b> или <b>нажмите</b> — другая картинка";
+    $("shotDropText").innerHTML="<b>Ctrl+V</b> или <b>нажми</b> — другая картинка";
     analyzeShot();
   };
   img.onerror=()=>{ URL.revokeObjectURL(url); shotMsg("Не удалось открыть картинку.","err"); };
@@ -1205,8 +1213,8 @@ function drawShot(){
 function renderShotLines(){
   const box=$("shotLines"); box.innerHTML="";
   const target=$("targetLabel").textContent, cl=isClassic();
-  if(!shot.lines.length){ shotMsg("Текст не найден. Выделите строку с текстом или сдвиньте «Порог».","err"); return; }
-  shotMsg("Найдено строк: "+shot.lines.length+". Выберите нужную и нажмите «Применить» — цвета встанут в «"+target+"»."
+  if(!shot.lines.length){ shotMsg("Текст не найден. Выдели строку с текстом или сдвинь «Порог».","err"); return; }
+  shotMsg("Найдено строк: "+shot.lines.length+". Выбери нужную и нажми «Применить» — цвета встанут в «"+target+"»."
     +(shot.exact?"":" Картинка сжата, уменьшена или это фото — цвета примерные."));
   shot.lines.forEach((l,i)=>{
     const d=document.createElement("div"); d.className="shot-line";
@@ -1256,7 +1264,7 @@ $("shotFile").addEventListener("change",e=>{ shot.from="file"; loadShot(e.target
 ["dragenter","dragover"].forEach(t=>$("shotDlg").addEventListener(t,e=>{ e.preventDefault(); $("shotDrop").classList.add("over"); }));
 ["dragleave","drop"].forEach(t=>$("shotDlg").addEventListener(t,()=>$("shotDrop").classList.remove("over")));
 $("shotDlg").addEventListener("drop",e=>{ e.preventDefault(); shot.from="drop"; loadShot(e.dataTransfer.files[0]); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("shotDlg").hidden) closeShot(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&$("shotDlg").open) closeShot(); });
 // Ctrl+V с картинкой в любом месте страницы открывает окно; обычная вставка текста не трогается
 document.addEventListener("paste",e=>{
   const f=[...(e.clipboardData?.items||[])].find(i=>i.kind==="file"&&/^image\//.test(i.type));
@@ -1272,3 +1280,261 @@ $("nickName").value=S.nick; $("nickHex").value=S.nickHex; if(valid(S.nickHex)) $
 lastEndSynced=S.sponsor.style.stops[S.sponsor.style.stops.length-1];
 $("name").value=S.name.text;
 applyMode(); modeAtStartup=false;
+
+/* ================= Оформление (шаг 3): только интерфейс поверх генератора =================
+ * Окна <dialog>, всплывающие палитры в пределах экрана, пауза анимации, липкая правая колонка (только если помещается),
+ * каталог палитр на телефоне, тексты для чтения с экрана. Здесь ничего не строит команды и не пишет
+ * fspirat_item_editor / fspirat_hex_templates; пауза хранится в своём ключе fs_gen_motion (не fs_motion главной). */
+
+/** Движение разрешено: нет «уменьшить движение» и страница не на паузе (класс ставит блок «Движение» ниже). */
+function motionAllowed(){ return !document.documentElement.classList.contains("motion-off"); }
+/** Как называется цель в подписях: «Название», «Строка 2», «Цвет ника». */
+function targetName(t){ return t==="name" ? $("nameLabel").textContent : t==="nick" ? "Цвет ника" : t==="sponsor" ? "Префикс sponsor" : "Строка "+(t+1); }
+
+/* --- всплывающие палитры и шрифт строки: внутри экрана, фокус — внутрь и обратно на кнопку --- */
+function placePop(pop){
+  pop.style.transform=""; pop.style.top=""; pop.style.bottom=""; pop.style.maxHeight="";
+  if(matchMedia("(max-width:559.98px)").matches) return;      // на телефоне это лист у верхнего края (CSS)
+  // по вертикали: вниз от кнопки, а если места внизу мало, а вверху больше — вверх; высота — по свободному месту
+  const a=pop.parentNode.getBoundingClientRect(), below=innerHeight-a.bottom-14, above=a.top-14;
+  if(below<280&&above>below){ pop.style.top="auto"; pop.style.bottom="calc(100% + 6px)"; pop.style.maxHeight=Math.max(200,Math.min(440,above))+"px"; }
+  else pop.style.maxHeight=Math.max(200,Math.min(440,below))+"px";
+  const r=pop.getBoundingClientRect(), vw=document.documentElement.clientWidth;
+  let dx=0; if(r.left<8) dx=8-r.left; else if(r.right>vw-8) dx=vw-8-r.right;
+  if(dx) pop.style.transform="translateX("+Math.round(dx)+"px)";
+}
+/** Шапка всплывающего окна: что выбирается и кнопка «Закрыть» (на телефоне окно — лист во весь экран). */
+function popHead(title,btn){
+  const h=document.createElement("div"); h.className="pop-head";
+  const t=document.createElement("p"); t.className="pop-title"; t.textContent=title;
+  const x=document.createElement("button"); x.type="button"; x.className="pop-close"; x.setAttribute("aria-label","Закрыть"); x.textContent="✕";
+  x.addEventListener("click",e=>{ e.stopPropagation(); closePop(); btn.focus({preventScroll:true}); });
+  h.append(t,x); return h;
+}
+addEventListener("resize",()=>{ if(openPop) placePop(openPop.pop); });
+function palBtnOf(t){
+  if(t==="name") return document.querySelector("#namePal .pal-btn");
+  if(t==="nick") return document.querySelector("#nickPal .pal-btn");
+  const row=typeof t==="number" ? document.querySelectorAll("#lore .lore-row")[t] : null;
+  return row ? row.querySelector(".pal-btn") : null;
+}
+function refocusPal(t){ const b=palBtnOf(t); if(b) b.focus({preventScroll:true}); }
+function refocusFont(t){ const row=document.querySelectorAll("#lore .lore-row")[t], b=row&&row.querySelector(".font-btn"); if(b) b.focus({preventScroll:true}); }
+
+/* --- окна: showModal() даёт ловушку фокуса и Escape; после закрытия фокус возвращается туда, откуда открыли --- */
+function openModal(d){ if(d.open) return; d._opener=document.activeElement; d.showModal(); }
+// Enter в названии палитры сохраняет (обработчик выше); без preventDefault то же нажатие после закрытия окна
+// «нажимало» кнопку «Сохранить палитру», на которую вернулся фокус, и окно открывалось снова
+$("dlgName").addEventListener("keydown",e=>{ if(e.key==="Enter") e.preventDefault(); });
+["dlg","shotDlg"].forEach(id=>$(id).addEventListener("close",()=>{
+  const o=$(id)._opener; $(id)._opener=null;
+  if(o&&o!==document.body&&o.isConnected&&!o.closest("[hidden]")) o.focus({preventScroll:true});
+}));
+
+/* --- копирование: результат ещё и строкой под «Скопировать всё» (её читает экранный диктор) --- */
+let copyStatusTimer=null;
+function copyAnnounce(ok,all){
+  const s=$("copyStatus"); if(!s) return;
+  s.classList.toggle("visually-hidden",ok);
+  s.textContent = ok ? (all?"Все команды скопированы.":"Команда скопирована.")
+    : all ? "Не удалось скопировать: браузер не дал доступ к буферу обмена. Скопируй команды по одной — нажми на команду, и она выделится целиком."
+    : "Не удалось скопировать: браузер не дал доступ к буферу обмена. Команда выделена — скопируй её вручную (Ctrl+C или долгое нажатие).";
+  clearTimeout(copyStatusTimer);
+  copyStatusTimer=setTimeout(()=>{ s.textContent=""; s.classList.add("visually-hidden"); },ok?2500:9000);
+}
+
+/* --- формат: полное название, лимит словами и одна фраза --- */
+(function(){
+  const box=$("fmtInfo"), sel=$("cmd"); if(!box||!sel) return;
+  const L64="Лимит: 64 символа на текст после /itemname.", L65="Лимит: 65 символов на текст каждой строки после /itemlore.",
+    LITEM="Лимит: 64 символа на текст после /itemname и 65 — после каждого /itemlore.", L256="Лимит: 256 символов на строку.",
+    LOTHER="Лимит: 256 символов на строку вместе с командой перед текстом.", CL="Только 16 цветов /colors (&0–&f) — для обычных игроков.";
+  const INFO={
+    "item":[LITEM,"Вводи по очереди, держа предмет в руке: сначала название, потом строки описания."],
+    "/itemname":[L64,"Только название предмета в руке."],
+    "/itemlore":[L65,"Каждая строка описания — отдельная команда."],
+    "sponsor":["Лимит 256 не мешает: команда всегда 89 символов.","Префикс «sponsor» — до 7 цветов, в конце цвет ника."],
+    "sponsoredit":["Лимит: 256 символов на всю команду.","Свой текст префикса и отдельный цвет или градиент ника."],
+    "am-raw":[L256,"Только текст с цветами AgeMagic, без команды."],
+    "c:item":[LITEM,CL], "c:/itemname":[L64,CL], "c:/itemlore":[L65,CL],
+    "c:raw":[L256,"Только текст с &-кодами цветов /colors, без команды."],
+    "fmt:nickname":[LOTHER,"Цвет каждой буквы — код &#RRGGBB."],
+    "fmt:chat":[LOTHER,"Цвет каждой буквы — тег <#RRGGBB>."],
+    "fmt:legacy":[LOTHER,"Цвет каждой буквы — коды &x&R&R&G&G&B&B."],
+    "fmt:console":[LOTHER,"Как Legacy, только с § — для консоли и конфигов, не для чата."],
+    "fmt:bbcode":[LOTHER,"Для форумов: [COLOR=#RRGGBB] у каждой буквы."],
+    "fmt:minimessage":[LOTHER,"Один тег <gradient:…> на строку — самый короткий вариант."],
+    "fmt:birdflop":[LOTHER,"Свой шаблон для каждой буквы — поле «Шаблон BirdFlop» в результате."]
+  };
+  function render(){
+    const o=sel.selectedOptions[0], info=INFO[sel.value]||["",""];
+    const name=(o?o.textContent:sel.value).replace(/\s+—\s+(лимит \d+|до 7 цветов)$/,"");
+    box.replaceChildren(...[["",name],["fmt-limit",info[0]],["fmt-note",info[1]]].filter(x=>x[1]).map(([c,t],i)=>{
+      const e=document.createElement(i?"span":"b"); if(c) e.className=c; e.textContent=t; return e; }));
+  }
+  sel.addEventListener("change",render); render();
+})();
+
+/* --- что редактируется: подпись в шапке палитр повторяет «Редактируется: …» --- */
+(function(){
+  const src=$("targetLabel"), dst=$("palTarget"); if(!src||!dst) return;
+  const sync=()=>{ dst.textContent=src.textContent; };
+  new MutationObserver(sync).observe(src,{childList:true,characterData:true,subtree:true}); sync();
+})();
+
+/* --- ошибка цвета озвучивается один раз, когда текст меняется (а не при каждом обновлении) --- */
+(function(){
+  const w=$("warn"), live=$("warnLive"); if(!w||!live) return; let last="";
+  new MutationObserver(()=>{ const t=w.textContent; if(t!==last){ last=t; live.textContent=t; } })
+    .observe(w,{childList:true,characterData:true,subtree:true});
+})();
+
+/* --- предпросмотр для чтения с экрана: обычный текст строк (сама подсказка aria-hidden — в ней буква на span) --- */
+(function(){
+  const tt=$("tooltip"), ul=$("previewText"); if(!tt||!ul) return;
+  const ok=st=>st&&Array.isArray(st.stops)&&st.stops.every(valid);
+  const say=(t,st)=>!ok(st)?"(цвета с ошибкой)":!t.trim()?"(пустая строка)":isClassic()&&st.fmt&&st.fmt.k?"(скрытый текст)":t;
+  function fill(){
+    const items=[];
+    if(isSponsor()) items.push(ok(S.sponsor.style)&&valid(nickColor()) ? "sponsor "+(S.nick||"nickname") : "(цвета с ошибкой)");
+    else if(isSponsorEdit()) items.push(ok(S.name.style)&&ok(S.nickT.style) ? S.name.text+" "+(S.nick||"nickname") : "(цвета с ошибкой)");
+    else {
+      items.push(showName() ? (S.name.text ? say(S.name.text,S.name.style) : "(без названия)") : "Paper");
+      if(showLore()) S.lore.forEach(ln=>items.push(say(ln.text,ln.style)));
+      items.push("minecraft:paper");
+    }
+    ul.replaceChildren(...items.map(t=>{ const li=document.createElement("li"); li.textContent=t; return li; }));
+  }
+  new MutationObserver(fill).observe(tt,{childList:true}); fill();
+})();
+
+/* --- длинная команда прокручивается в своём блоке: тогда до неё можно дойти Tab'ом --- */
+(function(){
+  const box=$("cmds"); if(!box) return;
+  function mark(){
+    box.querySelectorAll(".cmd").forEach(r=>{
+      const c=r.querySelector("code"); if(!c) return;
+      if(c.scrollHeight>c.clientHeight+2){
+        const n=(r.querySelector(".n")||{}).textContent||"";
+        c.tabIndex=0; c.setAttribute("role","region");
+        c.setAttribute("aria-label","Команда"+(n.trim()?" "+n.replace(/\s*-\s*$/,""):"")+" (прокручивается)");
+      } else if(c.hasAttribute("tabindex")){ c.removeAttribute("tabindex"); c.removeAttribute("role"); c.removeAttribute("aria-label"); }
+    });
+  }
+  let t=null; const later=()=>{ clearTimeout(t); t=setTimeout(mark,120); };
+  new MutationObserver(later).observe(box,{childList:true}); addEventListener("resize",later); later();
+})();
+
+/* --- правая колонка прилипает только целиком: если она выше окна, прокручивается вместе со страницей --- */
+(function(){
+  const side=$("genSide"); if(!side) return;
+  const wide=matchMedia("(min-width:1024px)");
+  const check=()=>{ const vh=Math.min(innerHeight,window.visualViewport?visualViewport.height:innerHeight);
+    side.classList.toggle("gen-side--fits",wide.matches&&side.offsetHeight+32<=vh); };
+  if(window.ResizeObserver) new ResizeObserver(check).observe(side);
+  addEventListener("resize",check);
+  if(window.visualViewport) visualViewport.addEventListener("resize",check);
+  if(wide.addEventListener) wide.addEventListener("change",check);
+  check();
+})();
+
+/* --- каталог палитр на телефоне и планшете: свёрнут, открывается кнопкой (с 1024 px открыт всегда) --- */
+(function(){
+  const btn=$("palToggle"), panel=$("palPanel"), cnt=$("palToggleCount"); if(!btn||!panel) return;
+  btn.hidden=false; panel.dataset.collapsed="true";
+  btn.addEventListener("click",()=>{ const open=btn.getAttribute("aria-expanded")!=="true";
+    btn.setAttribute("aria-expanded",String(open)); panel.dataset.collapsed=open?"false":"true"; });
+  const sync=()=>{ const m=$("palCount").textContent.match(/\d+/); if(cnt) cnt.textContent=m?"("+m[0]+")":""; };
+  new MutationObserver(sync).observe($("palCount"),{childList:true,characterData:true,subtree:true}); sync();
+})();
+
+/* --- Движение. Allay: постер (кадр 1) в разметке, скрипт добавляет ОДИН файл движения — как персонаж на главной:
+       не-WebKit → WebM VP9+alpha <video>, любой WebKit (Safari, iOS, WKWebView: альфу VP9 он показывает чёрной) →
+       анимированный WebP; 240 или 480 по ширине × плотности экрана. Только после load, когда Allay на экране, не при
+       Save-Data. Пауза: вне экрана и в скрытой вкладке; постер — при «уменьшить движение» (и при смене настройки),
+       ошибке, отказе автозапуска и на паузе страницы (кнопка, ключ fs_gen_motion; ключ главной fs_motion не трогаем).
+       Та же пауза останавливает мигающий &k и плавную прокрутку. --- */
+(function(){
+  const KEY="fs_gen_motion", root=document.documentElement, mq=matchMedia("(prefers-reduced-motion: reduce)");
+  const btn=$("motionBtn"), box=$("allay");
+  let paused=false; try{ paused=localStorage.getItem(KEY)==="off"; }catch(e){}
+
+  const ua=navigator.userAgent||"";
+  const webkitOnly=navigator.vendor==="Apple Computer, Inc."||/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)
+    ||(/AppleWebKit\//.test(ua)&&!/Chrome\/|Chromium\/|CriOS\/|Edg\/|EdgiOS\/|EdgA\/|OPR\/|Firefox\/|FxiOS\//.test(ua));
+  const saveData=!!(navigator.connection&&navigator.connection.saveData);
+  const hasIO="IntersectionObserver" in window;
+  let loaded=document.readyState==="complete", inView=!hasIO, onScreen=!hasIO, failed=false, blocked=false;
+  let el=null, mode=null, seq=0, hideTimer=0;
+  const isLive=()=>box.classList.contains("is-live");
+  const setLive=on=>box.classList.toggle("is-live",!!on);
+  const boxW=()=>box.getBoundingClientRect().width;
+  const stopped=()=>failed||blocked||saveData||!motionAllowed();
+  const wanted=()=>loaded&&!stopped()&&inView&&!document.hidden;
+
+  function fail(){
+    failed=true; setLive(false); clearTimeout(hideTimer);
+    if(el){ if(mode==="video"){ try{ el.pause(); el.removeAttribute("src"); el.load(); }catch(e){} } el.remove(); el=null; }
+  }
+  function build(){
+    const v=document.createElement("video");
+    if(!webkitOnly&&v.canPlayType&&v.canPlayType('video/webm; codecs="vp9"')){
+      mode="video"; v.className="allay-motion";
+      v.muted=true; v.defaultMuted=true; v.loop=true; v.playsInline=true;
+      ["muted","loop","playsinline","disablepictureinpicture","disableremoteplayback"].forEach(a=>v.setAttribute(a,""));
+      v.setAttribute("aria-hidden","true"); v.tabIndex=-1; v.preload="auto"; v.width=480; v.height=384;
+      v.addEventListener("playing",()=>{ if(wanted()) setLive(true); });
+      v.addEventListener("error",()=>{ if(v.getAttribute("src")) fail(); });
+      v.src=Math.round(boxW()*(window.devicePixelRatio||1))<=240 ? box.dataset.video : box.dataset.videoHd;
+      el=v;
+    } else {
+      mode="image"; const img=new Image();
+      img.className="allay-motion"; img.alt=""; img.width=480; img.height=384; img.decoding="async";
+      img.addEventListener("load",render); img.addEventListener("error",fail);
+      img.sizes=Math.round(boxW()||150)+"px"; img.srcset=box.dataset.animSrcset; img.src=box.dataset.anim;
+      el=img;
+    }
+    box.appendChild(el);
+  }
+  function render(){
+    const want=wanted();
+    if(want&&onScreen&&!el&&!failed) build();
+    if(!el) return;
+    if(mode==="video"){
+      if(want){
+        // на постере (кадр 1) ролик начинается с начала — без скачка позы
+        if(!isLive()&&el.currentTime>0){ try{ el.currentTime=0; }catch(e){} }
+        const p=el.play();
+        if(p&&p.then) p.then(null,err=>{ if(err&&err.name==="NotAllowedError"){ blocked=true; setLive(false); try{ el.pause(); el.removeAttribute("src"); el.load(); }catch(e){} } });
+      } else { el.pause(); if(stopped()) setLive(false); }
+    } else if(want){
+      clearTimeout(hideTimer); el.hidden=false;
+      if(el.complete&&el.naturalWidth>0&&!isLive()){ const s=++seq, img=el; const show=()=>{ if(s===seq&&el===img&&wanted()) setLive(true); };
+        if(img.decode) img.decode().then(show,show); else show(); }
+    } else if(stopped()&&!el.hidden){
+      seq++; setLive(false); clearTimeout(hideTimer); const img=el;
+      hideTimer=setTimeout(()=>{ if(el===img&&!isLive()) img.hidden=true; },360);   // после растворения в постер
+    }
+  }
+  function apply(){
+    const reduce=mq.matches, on=!reduce&&!paused;
+    root.classList.toggle("motion-off",!on);
+    setObfRunning(on);
+    if(btn){ btn.hidden=reduce; btn.setAttribute("aria-pressed",String(paused));
+      btn.title=paused?"Анимация на паузе — нажми, чтобы включить":"Остановить анимацию на странице"; }
+    if(box) render();
+  }
+  if(btn) btn.addEventListener("click",()=>{ paused=!paused;
+    try{ if(paused) localStorage.setItem(KEY,"off"); else localStorage.removeItem(KEY); }catch(e){} apply(); });
+  if(mq.addEventListener) mq.addEventListener("change",apply); else if(mq.addListener) mq.addListener(apply);
+  if(box){
+    if(hasIO){
+      new IntersectionObserver(es=>{ inView=es[es.length-1].isIntersecting; render(); },{rootMargin:"80px 0px"}).observe(box);
+      new IntersectionObserver(es=>{ onScreen=es[es.length-1].isIntersecting; render(); }).observe(box);
+    }
+    document.addEventListener("visibilitychange",render);
+    addEventListener("pageshow",render);
+    if(!loaded) addEventListener("load",()=>{ loaded=true; render(); });   // движение — после первого экрана
+  }
+  apply();
+})();
