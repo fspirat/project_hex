@@ -1,57 +1,243 @@
-@font-face{font-family:"Minecraft";src:url("/admin/mc.ttf") format("truetype");font-display:swap}
-:root{
-  --bg:#050605;--surface:#080b08;--card:#0d120d;--card-hi:#151c14;--line:#273322;--line-hi:#34452d;
-  --text:#e8eee6;--muted:#7c8578;--green:#7fbf3a;--green-hi:#9be052;
-  --pixel:"Minecraft",ui-monospace,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  color-scheme:dark;
+/* /log/ — просмотр чат-логов FSLOG. Шрифт, токены, шапка, подвал, кнопки, .page-head, .pane, .notice, .input —
+ * в /assets/site.css (подключается раньше). Здесь только своё: заголовок, сведения о логе, панель инструментов,
+ * окно чата (цвета сообщений — как в игре) и ошибки.
+ * CSP страницы: style-src 'self' — в разметке нет style=""; цвет и тень каждого куска ставит log.js через CSSOM.
+ * CREDITS: своих картинок у страницы нет; шрифт и знак — общие (см. CREDITS в site.css).
+ * Пиксельный шрифт — только 16/24 и 24/32 (сетка 8 px). */
+
+/* ── Заголовок ── */
+.log-head { padding-bottom: 16px; }
+@media (min-width: 720px) { .log-head { padding-bottom: 24px; } }
+.log-head .eyebrow { margin-bottom: 8px; }
+.log-head .page-title { overflow-wrap: anywhere; }
+/* ник (до 16 знаков) на телефоне — отдельной строкой на ступень меньше: 16 × 18 px помещаются от 320 px, не рвутся посередине */
+@container (max-width: 399.98px) {
+  .log-head .page-title .accent { display: block; font-size: 24px; line-height: 32px; }
 }
-*{box-sizing:border-box}
-[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 var(--sans);min-height:100vh;display:flex;flex-direction:column;
-  background-image:radial-gradient(900px 500px at 15% -10%,rgba(127,191,58,.07),transparent 60%)}
-a{color:var(--green-hi)}
-.muted{color:var(--muted);font-size:13px}
-button{font:15px var(--pixel);cursor:pointer;color:var(--text);background:var(--card);border:1px solid var(--line);border-radius:2px;padding:7px 12px;box-shadow:2px 2px 0 rgba(0,0,0,.5)}
-button:hover{background:var(--card-hi);border-color:rgba(127,191,58,.55)}
-button.small{font-size:14px;padding:5px 10px}
-.accent,.seg button[aria-pressed="true"]{background:var(--green);border-color:var(--green);color:#071006}
-button:focus-visible,input:focus-visible{outline:2px solid var(--green-hi);outline-offset:2px}
-input[type=search]{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:7px 10px;flex:1 1 220px;min-width:0}
-.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line)}
-.brand{font:18px var(--pixel);color:var(--text);text-decoration:none;display:flex;align-items:center;gap:8px}
-.brand span{color:var(--green-hi)}
-.dot{width:9px;height:9px;background:var(--green-hi);box-shadow:0 0 10px var(--green-hi)}
-main{width:100%;max-width:1100px;margin:0 auto;padding:18px 20px 30px;flex:1}
-.panel{background:linear-gradient(180deg,var(--card),var(--surface));border:1px solid var(--line);border-radius:3px;padding:14px 16px;margin-bottom:12px}
-h1{margin:0 0 6px;font:400 22px var(--pixel)}
-h1 b{color:var(--green-hi);font-weight:400}
-.meta{display:flex;flex-wrap:wrap;gap:6px 16px;color:var(--muted);font-size:13px}
-.meta b{color:var(--text);font-weight:500}
-.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-bottom:10px}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:2px;padding:3px;background:var(--surface);gap:3px}
-.seg button{box-shadow:none;border:0;padding:5px 10px;font-size:13px}
-.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
-.chk input{accent-color:var(--green)}
-.sp{flex:1}
-.found{margin:0 0 8px}
-/* окно чата: как в игре — полупрозрачный фон, тень текста */
-.chat{background:rgba(0,0,0,.55);border:1px solid var(--line);border-radius:3px;padding:8px 0;font-size:15px;line-height:1.5}
-.chat.mc{font-family:var(--pixel);font-size:16px}
-.line{display:flex;gap:10px;padding:1px 14px;white-space:pre-wrap;overflow-wrap:anywhere}
-.line:hover{background:rgba(255,255,255,.05)}
-.line .t{flex:none;color:#6f786b;font-family:var(--sans);font-size:12px;padding-top:3px;font-variant-numeric:tabular-nums;user-select:none}
-.chat.notime .t{display:none}
-.line .m{min-width:0;color:#fff}
-.line .m span{text-shadow:2px 2px 0 var(--sh,#3f3f3f)}
-.chat:not(.mc) .line .m span{text-shadow:1px 1px 0 var(--sh,#3f3f3f)}
-.b{font-weight:700}.i{font-style:italic}.u{text-decoration:underline}.s{text-decoration:line-through}.u.s{text-decoration:underline line-through}
-mark{background:rgba(155,224,82,.35);color:inherit;border-radius:2px}
-.sep{padding:6px 14px;margin:4px 0;color:var(--green);font:13px var(--pixel);border-top:1px solid rgba(39,51,34,.8);border-bottom:1px solid rgba(39,51,34,.8);background:rgba(8,11,8,.6)}
-.empty{text-align:center;color:var(--muted);padding:30px 16px}
-.empty h2{font:400 18px var(--pixel);color:var(--text);margin:0 0 6px}
-.foot{text-align:center;padding:16px}
-@media(max-width:600px){
-  .top{padding:10px 16px} main{padding:14px 16px 24px}
-  .line{padding:1px 10px;gap:8px} .chat.mc{font-size:15px}
-  .sp{display:none}
+/* «Загрузка лога…»; после загрузки текст остаётся только для чтения с экрана (.visually-hidden из log.js) */
+.log-state {
+  margin: 8px 0 0;
+  font: 400 16px/24px var(--pixel);
+  color: var(--muted);
+}
+
+/* Предупреждение о подлинности — сразу под заголовком, во всех состояниях (и без JS) */
+.log-auth { align-items: flex-start; margin-bottom: 24px; font-size: 17px; line-height: 1.55; }
+.log-auth-icon { flex: none; width: 16px; height: 16px; margin-top: 5px; color: var(--warn); }
+.log-nojs { margin-bottom: 24px; }
+
+/* Пока лог грузится, место под ним занято с первой отрисовки: «Кто видит лог» и подвал не прыгают, когда появится
+   чат (log.js может прийти уже после первой отрисовки). Без JS резерва нет: только тогда содержимое <noscript>
+   становится элементами, и .log-nojs находится через :has() */
+.log-main[data-log-state="loading"]:not(:has(.log-nojs)) .log-body { min-height: 100vh; }
+.log-main[data-log-state="loading"]:not(:has(.log-nojs)) .log-state { min-height: 24px; }
+
+/* ── Сведения о логе: dl, до 480 px — строки «метка — значение», шире — в ряд ── */
+.log-info { margin-bottom: 24px; padding: 16px; }
+.log-meta { display: grid; gap: 8px; margin: 0; }
+.log-meta-item {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 0 12px;
+  align-items: baseline;
+  min-width: 0;
+}
+.log-meta dt { font: 400 16px/24px var(--pixel); color: var(--muted); }
+.log-meta dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 17px;
+  line-height: 24px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 480px) {
+  .log-info { padding: 20px 24px; }
+  .log-meta { display: flex; flex-wrap: wrap; gap: 16px 40px; }
+  .log-meta-item { display: block; max-width: 100%; }
+  .log-meta dd { margin-top: 4px; }
+}
+
+/* ── Панель инструментов (не липкая: не закрывает клавиатуру на телефоне) ── */
+.log-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px 24px;
+  margin-bottom: 16px;
+}
+.log-search .input { font-size: 17px; }   /* ≥ 16 px: iOS не увеличивает страницу при фокусе */
+.log-search .input::-webkit-search-cancel-button { cursor: pointer; }
+
+/* «Все / Игроки / Система»: нажатая — заливка и квадратный маркер (не только цветом) */
+.seg { display: flex; min-width: 0; }
+.seg button {
+  position: relative;
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text-2);
+  font: 400 16px/24px var(--pixel);
+  cursor: pointer;
+  transition: background-color var(--t) var(--ease), border-color var(--t) var(--ease), color var(--t) var(--ease);
+}
+.seg button + button { margin-left: -1px; }
+.seg button[aria-pressed="true"] {
+  z-index: 1;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.seg button[aria-pressed="true"]::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+}
+.seg button:focus-visible { z-index: 2; }
+@media (hover: hover) {
+  .seg button[aria-pressed="false"]:hover { z-index: 1; border-color: var(--accent); background: #1C2B21; color: var(--text); }
+}
+
+/* флажки «время», «шрифт Minecraft», «анимация &k» — родные, зона нажатия — вся подпись */
+.log-opts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; min-width: 0; }
+.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  font: 400 16px/24px var(--pixel);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.chk input { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+
+/* рядом, если помещаются целиком (от ≈ 380 px), иначе друг под другом во всю ширину — подписи не рвутся */
+.log-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.log-actions .btn { flex: 1 1 auto; padding-left: 12px; padding-right: 12px; white-space: nowrap; }
+
+/* итог копирования: пусто — строка нулевой высоты (live-область остаётся в дереве) */
+.log-copy-msg { margin: 0; font-size: 16px; line-height: 24px; }
+.log-copy-msg:empty { margin-top: -12px; }
+.log-copy-msg.is-ok { color: var(--accent-bright); }
+.log-copy-msg.is-fail { color: var(--danger); }
+
+@media (min-width: 720px) {
+  .log-bar { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .log-actions { justify-content: flex-end; }
+  .log-actions .btn { flex: 0 0 auto; padding-left: 16px; padding-right: 16px; }
+  .log-copy-msg { grid-column: 1 / -1; text-align: right; }
+}
+@media (min-width: 720px) and (max-width: 1023.98px) {
+  .seg button { padding-left: 16px; padding-right: 16px; }
+}
+
+/* «Показано N из M»; пусто — нулевая высота */
+.log-found { margin: 0; font: 400 16px/24px var(--pixel); color: var(--text-2); }
+.log-found:not(:empty) { margin-bottom: 8px; }
+
+/* ── Окно чата: как в игре — тёмная полупрозрачная подложка, тень текста = цвет / 4.
+   Тёмные игровые цвета (§0, §1, §8) и в игре читаются плохо — их не перекрашиваем ── */
+.chat {
+  position: relative;
+  padding: 8px 0;
+  border: 1px solid var(--border);
+  background: linear-gradient(rgba(0, 0, 0, .55), rgba(0, 0, 0, .55)), var(--bg-2);
+  box-shadow: var(--shadow);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.chat.mc { font-family: var(--pixel); font-size: 16px; line-height: 24px; }
+.line {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: baseline;
+  padding: 0 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (hover: hover) { .line:hover { background: rgba(255, 255, 255, .05); } }
+.line .t {
+  color: var(--muted);
+  font: 400 13px/16px var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  user-select: none;
+}
+.line .m { min-width: 0; max-width: 940px; color: #fff; }
+.line .m span { text-shadow: 2px 2px 0 var(--sh, #3f3f3f); }
+.chat:not(.mc) .line .m span { text-shadow: 1px 1px 0 var(--sh, #3f3f3f); }
+.chat.notime .line { grid-template-columns: minmax(0, 1fr); }
+.chat.notime .t { display: none; }
+@media (max-width: 479.98px) {
+  .line { column-gap: 8px; padding: 0 12px; }
+}
+
+/* форматирование из игры */
+.chat .b { font-weight: 700; }
+/* у пиксельного шрифта нет жирного: как в игре — знак рисуется второй раз со сдвигом, без искусственного утолщения */
+.chat.mc .b { font-weight: 400; text-shadow: 1px 0 0 currentColor, 2px 2px 0 var(--sh, #3f3f3f), 3px 2px 0 var(--sh, #3f3f3f); }
+.chat .i { font-style: italic; font-synthesis: style; }
+.chat .u { text-decoration: underline; }
+.chat .s { text-decoration: line-through; }
+.chat .u.s { text-decoration: underline line-through; }
+.chat.mc .u, .chat.mc .s { text-decoration-thickness: 2px; text-decoration-skip-ink: none; }
+.chat mark { background: rgba(184, 239, 124, .35); color: inherit; }
+
+.sep {
+  margin: 8px 0;
+  padding: 4px 16px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: rgba(16, 24, 18, .7);
+  color: var(--accent);
+  font: 400 16px/24px var(--pixel);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.chat > .sep:first-child { margin-top: -8px; border-top: 0; }
+.chat .empty { margin: 0; padding: 32px 16px; text-align: center; color: var(--muted); font: 400 16px/24px var(--pixel); }
+
+/* ── Ошибки: крупно, на всю ширину под заголовком; полоса сверху — по виду ошибки ── */
+.log-error { border-top: 4px solid var(--border-strong); }
+.log-error--incomplete { border-top-color: var(--warn); }
+.log-error--error { border-top-color: var(--danger); }
+.log-error-title { margin: 0 0 8px; font: 400 24px/32px var(--pixel); color: var(--text); }
+.log-error p { max-width: 40em; margin: 0; color: var(--text-2); }
+.log-error p + p { margin-top: 8px; }
+.log-retry { margin-top: 24px; }
+
+/* ── Кто видит лог ── */
+.log-about { margin-top: 48px; padding-top: 32px; border-top: 1px dashed var(--border); }
+.log-about-title { margin: 0 0 16px; font: 400 24px/32px var(--pixel); }
+.log-facts { display: grid; gap: 12px; max-width: 46em; margin: 0; padding: 0; list-style: none; color: var(--text-2); }
+.log-facts li { position: relative; padding-left: 24px; }
+.log-facts li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: calc(.8em - 4px);
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+}
+.log-about-more { margin: 16px 0 0; }
+.log-about-more .text-link { margin-left: -4px; }
+
+@media (forced-colors: active) {
+  .seg button[aria-pressed="true"] { border-width: 3px; }
+  .chat { forced-color-adjust: none; }   /* цвета сообщений и есть содержимое */
 }

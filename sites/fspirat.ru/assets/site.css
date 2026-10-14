@@ -1,0 +1,577 @@
+/* fspirat.xyz — общий слой внутренних страниц (/fstweak/, /log/, /hex_generator/).
+ * Блоки «шрифт, токены, шапка, подвал, кнопки, заголовки разделов» повторяют assets/home.css — держать в синхроне,
+ * пока главная не подключит этот файл (фаза 2 плана). Свои стили страниц — в их файлах, после этого.
+ *
+ * CREDITS (общие ресурсы):
+ *  - шрифт «Minecraft Rus» Regular v1.1, © 2004–2012 BOGDAN Software (файл с прежней главной);
+ *  - знак fspirat (favicon, mark-*.webp) — логотип владельца;
+ *  - фоны «изумрудные руины» bg-ruins-*.webp — созданы для владельца генератором изображений (14.10.2026);
+ *  - прежний фон bg-landscape.webp удалён по решению владельца (2026-10-15), на сайте не используется;
+ *  - fstweak/img/hero-icon-152.png (значок 152×152 прежней шапки FSTWEAK, сейчас не используется) — источник не подтверждён.
+ *
+ * Не использовать имена (заняты старым CSS/JS страниц): .panel .chips .chip .tag .tags .badge .status .note .box
+ * .layout .lead .hero .main, а на /log/ ещё .brand до переписывания log.css. */
+
+@font-face {
+  font-family: "Minecraft";
+  src: url("fonts/minecraft.woff2") format("woff2"), url("fonts/minecraft.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+/* замена на время подгрузки: знак Minecraft ≈ 0.75em, моноширинный ≈ 0.6em */
+@font-face {
+  font-family: "Minecraft Fallback";
+  src: local("Menlo"), local("Menlo-Regular"), local("Consolas"), local("Courier New"), local("CourierNewPSMT");
+  size-adjust: 125%;
+  ascent-override: 70%;
+  descent-override: 10%;
+  line-gap-override: 0%;
+}
+
+/* ── Токены (как в home.css) ── */
+:root {
+  color-scheme: dark;
+  --bg: #070B09;
+  --bg-2: #0B120E;
+  --surface: #101812;
+  --surface-raised: #17231B;
+  --border: #2B3D30;
+  --border-strong: #4F6B57;
+  --text: #E8EEE6;
+  --text-2: #C4CEC5;
+  --muted: #A1AEA3;
+  --accent: #7FBF3A;
+  --accent-bright: #B8EF7C;
+  --accent-ink: #0A1407;
+  --emerald: #36C78B;
+  --danger: #FF8A80;      /* только для сообщений об ошибке: 7.9:1 на --surface */
+  --warn: #FFD24D;
+
+  --pixel: "Minecraft", "Minecraft Fallback", ui-monospace, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, Menlo, monospace;
+
+  --container: 1200px;
+  --pad: 16px;
+  --shadow: 4px 4px 0 rgba(0, 0, 0, .55);
+  --shadow-up: 6px 6px 0 rgba(0, 0, 0, .6);
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --t: 180ms;
+}
+@media (min-width: 480px)  { :root { --pad: 20px; } }
+@media (min-width: 720px)  { :root { --pad: 32px; } }
+@media (min-width: 1280px) { :root { --pad: 40px; } }
+@media (min-width: 560px) and (max-width: 1023.98px) and (max-height: 500px) {
+  :root { --pad: 20px; }
+}
+
+/* ── Основа. Сбросы только точечные: старые виджеты страниц (генератор) на них не рассчитаны ── */
+*, *::before, *::after { box-sizing: border-box; }
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--bg);
+}
+body {
+  position: relative;
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.6;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-wrap: break-word;
+}
+/* фон — у html, не у body: иначе .page-backdrop (z-index: -1) окажется под фоном body */
+[hidden] { display: none !important; }
+::selection { background: var(--accent); color: var(--accent-ink); }
+:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 3px;
+}
+main:focus { outline: none; }
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.wrap {
+  width: 100%;
+  max-width: calc(var(--container) + 2 * var(--pad));
+  margin-inline: auto;
+  padding-left: max(var(--pad), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--pad), env(safe-area-inset-right, 0px));
+}
+
+/* ── Ссылка «Перейти к содержанию» → main#main[tabindex=-1] ── */
+.skip-link {
+  position: absolute;
+  left: var(--pad);
+  top: 8px;
+  z-index: 50;
+  padding: 12px 16px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 400 16px/24px var(--pixel);
+  text-decoration: none;
+  transform: translateY(-160%);
+}
+.skip-link:focus { transform: none; }
+
+/* ── Шапка (разметка — как на главной; на внутренних — .site-header--inner) ── */
+.site-header { position: relative; z-index: 2; }
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 60px;
+}
+.brand {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  color: var(--text);
+  text-decoration: none;
+}
+.brand:hover { color: var(--text); }
+/* Знак — голова персонажа из скина владельца (лицо + второй слой, 8×8) в тонкой белой рамке, рядом адрес
+   пиксельными заглавными с шагом в пиксель шрифта (2 px), как у плашек Minecraft. SVG — чёткий при любой плотности */
+.brand-face { display: block; width: 24px; height: 24px; image-rendering: pixelated; box-shadow: 0 0 0 1px #FFFFFF; }
+.brand-name { font: 400 16px/24px var(--pixel); text-transform: uppercase; letter-spacing: 2px; color: var(--accent-bright); transition: color var(--t) var(--ease); }
+.brand:hover .brand-name { color: #D4FF9A; }
+/* «.xyz» — только с 720 px: на телефоне адрес целиком сталкивался со ссылками шапки (до ≈ 456 px), там просто «FSPIRAT» */
+@media (max-width: 719.98px) { .brand-tld { display: none; } }
+.site-nav ul { display: flex; flex-wrap: wrap; justify-content: flex-end; margin: 0; padding: 0; list-style: none; }
+.site-nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 6px;
+  font: 400 16px/24px var(--pixel);
+  color: var(--muted);
+  text-decoration: none;
+  transition: color var(--t) var(--ease);
+}
+.site-nav li:last-child a { padding-right: 0; }
+.site-nav a::after {
+  content: "";
+  position: absolute;
+  left: 6px; right: 6px; bottom: 8px;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--t) var(--ease);
+}
+.site-nav a:hover, .site-nav a:focus-visible { color: var(--text); }
+.site-nav a:hover::after, .site-nav a:focus-visible::after { transform: scaleX(1); }
+.site-nav li:last-child a::after { right: 0; }
+/* текущая страница: цвет текста и подчёркивание — не только цветом */
+.site-nav a[aria-current="page"] { color: var(--text); }
+.site-nav a[aria-current="page"]::after { transform: scaleX(1); }
+
+@media (min-width: 376px) and (max-width: 399.98px) {
+  .site-nav a { padding: 0 10px; }
+  .site-nav a::after { left: 10px; right: 10px; }
+}
+@media (min-width: 400px) {
+  .site-nav ul { gap: 4px; }
+  .site-nav a { padding: 0 12px; }
+  .site-nav a::after { left: 12px; right: 12px; }
+  .site-nav li:last-child a { padding-right: 0; }
+  .site-nav li:last-child a::after { right: 0; }
+}
+@media (min-width: 720px) {
+  .header-row { min-height: 72px; }
+  .brand { gap: 12px; }
+  .brand-face { width: 32px; height: 32px; }
+  .site-nav ul { gap: 8px; }
+  .site-nav a { padding: 0 12px; }
+  .site-nav a::after { left: 12px; right: 12px; }
+}
+/* низкий экран (телефон горизонтально, окно ПК при увеличении): шапка 48 px. После правила 720 — иначе оно сильнее */
+@media (min-width: 560px) and (max-width: 1023.98px) and (max-height: 500px) {
+  .header-row { min-height: 48px; }
+}
+/* внутренние страницы: до 400 px только знак (имя ссылки остаётся для чтения с экрана),
+   иначе «fspirat Генератор FSTWEAK» читается одной фразой */
+@media (max-width: 407.98px) {
+  .site-header--inner .brand-name {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap;
+  }
+}
+
+/* ── Подвал ── */
+.site-footer {
+  margin-top: 48px;
+  border-top: 1px dashed var(--border);
+}
+.footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding-top: 24px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  font: 400 16px/24px var(--pixel);
+  color: var(--muted);
+}
+.footer-row p { margin: 0; }
+.copy-sign { font-family: var(--sans); font-size: 17px; }
+.footer-links { display: flex; flex-wrap: wrap; gap: 0 24px; }
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+  text-decoration-color: rgba(161, 174, 163, .35);
+  transition: color var(--t) var(--ease), text-decoration-color var(--t) var(--ease);
+}
+.footer-links a:hover { color: var(--text); text-decoration-color: var(--accent); }
+.footer-sign { display: inline-flex; align-items: center; gap: 8px; }
+.footer-block {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(#7FBF3A 0 33%, #5C3D24 33% 100%);
+  box-shadow: inset -3px -3px 0 rgba(0, 0, 0, .25);
+}
+
+/* ── Кнопки и ссылки-действия ── */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 12px 24px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  font: 400 16px/24px var(--pixel);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--t) var(--ease),
+    box-shadow var(--t) var(--ease),
+    background-color var(--t) var(--ease),
+    border-color var(--t) var(--ease),
+    color var(--t) var(--ease);
+}
+.btn-primary {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: #0B1608;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, .28),
+    inset 0 -4px 0 rgba(0, 0, 0, .22),
+    var(--shadow);
+}
+.btn-secondary {
+  color: var(--text);
+  background: var(--surface-raised);
+  border-color: var(--border-strong);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, .05),
+    inset 0 -4px 0 rgba(0, 0, 0, .28),
+    var(--shadow);
+}
+.btn:not(.card-cta):active { transform: translate(2px, 2px); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25), 2px 2px 0 rgba(0, 0, 0, .55); }
+@media (hover: hover) {
+  .btn-primary:not(.card-cta):hover { background: #8DCB47; transform: translate(-2px, -2px); box-shadow: inset 0 2px 0 rgba(255,255,255,.3), inset 0 -4px 0 rgba(0,0,0,.22), var(--shadow-up); }
+  .btn-secondary:not(.card-cta):hover { border-color: var(--accent); background: #1C2B21; transform: translate(-2px, -2px); box-shadow: inset 0 2px 0 rgba(255,255,255,.05), inset 0 -4px 0 rgba(0,0,0,.28), var(--shadow-up); }
+}
+/* компактная: панели инструментов, «Копировать», «Повторить». Зона нажатия ≥ 44 */
+.btn-sm { min-height: 44px; padding: 8px 16px; }
+.btn[disabled], .btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; transform: none; }
+
+.text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px;
+  font: 400 16px/24px var(--pixel);
+  color: var(--accent-bright);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+  text-decoration-color: rgba(184, 239, 124, .35);
+  transition: color var(--t) var(--ease), text-decoration-color var(--t) var(--ease);
+}
+.text-link:hover { color: var(--accent-bright); text-decoration-color: var(--accent-bright); }
+.px-arrow { display: block; flex: none; width: 10px; height: 14px; }
+.text-link .px-arrow { transition: transform var(--t) var(--ease); }
+@media (hover: hover) { .text-link:hover .px-arrow { transform: translateX(3px); } }
+
+/* ── Разделы ── */
+.section { padding: 32px 0; scroll-margin-top: 8px; }
+.section-head {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 24px;
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed var(--border);
+}
+.section-head::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+.section-head::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  bottom: -1px;
+  width: 64px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), rgba(127, 191, 58, 0));
+}
+.section-head > h2, .section-title {
+  margin: 0;
+  font-family: var(--pixel);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 32px;
+}
+.section-sub {
+  margin: 0;
+  font: 400 16px/24px var(--pixel);
+  color: var(--muted);
+}
+@media (min-width: 720px) {
+  .section { padding: 48px 0; }
+  .section-head { margin-bottom: 32px; padding-bottom: 16px; }
+  .section-head > h2, .section-title { font-size: 32px; line-height: 40px; }
+}
+
+/* ── Набор внутренних страниц ──
+   Пиксельный шрифт — только кегли 16/24, 24/32, 32/40, 40/48, 48/56 и weight 400 (сетка 8 px, иначе мылится).
+   Русский текст — без верхнего регистра и разрядки. Английские фразы — lang="en". */
+
+/* Заголовок страницы вместо прежних «hero»: метка, H1, вводный абзац, при необходимости действия.
+   Отступы только сверху и снизу — можно ставить на один элемент с .wrap */
+.page-head {
+  position: relative;
+  padding-top: 24px;
+  padding-bottom: 24px;
+  container-type: inline-size;
+}
+.page-title {
+  margin: 0;
+  font-family: var(--pixel);
+  font-weight: 400;
+  font-size: 32px;
+  line-height: 40px;
+  letter-spacing: 0;
+  color: var(--text);
+  text-wrap: balance;
+}
+.page-title .accent { color: var(--accent-bright); }
+/* узкая колонка (увеличение на телефоне): кегль по ширине самого длинного слова заголовка, чтобы оно не рвалось.
+   --title-fit — его ширина в em (знак ≈ 0.75em): «градиентов» 9.25 (по умолчанию), страница задаёт своё, «FSTWEAK» ≈ 5.25 */
+@container (max-width: 287.98px) {
+  .page-title { font-size: clamp(16px, 100cqw / var(--title-fit, 9.25), 32px); line-height: calc(1em + 8px); }
+}
+.page-lead {
+  max-width: 40em;
+  margin: 12px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text-2);
+  text-wrap: pretty;
+}
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 559.98px) {
+  .page-actions .btn { flex: 1 1 100%; }
+}
+@media (min-width: 560px) {
+  .page-lead { font-size: 18px; }
+}
+@media (min-width: 720px) {
+  .page-head { padding-top: 40px; padding-bottom: 32px; }
+  .page-title { font-size: 40px; line-height: 48px; }
+  .page-lead { margin-top: 16px; }
+}
+@media (min-width: 1200px) {
+  .page-title { font-size: 48px; line-height: 56px; }
+}
+
+/* Метка над заголовком: квадрат 8×8 с ореолом */
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 12px;
+  font: 400 16px/24px var(--pixel);
+  color: var(--accent);
+}
+.eyebrow > span { min-width: 0; }
+.eyebrow::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px rgba(127, 191, 58, .14);
+}
+.eyebrow--mod { color: var(--emerald); }
+.eyebrow--mod::before { box-shadow: 0 0 0 4px rgba(54, 199, 139, .14); }
+
+/* Спокойная полоса фона за заголовком страницы (по желанию страницы). Только за .page-head, не за рабочими
+   областями. Тот же файл, что на главной, — уже в кэше. Положить первым ребёнком <body> или .page-head-обёртки */
+.page-backdrop {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 440px;
+  z-index: -1;
+  pointer-events: none;
+  /* сверху — полоса затемнения под ссылками шапки (как на главной): серые ссылки над светлыми пятнами кадра были 3.4–4.2:1 */
+  background:
+    linear-gradient(to bottom, rgba(7, 11, 9, .85) 0, rgba(7, 11, 9, .55) 72px, rgba(7, 11, 9, 0) 144px),
+    url("img/bg-ruins-desktop.webp") 50% 30% / cover no-repeat;
+  opacity: .5;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 40%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 0, #000 40%, transparent 100%);
+}
+@media (max-width: 719.98px) {
+  .page-backdrop {
+    height: 360px;
+    background-image: linear-gradient(to bottom, rgba(7, 11, 9, .85) 0, rgba(7, 11, 9, .55) 60px, rgba(7, 11, 9, 0) 132px), url("img/bg-ruins-mobile.webp");
+    background-position: 0 0, 50% 20%;
+  }
+}
+
+/* Панель рабочей области: поверхность карточек главной, без «подъёма» при наведении */
+.pane {
+  position: relative;
+  min-width: 0;
+  padding: 16px;
+  background: linear-gradient(180deg, var(--surface-raised) 0, var(--surface) 140px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+@media (min-width: 480px) { .pane { padding: 24px; } }
+.pane-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 16px;
+}
+.pane-title {
+  margin: 0;
+  font-family: var(--pixel);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 32px;
+}
+
+/* Поля ввода */
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.field-label { font: 400 16px/24px var(--pixel); color: var(--text-2); }
+.field-hint { font-size: 15px; line-height: 1.5; color: var(--muted); }
+.input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 17px;
+  line-height: 22px;
+  box-shadow: inset 2px 2px 0 rgba(0, 0, 0, .4);
+}
+.input::placeholder { color: var(--muted); opacity: 1; }
+.input:hover { border-color: var(--muted); }
+.input:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 1px; border-color: var(--accent); }
+
+/* Признаки-«плашки» (как .chips li на главной) */
+.chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.chip-list > li {
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: rgba(7, 11, 9, .45);
+  font: 400 16px/24px var(--pixel);
+  color: var(--muted);
+}
+
+/* Заметка / предупреждение: видно сразу, а не мелким шрифтом в подвале */
+.notice {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--emerald);
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.notice > p { margin: 0; }
+.notice--warn { border-left-color: var(--warn); }
+.notice--error { border-left-color: var(--danger); }
+.notice strong { color: var(--text); font-weight: 600; }
+
+/* ── Движение ──
+   Всё, что крутится по кругу, — класс .loop; остановка — html.motion-off (своя для страницы, не влияет на главную).
+   «Уменьшить движение» — без анимаций и переходов; JS-циклы (setInterval, GIF, видео) страница останавливает сама,
+   в том числе при смене настройки на открытой странице (matchMedia change). */
+.motion-off .loop { animation-play-state: paused !important; }
+@media (prefers-reduced-motion: no-preference) {
+  html.smooth { scroll-behavior: smooth; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Контрастные темы Windows: декоративный фон убираем, иначе системная рамка фокуса теряется на тёмном фото */
+@media (forced-colors: active) {
+  .page-backdrop { display: none; }
+  /* квадраты-маркеры нарисованы фоном (currentColor) — в контрастной теме фон заменяется и они пропадают */
+  .eyebrow::before, .section-head::before, .footer-block { forced-color-adjust: none; background: CanvasText; }
+  /* у элементов с forced-color-adjust: none рамка фокуса осталась бы зелёной (на светлой теме 1.3:1) */
+  :focus-visible { outline-color: Highlight; }
+}
