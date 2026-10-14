@@ -5,9 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HEX генератор | fspirat.xyz</title>
 <meta name="description" content="Генератор HEX-градиентов для названий, описаний и префиксов в Minecraft: AgeMagic, цвета /colors, MiniMessage, BirdFlop и другие форматы. Работает в браузере.">
+<link rel="canonical" href="https://fspirat.xyz/hex_generator/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="fspirat.xyz">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:url" content="https://fspirat.xyz/hex_generator/">
+<meta property="og:title" content="Генератор градиентов — fspirat.xyz">
+<meta property="og:description" content="HEX-градиенты для названий, описаний и префиксов в Minecraft: AgeMagic, цвета /colors, MiniMessage, BirdFlop и другие форматы — прямо в браузере.">
+<meta property="og:image" content="https://fspirat.xyz/assets/img/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Персонаж fspirat парит в воздухе, скрестив ноги, и надпись «Больше возможностей в Minecraft.»">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#070B09">
 <meta name="color-scheme" content="dark">
-<link rel="icon" type="image/png" sizes="64x64" href="/assets/img/favicon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/assets/img/favicon-head-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="/assets/img/favicon-head-64.png">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-head-180.png">
 <link rel="preload" href="/assets/fonts/minecraft.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css?v=20261015">
 <link rel="stylesheet" href="/hex_generator/generator.css?v=20261015">
@@ -18,12 +32,12 @@
 <header class="site-header site-header--inner">
   <div class="wrap header-row">
     <a class="brand" href="/">
-      <img class="brand-mark" src="/assets/img/mark-48.webp" srcset="/assets/img/mark-48.webp 1x, /assets/img/mark-96.webp 2x, /assets/img/mark-144.webp 3x" width="36" height="36" alt="">
-      <span class="brand-name">fspirat</span>
+      <img class="brand-face" src="/assets/img/fspirat-head.svg" width="32" height="32" alt="">
+      <span class="brand-name">fspirat<span class="brand-tld">.xyz</span></span>
     </a>
     <nav class="site-nav" aria-label="Разделы сайта">
       <ul>
-        <li><a href="/hex_generator/" aria-current="page">Генератор</a></li>
+        <li><a href="/hex_generator/" aria-current="page" lang="en">Generator</a></li>
         <li><a href="/fstweak/">FSTWEAK</a></li>
       </ul>
     </nav>
@@ -41,7 +55,7 @@
       </div>
       <!-- Allay (рендер в Blender, 5:4): в разметке только постер = кадр 1. Скрипт добавляет ОДИН файл движения:
            WebM VP9+alpha (не-WebKit) или анимированный WebP (WebKit), 240 или 480 по ширине × плотности экрана.
-           Без JS, при «уменьшить движение», Save-Data, ошибке и на паузе — постер. -->
+           Без JS, при «уменьшить движение», Save-Data, ошибке и отказе автозапуска — постер. Кнопки паузы нет. -->
       <div class="allay-wrap" aria-hidden="true">
         <div class="allay" id="allay"
              data-video="/hex_generator/img/allay-240.webm" data-video-hd="/hex_generator/img/allay-480.webm"
@@ -52,11 +66,6 @@
                sizes="(min-width: 720px) 220px, 34vw" width="480" height="384" alt="" draggable="false" decoding="async">
         </div>
       </div>
-      <button type="button" class="motion-btn" id="motionBtn" aria-pressed="false" title="Остановить анимацию на странице" hidden>
-        <svg class="motion-ico motion-ico--pause" viewBox="0 0 7 7" width="14" height="14" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h2v7H1zM4 0h2v7H4z"/></svg>
-        <svg class="motion-ico motion-ico--play" viewBox="0 0 7 7" width="14" height="14" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M1 0h1v7H1zM2 1h1v5H2zM3 2h1v3H3zM4 3h1v1H4z"/></svg>
-        <span class="visually-hidden">Остановить анимацию</span>
-      </button>
     </div>
 
     <noscript><p class="notice notice--warn gen-noscript">Генератор работает в&nbsp;браузере и&nbsp;требует JavaScript.</p></noscript>
@@ -70,15 +79,15 @@
         <div class="field">
           <label class="field-label" for="cmd">Формат команды</label>
           <select id="cmd" aria-describedby="fmtInfo">
-            <optgroup label="AgeMagic ( Sponsor's )">
+            <optgroup label="AgeMagic (Sponsor)">
               <option value="item">Предмет: /itemname + /itemlore (AgeMagic)</option>
               <option value="/itemname">/itemname (AgeMagic) — лимит 64</option>
               <option value="/itemlore">/itemlore (AgeMagic) — лимит 65</option>
               <option value="sponsor">/sponsor prefix (AgeMagic) — до 7 цветов</option>
               <option value="sponsoredit">/sponsor editprefix (AgeMagic) — лимит 256</option>
-              <option value="am-raw">no command (AgeMagic) — лимит 256</option>
+              <option value="am-raw">без команды (AgeMagic) — лимит 256</option>
             </optgroup>
-            <optgroup label="AgeMagic ( обычные игроки цвета из [/colors] )">
+            <optgroup label="AgeMagic (обычные игроки, цвета /colors)">
               <option value="c:item">Предмет: /itemname + /itemlore (цвета /colors)</option>
               <option value="c:/itemname">/itemname (цвета /colors) — лимит 64</option>
               <option value="c:/itemlore">/itemlore (цвета /colors) — лимит 65</option>
@@ -279,12 +288,18 @@
       </section>
     </div>
   </div>
+  <!-- Телефон и планшет (< 1024 px): «Скопировать всё» внизу экрана, пока сам «Результат» не виден.
+       Кнопка нажимает настоящую #copyAll — то же копирование и то же событие gen.copy. -->
+  <div class="copy-bar" id="copyBar" role="region" aria-label="Копирование результата" hidden>
+    <p class="copy-bar-state" id="copyBarState"></p>
+    <button type="button" class="btn btn-primary btn-sm copy-bar-btn" id="copyBarBtn">Скопировать всё</button>
+  </div>
 </main>
 
 <footer class="site-footer">
   <div class="wrap footer-row">
     <p><span class="copy-sign">©</span> fspirat.xyz</p>
-    <p class="footer-links"><a href="/#contacts">Контакты</a></p>
+    <p class="footer-links"><a href="/#contacts" lang="en">Contacts</a></p>
     <p class="footer-sign"><span class="footer-block" aria-hidden="true"></span><span lang="en">Crafted block by block</span></p>
   </div>
 </footer>

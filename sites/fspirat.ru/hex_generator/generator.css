@@ -4,10 +4,9 @@
  * CREDITS (ресурсы страницы; общие — в /assets/site.css):
  *  - img/allay-*.webm, img/allay-anim-*.webp, img/allay-poster-*.webp — Allay, отрендерен для владельца в Blender 5.2
  *    (2026-10-14) по модели AllayModel и текстуре из клиента Minecraft 26.2 (Mojang): «текстура Allay из клиента
- *    Minecraft (Mojang), использование — на усмотрение владельца». Прежний allay.gif (автор рендера не подтверждён)
- *    оставлен на диске, страница его больше не загружает;
- *  - img/stage.webp — неподвижный кадр (первый) той же анимации ночного леса, что была за подсказкой: img/stage.gif
- *    (640×358, 55 кадров; файл оставлен, страница его больше не загружает). Источник не подтверждён;
+ *    Minecraft (Mojang), использование — на усмотрение владельца». Прежний allay.gif удалён (решение владельца 2026-10-15);
+ *  - img/stage.webp — неподвижный кадр (первый) прежней анимации ночного леса за подсказкой (640×358; сама анимация
+ *    stage.gif удалена по решению владельца 2026-10-15). Источник не подтверждён;
  *  - img/floppy.png (дискета 48×48 на кнопке «Сохранить палитру», показывается 24×24) — источник не подтверждён.
  *
  * Классы, которые создаёт generator.js, переименовывать нельзя (PLAN §3.2): .lore-row .target .active .pcard .pal-pop
@@ -19,11 +18,11 @@
  * собирает скрипт — им шрифт var(--sans). */
 
 /* ── Заголовок страницы и место Allay ── */
-/* телефон: заголовок во всю ширину; вводная фраза | Allay; ссылка | пауза */
+/* телефон: заголовок во всю ширину; вводная фраза | Allay; ссылка во всю ширину */
 .gen-head {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: "title title" "lead allay" "link motion";
+  grid-template-areas: "title title" "lead allay" "link link";
   align-items: center;
   column-gap: 12px;
 }
@@ -32,12 +31,6 @@
 .gen-head .page-lead { grid-area: lead; margin-top: 8px; }
 .gen-head-link { grid-area: link; margin: 4px 0 0; min-width: 0; }
 .gen-head-link .text-link { padding-left: 0; }
-/* узкий экран: ссылка переносится как обычный текст, стрелка остаётся после слова (зона нажатия — 2 строки по 24 + отступы) */
-@media (max-width: 719.98px) {
-  .gen-head-link { padding: 8px 0; }
-  .gen-head-link .text-link { display: inline; padding: 10px 0; line-height: 24px; }
-  .gen-head-link .px-arrow { display: inline; margin-left: 8px; vertical-align: -1px; }
-}
 /* Allay 5:4: 120–150 px на телефоне, 220 px с 720 px. Без свечения, теней и CSS-покачивания — рендер сам парит.
    Постер (кадр 1) лежит под файлом движения; смена «постер ↔ движение» — растворением, как на главной */
 .allay-wrap {
@@ -67,33 +60,10 @@ video.allay-motion { opacity: .001; }
   .allay-poster, .allay-motion { transition: opacity .2s linear .12s; }
   .allay.is-live .allay-motion, .allay:not(.is-live) .allay-poster { transition-delay: 0s; }
 }
-.motion-btn {
-  grid-area: motion;
-  justify-self: end;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  color: var(--text-2);
-  background: var(--surface-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: 0;
-  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .28), 2px 2px 0 rgba(0, 0, 0, .5);
-  cursor: pointer;
-  transition: border-color var(--t) var(--ease), color var(--t) var(--ease);
-}
-.motion-btn .motion-ico--play { display: none; }
-.motion-btn[aria-pressed="true"] .motion-ico--pause { display: none; }
-.motion-btn[aria-pressed="true"] .motion-ico--play { display: block; }
-.motion-btn[aria-pressed="true"] { color: var(--accent-bright); border-color: var(--accent); }
-@media (hover: hover) { .motion-btn:hover { color: var(--text); border-color: var(--accent); } }
 @media (min-width: 720px) {
-  .gen-head { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "copy motion allay"; column-gap: 16px; align-items: end; }
+  .gen-head { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "copy allay"; column-gap: 24px; align-items: end; }
   .gen-head-copy { display: block; grid-area: copy; align-self: center; min-width: 0; }
   .allay-wrap { width: 220px; margin-top: 0; }
-  .motion-btn { align-self: end; margin-bottom: 8px; }
 }
 
 /* ── Рабочая область: одна колонка, с 1024 px — редактор слева, предпросмотр и результат справа ── */
@@ -233,7 +203,6 @@ video.allay-motion { opacity: .001; }
 @media (max-width: 559.98px) {
   #stopTools, #classicBlock .tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #stopTools button, #classicBlock .tools button { padding-left: 8px; padding-right: 8px; }
-  #stopTools .save-btn { grid-column: 1 / -1; }
   .fmt-info .fmt-note { display: none; }
 }
 
@@ -562,7 +531,7 @@ video.allay-motion { opacity: .001; }
 }
 .chip[aria-pressed="true"] { color: var(--accent-ink) !important; background: var(--accent) !important; border-color: var(--accent) !important; font-weight: 600; }
 .chip .cnt { margin-left: 6px; opacity: .8; font-weight: 400; }
-.palettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+.palettes { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 8px; }   /* 132: «Северное сияние» целиком */
 .pcard {
   position: relative;
   display: block !important;
@@ -781,7 +750,7 @@ video.allay-motion { opacity: .001; }
 @media (max-width: 560px) { .shot-line { grid-template-columns: minmax(0, 1fr); } .shot-line .n { text-align: left; } .shot-line > button { width: 100%; } }
 
 /* ── Движение: CSS-циклов на странице нет. Allay (видео / анимированный WebP) и мигающий &k останавливает
-   generator.js: пауза страницы (fs_gen_motion), «уменьшить движение» (и при смене настройки), скрытая вкладка ── */
+   generator.js: «уменьшить движение» (и при смене настройки), Save-Data, вне экрана, скрытая вкладка. Кнопки паузы нет ── */
 
 /* Контрастные темы Windows: системные рамки и цвета вместо наших */
 @media (forced-colors: active) {
@@ -789,7 +758,8 @@ video.allay-motion { opacity: .001; }
   .tooltip-stage, .pal-btn .sw, .pcard .bar, .chain .node, .chain .link, .stop input[type=color], .leg-sw, .leg-chip .sq,
   .dlg-box .bar, .shot-line .bar, .shot-chars i { forced-color-adjust: none; }
   .target.active, .target-bar, .pcard.active, .lore-row.active .num { outline: 2px solid Highlight; }
-  .seg button[aria-pressed="true"]::before, .fmt button[aria-pressed="true"]::before, .chip[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .seg button[aria-pressed="true"]::before, .fmt button[aria-pressed="true"]::before { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .chip[aria-pressed="true"] { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
 }
 
 /* телефон: компактнее по высоте — режим цвета в два равных столбца, отступы между блоками меньше */
@@ -806,3 +776,50 @@ video.allay-motion { opacity: .001; }
 /* шаг 2b: заметки «не применён #…» под цветами и «коды выбраны вручную» в /colors */
 .stops-note, .leg-note { margin: 8px 0 0; padding: 6px 10px; color: var(--text-2); border-left: 4px solid var(--warn); background: rgba(255, 210, 77, .06); }
 .stops-note:empty, .leg-note:empty { display: none; }
+
+/* ── Шаг 3b, телефон: «Цвета и формат» компактнее (цели по-прежнему ≥ 44 px, текст ≥ 16 px) ── */
+@media (max-width: 559.98px) {
+  #stopTools, #classicBlock .tools { align-items: stretch; }
+  /* переключатели формата остаются «2 + 1 + 1»: «Подчёркнутый» не помещается в половину ширины без разрыва слова */
+  /* кнопка скриншота — одна строка обычным шрифтом 16 px вместо двух строк пиксельного */
+  .shot-btn { min-height: 44px; padding-top: 8px !important; padding-bottom: 8px !important; font: 600 16px/24px var(--sans) !important; }
+}
+
+/* ── Шаг 3b: «Скопировать всё» внизу экрана (< 1024 px), пока «Результат» не на экране. Без анимации ── */
+.copy-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px max(var(--pad), env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(var(--pad), env(safe-area-inset-left, 0px));
+  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  box-shadow: 0 -4px 0 rgba(0, 0, 0, .45);
+}
+.copy-bar[hidden] { display: none; }
+.copy-bar-state { flex: 1 1 120px; min-width: 0; margin: 0; font-size: 16px; line-height: 1.35; color: var(--text-2); }
+.copy-bar-state.is-over { color: var(--danger); }
+.copy-bar-state.is-error { color: var(--text); }
+.copy-bar-btn { flex: none; min-height: 44px; }
+/* пока панель видна, низ страницы (подвал, последние кнопки) не уходит под неё, а прокрутка к полю — над ней */
+@media (max-width: 1023.98px) { html { scroll-padding-bottom: calc(var(--copy-bar-h, 92px) + 8px); } }
+html.has-copy-bar body { padding-bottom: var(--copy-bar-h, 92px); }
+@media (min-width: 1024px) { .copy-bar { display: none !important; } }
+@media (forced-colors: active) { .copy-bar { border-top: 2px solid CanvasText; } }
+
+/* ── Шаг 3c: телефон горизонтально и 200 % масштаба (тот же запрос, что в site.css) — заголовок ниже, на первом экране
+   уже есть «Формат» ── */
+@media (min-width: 560px) and (max-width: 1023.98px) and (max-height: 500px) {
+  .page-head.gen-head { padding-top: 12px; padding-bottom: 12px; }
+  .gen-head .page-lead { margin-top: 4px; }
+  .gen-head-link { margin-top: 0; }
+  .allay-wrap { width: 120px; }
+  .gen-head .page-title { font-size: 32px; line-height: 40px; }      /* 32/40 — на сетке пиксельного шрифта */
+  .gen-layout > .pane { padding-top: 16px; }
+  .gen-pane .pane-head { margin-bottom: 8px; }
+}

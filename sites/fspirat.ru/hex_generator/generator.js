@@ -683,11 +683,13 @@ function makeGlyph(ch,hex,f){
 /* ================= Предпросмотр ================= */
 /** Один символ цветом hex (без «#») с форматированием f. */
 const OBF="ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghkmnopqrstuvwxyz0123456789#$%&?@";
-let obfTimer=null;
-function setObfRunning(on){
+let obfTimer=null, obfAllowed=true, obfInView=true;   // мигает, только если движение разрешено, подсказка на экране и вкладка видна
+function obfSync(){
+  const on=obfAllowed&&obfInView&&!document.hidden;
   if(on&&!obfTimer) obfTimer=setInterval(()=>document.querySelectorAll(".obf").forEach(e=>{ e.textContent=OBF[Math.floor(Math.random()*OBF.length)]; }),70);
   else if(!on&&obfTimer){ clearInterval(obfTimer); obfTimer=null; }
 }
+function setObfRunning(on){ obfAllowed=on; obfSync(); }
 setObfRunning(!matchMedia("(prefers-reduced-motion: reduce)").matches);
 function glyphEl(c,hex,f){
   if(f.k&&isClassic()&&c!==" "){ const sp=document.createElement("span"); sp.className="obf"; sp.textContent=OBF[0];
@@ -1003,7 +1005,8 @@ $("symBtn").addEventListener("mousedown",e=>e.preventDefault()); // не заб�
 $("symBtn").addEventListener("click",()=>toggleSyms());
 $("symPop").addEventListener("mousedown",e=>e.preventDefault());
 document.addEventListener("mousedown",e=>{ if(!$("symPop").hidden&&!e.target.closest(".sym-wrap")) toggleSyms(false); });
-document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("symPop").hidden) toggleSyms(false); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("symPop").hidden){ const inPop=$("symPop").contains(document.activeElement);
+  toggleSyms(false); if(inPop) $("symBtn").focus(); } });
 
 function update(){
   const all = isSponsor() ? [S.sponsor] : isSponsorEdit() ? [S.name,S.nickT] : [...(showName()?[S.name]:[]),...(showLore()?S.lore:[])];
@@ -1300,11 +1303,12 @@ $("name").value=S.name.text;
 applyMode(); modeAtStartup=false;
 
 /* ================= Оформление (шаг 3): только интерфейс поверх генератора =================
- * Окна <dialog>, всплывающие палитры в пределах экрана, пауза анимации, липкая правая колонка (только если помещается),
+ * Окна <dialog>, всплывающие палитры в пределах экрана, липкая правая колонка (только если помещается),
  * каталог палитр на телефоне, тексты для чтения с экрана. Здесь ничего не строит команды и не пишет
- * fspirat_item_editor / fspirat_hex_templates; пауза хранится в своём ключе fs_gen_motion (не fs_motion главной). */
+ * fspirat_item_editor / fspirat_hex_templates. Кнопки паузы нет (решение владельца 2026-10-15, как на главной):
+ * движение останавливается само — «уменьшить движение», Save-Data, вне экрана, скрытая вкладка. */
 
-/** Движение разрешено: нет «уменьшить движение» и страница не на паузе (класс ставит блок «Движение» ниже). */
+/** Движение разрешено: в системе не включено «уменьшить движение» (класс motion-off ставит блок «Движение» ниже). */
 function motionAllowed(){ return !document.documentElement.classList.contains("motion-off"); }
 /** Как называется цель в подписях: «Название», «Строка 2», «Цвет ника». */
 function targetName(t){ return t==="name" ? $("nameLabel").textContent : t==="nick" ? "Цвет ника" : t==="sponsor" ? "Префикс sponsor" : "Строка "+(t+1); }
@@ -1469,13 +1473,12 @@ function copyAnnounce(ok,all){
 /* --- Движение. Allay: постер (кадр 1) в разметке, скрипт добавляет ОДИН файл движения — как персонаж на главной:
        не-WebKit → WebM VP9+alpha <video>, любой WebKit (Safari, iOS, WKWebView: альфу VP9 он показывает чёрной) →
        анимированный WebP; 240 или 480 по ширине × плотности экрана. Только после load, когда Allay на экране, не при
-       Save-Data. Пауза: вне экрана и в скрытой вкладке; постер — при «уменьшить движение» (и при смене настройки),
-       ошибке, отказе автозапуска и на паузе страницы (кнопка, ключ fs_gen_motion; ключ главной fs_motion не трогаем).
-       Та же пауза останавливает мигающий &k и плавную прокрутку. --- */
+       Save-Data. Пауза: вне экрана и в скрытой вкладке; постер — при «уменьшить движение» (и при смене настройки
+       на открытой странице), Save-Data, ошибке и отказе автозапуска. «Уменьшить движение» останавливает и мигающий
+       &k, и плавную прокрутку. Кнопки паузы нет (решение владельца); старый ключ fs_gen_motion не читается. --- */
 (function(){
-  const KEY="fs_gen_motion", root=document.documentElement, mq=matchMedia("(prefers-reduced-motion: reduce)");
-  const btn=$("motionBtn"), box=$("allay");
-  let paused=false; try{ paused=localStorage.getItem(KEY)==="off"; }catch(e){}
+  const root=document.documentElement, mq=matchMedia("(prefers-reduced-motion: reduce)");
+  const box=$("allay");
 
   const ua=navigator.userAgent||"";
   const webkitOnly=navigator.vendor==="Apple Computer, Inc."||/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1)
@@ -1535,15 +1538,11 @@ function copyAnnounce(ok,all){
     }
   }
   function apply(){
-    const reduce=mq.matches, on=!reduce&&!paused;
+    const on=!mq.matches;
     root.classList.toggle("motion-off",!on);
     setObfRunning(on);
-    if(btn){ btn.hidden=reduce; btn.setAttribute("aria-pressed",String(paused));
-      btn.title=paused?"Анимация на паузе — нажми, чтобы включить":"Остановить анимацию на странице"; }
     if(box) render();
   }
-  if(btn) btn.addEventListener("click",()=>{ paused=!paused;
-    try{ if(paused) localStorage.setItem(KEY,"off"); else localStorage.removeItem(KEY); }catch(e){} apply(); });
   if(mq.addEventListener) mq.addEventListener("change",apply); else if(mq.addListener) mq.addListener(apply);
   if(box){
     if(hasIO){
@@ -1563,3 +1562,102 @@ function trimNote(all,keep,lead){
   const lost=all.filter((c,i)=>i>=keep.length-1&&i<all.length-1);
   return lead+" "+all.length+" цветов, а здесь можно до "+keep.length+(lost.length>1?": не применены ":": не применён ")+lost.map(c=>"#"+c).join(", ")+".";
 }
+
+/* ===== Шаг 3b: «Скопировать всё» внизу экрана на телефоне и планшете (< 1024 px) =====
+   Видна, только пока блок «Результат» целиком вне экрана и есть что копировать. Прячется, пока открыта клавиатура
+   (фокус в поле ввода или списке), открыто окно палитры / символов. Кнопка нажимает настоящую #copyAll: то же
+   копирование, тот же честный текст и то же событие gen.copy {fmt, len, all:1}. На компьютере (≥ 1024 px) её нет. */
+(function(){
+  const bar=$("copyBar"), btn=$("copyBarBtn"), state=$("copyBarState"), all=$("copyAll"), res=$("genResult"), box=$("cmds");
+  if(!bar||!btn||!state||!all||!res||!box) return;
+  const root=document.documentElement, narrow=matchMedia("(max-width:1023.98px)");
+  let resultOnScreen=true, typing=false, failText="", pointerDown=false, waitScroll=false;
+  const plural=(n,one,few,many)=>{ const m=n%10,h=n%100; return m===1&&h!==11?one:m>=2&&m<=4&&(h<12||h>14)?few:many; };
+
+  btn.addEventListener("click",()=>{ if(!all.disabled) all.click(); });
+  // текст кнопки («Скопировано» / «Не удалось скопировать») и disabled — как у настоящей кнопки
+  const syncBtn=()=>{ btn.textContent=all.textContent; btn.disabled=all.disabled; };
+  new MutationObserver(syncBtn).observe(all,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:["disabled"]});
+  // при неудаче — то же объяснение, что под «Скопировать всё» (#copyStatus)
+  const st=$("copyStatus");
+  // короче, чем под кнопкой: панель узкая
+  if(st) new MutationObserver(()=>{ failText=st.classList.contains("visually-hidden")||!st.textContent?"":"Браузер не дал скопировать. Команды можно выделить вручную в «Результате»: нажми на команду — она выделится целиком."; summary(); })
+    .observe(st,{childList:true,characterData:true,subtree:true,attributes:true,attributeFilter:["class"]});
+
+  function summary(){
+    const rows=[...box.querySelectorAll(".cmd")], n=rows.length;
+    const over=rows.filter(r=>r.querySelector(".len.over")).length, near=rows.filter(r=>r.querySelector(".len.warn-len")).length;
+    state.classList.toggle("is-over",!failText&&over>0); state.classList.toggle("is-error",!!failText);
+    if(failText){ state.textContent=failText; return n; }
+    if(n===1){ const l=rows[0].querySelector(".len").textContent, w=rows[0].querySelector(".len-why").textContent;
+      state.textContent=l+(w?" — "+w:" — в пределах лимита"); return n; }
+    state.textContent=n+" "+plural(n,"команда","команды","команд")+" — "+(over?over+" "+plural(over,"длиннее","длиннее","длиннее")+" лимита"
+      :near?"все в пределах лимита, "+near+" почти у предела":"все в пределах лимита");
+    return n;
+  }
+  function update(){
+    const n=summary();
+    // посреди нажатия панель не появляется и не исчезает: иначе палец (или мышь) «отпустит» уже на ней и нажатие пропадёт
+    if(pointerDown) return;
+    const popup=!!openPop||!$("symPop").hidden||!!document.querySelector("dialog[open]");
+    const inBar=bar.contains(document.activeElement);
+    const show=narrow.matches&&n>0&&!resultOnScreen&&(inBar||(!typing&&!popup&&!waitScroll));
+    if(bar.hidden===show){
+      if(!show&&inBar) all.focus({preventScroll:true});   // фокус не теряется вместе со спрятанной панелью
+      bar.hidden=!show; root.classList.toggle("has-copy-bar",show);
+    }
+    if(show) root.style.setProperty("--copy-bar-h",bar.offsetHeight+"px");   // отступ снизу = настоящая высота панели
+  }
+  if(window.ResizeObserver) new ResizeObserver(()=>{ if(!bar.hidden) root.style.setProperty("--copy-bar-h",bar.offsetHeight+"px"); }).observe(bar);
+  new MutationObserver(update).observe(box,{childList:true});
+  if("IntersectionObserver" in window)
+    new IntersectionObserver(es=>{ resultOnScreen=es[es.length-1].isIntersecting; update(); }).observe(res);
+  // поле ввода страницы (временное поле копирования в <body> не в счёт — это не клавиатура)
+  const isTyping=e=>!!(e&&e.matches&&e.matches('input[type=text], input:not([type]), textarea, select')&&e.closest("main"));
+  document.addEventListener("focusin",e=>{ typing=isTyping(e.target); update(); });
+  // клавиатура закрылась: панель вернётся при следующей прокрутке, а не под пальцем, который как раз нажимает кнопку
+  document.addEventListener("focusout",e=>{ if(isTyping(e.target)) waitScroll=true; setTimeout(()=>{ typing=isTyping(document.activeElement); update(); },0); });
+  addEventListener("scroll",()=>{ if(waitScroll&&!typing){ waitScroll=false; update(); } },{passive:true});
+  document.addEventListener("pointerdown",()=>{ pointerDown=true; },true);
+  const released=()=>{ pointerDown=false; setTimeout(update,0); };
+  document.addEventListener("pointerup",released,true); document.addEventListener("pointercancel",released,true);
+  document.addEventListener("click",()=>setTimeout(update,0));
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape") setTimeout(update,0); });
+  if(narrow.addEventListener) narrow.addEventListener("change",update);
+  syncBtn(); update();
+})();
+
+/* ===== Шаг 3c: доработки по итоговой проверке ===== */
+
+/* A11Y-2: всплывающие окна не остаются открытыми, когда фокус ушёл Tab'ом дальше (они закрывали новые элементы).
+   Палитра / шрифт строки: закрываются, если фокус вне окна и вне его кнопки. «Символы»: закрываются, если фокус ушёл
+   из блока символов клавишей Tab — или мышью в любое место, кроме поля, куда символы вставляются (вставка сама ставит
+   фокус в это поле — окно при этом остаётся открытым, как и раньше). */
+let tabNav=false;
+document.addEventListener("keydown",e=>{ tabNav=e.key==="Tab"; },true);
+document.addEventListener("pointerdown",()=>{ tabNav=false; },true);
+document.addEventListener("focusin",e=>{
+  const t=e.target, byTab=tabNav; tabNav=false;
+  if(openPop&&!openPop.pop.contains(t)&&t!==openPop.btn) closePop();
+  if(!$("symPop").hidden&&!t.closest(".sym-wrap")&&(byTab||t!==lastInput)) toggleSyms(false);
+});
+
+/* A11Y-1: панель «Скопировать всё» появилась поверх элемента с фокусом клавиатуры — прокручиваем его над панелью
+   (scroll-padding-bottom ниже 1024 px теперь задан всегда, см. generator.css). */
+(function(){
+  const bar=$("copyBar"); if(!bar) return;
+  new MutationObserver(()=>{
+    if(bar.hidden) return;
+    const a=document.activeElement;
+    if(!a||a===document.body||bar.contains(a)) return;
+    const r=a.getBoundingClientRect(), top=bar.getBoundingClientRect().top;
+    if(r.bottom>top&&r.top<innerHeight) a.scrollIntoView({block:"nearest"});
+  }).observe(bar,{attributes:true,attributeFilter:["hidden"]});
+})();
+
+/* PERF-2: мигающий &k меняет буквы только пока подсказка на экране и вкладка видна (ещё и «уменьшить движение» — выше) */
+(function(){
+  const tt=$("tooltip"); if(!tt) return;
+  if("IntersectionObserver" in window) new IntersectionObserver(es=>{ obfInView=es[es.length-1].isIntersecting; obfSync(); }).observe(tt);
+  document.addEventListener("visibilitychange",obfSync);
+})();
