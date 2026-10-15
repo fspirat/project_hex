@@ -18,6 +18,8 @@ jobs:
         include:
           - project: hexgen-1.21.11
             gradle: "9.2.1"
+          - project: hexgen-26.3
+            gradle: "9.6.0"
           - project: hexgen-26.2
             gradle: "9.5.1"
           - project: hexgen-26.1.2

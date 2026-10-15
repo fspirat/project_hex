@@ -1,0 +1,80 @@
+name: API probe 26.3 (temporary)
+
+# Временная разведка для переноса на 26.3: печатает в лог версии Fabric и сигнатуры классов ввода/окон
+# во всех версиях Minecraft, чтобы писать общий код. Удаляется до слияния.
+on:
+  push:
+    paths:
+      - ".github/workflows/probe-26-3.yml"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: hexgen-1.21.11
+            gradle: "9.2.1"
+          - project: hexgen-26.2
+            gradle: "9.5.1"
+          - project: hexgen-26.3
+            gradle: "9.6.0"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ matrix.gradle }}
+
+      - name: Fabric versions for 26.3
+        if: matrix.project == 'hexgen-26.3'
+        run: |
+          echo "== loader"; curl -s https://meta.fabricmc.net/v2/versions/loader/26.3 | jq -r '.[0:3][] | .loader.version + " stable=" + (.loader.stable|tostring)'
+          echo "== game"; curl -s https://meta.fabricmc.net/v2/versions/game | jq -r '.[0:6][] | .version'
+          echo "== fabric-api"; curl -s https://maven.fabricmc.net/net/fabricmc/fabric-api/fabric-api/maven-metadata.xml | grep -o '<version>[^<]*26\.3[^<]*</version>' | tail -n 4
+          echo "== loom"; curl -s https://maven.fabricmc.net/net/fabricmc/fabric-loom/net.fabricmc.fabric-loom.gradle.plugin/maven-metadata.xml | grep -o '<version>[^<]*</version>' | tail -n 4
+
+      - name: Classpath
+        working-directory: ${{ matrix.project }}
+        run: |
+          cat > /tmp/cp.gradle <<'EOF'
+          allprojects { p -> p.afterEvaluate { p.tasks.register('printCp') { doLast { println "CP=" + p.sourceSets.main.compileClasspath.asPath } } } }
+          EOF
+          gradle -q --no-configuration-cache -I /tmp/cp.gradle printCp | grep '^CP=' | sed 's/^CP=//' > /tmp/cp.txt
+          tr ':' '\n' < /tmp/cp.txt | grep -iE 'minecraft|lwjgl|sdl' | sed 's#.*/##'
+
+      - name: Dump API
+        working-directory: ${{ matrix.project }}
+        run: |
+          CP=$(cat /tmp/cp.txt)
+          echo "== GLFW / SDL classes on classpath"
+          for j in $(tr ':' '\n' < /tmp/cp.txt); do
+            [ -f "$j" ] || continue
+            unzip -Z1 "$j" 2>/dev/null | grep -qE '^org/lwjgl/glfw/GLFW\.class$' && echo "GLFW: ${j##*/}"
+            unzip -Z1 "$j" 2>/dev/null | grep -E '^org/lwjgl/sdl/SDL[A-Za-z]*\.class$' | head -n 3 | sed "s#^#SDL (${j##*/}): #"
+          done
+          echo "== input / platform classes"
+          for j in $(tr ':' '\n' < /tmp/cp.txt | grep -i minecraft); do
+            [ -f "$j" ] || continue
+            unzip -Z1 "$j" 2>/dev/null | grep -E '^(com/mojang/blaze3d/platform|net/minecraft/client/input)/[A-Za-z]+\.class$' | sed "s#^#${j##*/}: #"
+          done
+          for c in com.mojang.blaze3d.platform.InputConstants 'com.mojang.blaze3d.platform.InputConstants$Type' \
+                   com.mojang.blaze3d.platform.Window net.minecraft.client.input.KeyEvent net.minecraft.client.input.MouseButtonInfo \
+                   net.minecraft.client.input.MouseButtonEvent net.minecraft.client.input.InputWithModifiers \
+                   net.minecraft.client.MouseHandler net.minecraft.client.KeyboardHandler net.minecraft.client.KeyMapping \
+                   net.minecraft.client.gui.components.EditBox net.minecraft.client.gui.Gui \
+                   net.fabricmc.fabric.api.client.gametest.v1.TestInput net.fabricmc.fabric.api.client.gametest.v1.context.TestInput \
+                   net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext; do
+            echo "=================== $c"
+            javap -cp "$CP" -public -constants "$c" 2>&1 | head -n 400
+          done
+          for c in net.minecraft.client.Minecraft net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.GuiGraphicsExtractor net.minecraft.client.gui.GuiGraphics; do
+            echo "=================== $c (filtered)"
+            javap -cp "$CP" -public "$c" 2>&1 | grep -iE 'shift|control|alt|key|mouse|cursor|screen|gui|hud|window|text\(|drawString|fill\(|class |error' | head -n 120
+          done

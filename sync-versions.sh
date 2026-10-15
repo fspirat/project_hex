@@ -2,14 +2,14 @@
 # Генерирует исходники для Minecraft 26.x из основной версии (hexgen-1.21.11).
 # Код правится только в hexgen-1.21.11, затем: ./sync-versions.sh
 # Различия 26.x: GuiGraphics → GuiGraphicsExtractor, render → extractRenderState,
-# drawString → text, renderItem → item, setScreen идёт через minecraft.gui (только 26.2),
+# drawString → text, renderItem → item, setScreen идёт через minecraft.gui (26.2 и 26.3),
 # afterRender → afterExtract, KeyBindingHelper → KeyMappingHelper, ClientCommandManager → ClientCommands,
-# сообщения в чат — addClientSystemMessage (в 26.2 чат — через gui.hud). Логгер чата /log — пакет fslog, правится тоже здесь.
+# сообщения в чат — addClientSystemMessage (в 26.2+ чат — через gui.hud). Логгер чата /log — пакет fslog, правится тоже здесь.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 SRC=hexgen-1.21.11/src/main
-for TARGET in hexgen-26.2 hexgen-26.1.2; do
+for TARGET in hexgen-26.3 hexgen-26.2 hexgen-26.1.2; do
   DST=$TARGET/src/main
   mkdir -p "$DST/java/ru/fspirat/hexgen/mixin" "$DST/java/ru/fspirat/hexgen/fslog" "$DST/resources/assets/hexgen/lang"
   for f in "$SRC"/java/ru/fspirat/hexgen/*.java "$SRC"/java/ru/fspirat/hexgen/mixin/*.java "$SRC"/java/ru/fspirat/hexgen/fslog/*.java; do
@@ -26,8 +26,8 @@ for TARGET in hexgen-26.2 hexgen-26.1.2; do
         -e 's/\bClientCommandManager\b/ClientCommands/g' \
         -e 's/gui\.getChat()\.addMessage(/gui.getChat().addClientSystemMessage(/g' \
         "$f" > "$DST/$rel"
-    # В 26.2 окна открываются через minecraft.gui, а чат — через gui.hud; в 26.1 — как раньше.
-    if [ "$TARGET" = hexgen-26.2 ]; then
+    # В 26.2+ окна открываются через minecraft.gui, а чат — через gui.hud; в 26.1 — как раньше.
+    if [ "$TARGET" != hexgen-26.1.2 ]; then
       sed -i -e 's/this\.minecraft\.setScreen(/this.minecraft.gui.setScreen(/g' \
              -e 's/client\.setScreen(/client.gui.setScreen(/g' \
              -e 's/gui\.getChat()/gui.hud.getChat()/g' "$DST/$rel"
@@ -36,4 +36,4 @@ for TARGET in hexgen-26.2 hexgen-26.1.2; do
   cp "$SRC"/resources/assets/hexgen/icon.png "$DST/resources/assets/hexgen/icon.png"
   cp "$SRC"/resources/assets/hexgen/lang/*.json "$DST/resources/assets/hexgen/lang/"
 done
-echo "OK: hexgen-26.2 и hexgen-26.1.2 обновлены"
+echo "OK: hexgen-26.3, hexgen-26.2 и hexgen-26.1.2 обновлены"
