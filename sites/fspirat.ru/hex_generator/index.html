@@ -24,7 +24,7 @@
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-head-180.png">
 <link rel="preload" href="/assets/fonts/minecraft.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/assets/site.css?v=20261015">
-<link rel="stylesheet" href="/hex_generator/generator.css?v=20261015">
+<link rel="stylesheet" href="/hex_generator/generator.css?v=20261016d">
 </head>
 <body>
 <div class="page-backdrop" aria-hidden="true"></div>
@@ -137,6 +137,22 @@
           </div>
         </div>
 
+        <!-- Формат — панель над полями, как в текстовом редакторе: код и образец буквы с самим эффектом.
+             id и data-c читает generator.js; #fmtBlock прячется в режиме /sponsor prefix. -->
+        <div id="fmtBlock" class="fmt-bar">
+          <p class="field-label fmt-head" id="fmtLabel">Формат <span class="fmt-to">для: <b id="fmtTarget">Название</b></span></p>
+          <div class="fmt" id="fmt" role="group" aria-labelledby="fmtLabel" aria-describedby="fmtHint">
+            <button type="button" data-c="l" aria-pressed="false" aria-label="&amp;l Жирный" title="Жирный (&amp;l)"><span class="fmt-code" aria-hidden="true">&amp;l</span><span class="fmt-smp fmt-smp--l" aria-hidden="true">O</span></button>
+            <button type="button" data-c="o" aria-pressed="false" aria-label="&amp;o Курсив" title="Курсив (&amp;o)"><span class="fmt-code" aria-hidden="true">&amp;o</span><span class="fmt-smp fmt-smp--o" aria-hidden="true">O</span></button>
+            <button type="button" data-c="n" aria-pressed="false" aria-label="&amp;n Подчёркнутый" title="Подчёркнутый (&amp;n)"><span class="fmt-code" aria-hidden="true">&amp;n</span><span class="fmt-smp fmt-smp--n" aria-hidden="true">O</span></button>
+            <button type="button" data-c="m" aria-pressed="false" aria-label="&amp;m Зачёркнутый" title="Зачёркнутый (&amp;m)"><span class="fmt-code" aria-hidden="true">&amp;m</span><span class="fmt-smp fmt-smp--m" aria-hidden="true">O</span></button>
+            <button type="button" data-c="k" aria-pressed="false" id="fmtK" aria-label="&amp;k Обфускация" aria-describedby="fmtKHint" title="«Бегущие» символы. Можно писать &amp;k прямо в тексте, &amp;r — сброс. Разрешён ли &amp;k, решает сервер."><span class="fmt-code" aria-hidden="true">&amp;k</span><span class="fmt-smp fmt-smp--k obf" aria-hidden="true">?</span></button>
+          </div>
+          <p class="field-hint fmt-hint" id="fmtHint">Выдели часть текста — формат встанет только на неё. &amp;k — «бегущие» символы, &amp;r — сброс.</p>
+          <p class="visually-hidden" id="fmtKHint">«Бегущие» символы. Можно писать &amp;k прямо в тексте, &amp;r — сброс. Разрешён ли &amp;k, решает сервер.</p>
+          <p class="field-hint fmt-note" id="fmtNote" role="status"></p>
+        </div>
+
         <div id="sponsorBlock" hidden>
           <div class="sp-row">
             <div class="field">
@@ -155,7 +171,7 @@
               </div>
             </div>
           </div>
-          <p class="field-hint" id="sponsorNote">Префикс «sponsor»: каждая буква получает свой цвет из градиента. Цвета настраиваются в разделе «Цвета и формат».</p>
+          <p class="field-hint" id="sponsorNote">Префикс «sponsor»: каждая буква получает свой цвет из градиента. Цвета настраиваются в разделе «Цвета».</p>
         </div>
 
         <div id="nameBlock" class="gen-field">
@@ -181,7 +197,7 @@
       <p class="gen-jump gen-jump--down"><a class="text-link" href="#genResult">К результату<svg class="px-arrow px-arrow--down" viewBox="0 0 7 5" width="14" height="10" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path fill="currentColor" d="M0 0h1v2H0zM6 0h1v2H6zM1 1h1v2H1zM5 1h1v2H5zM2 2h1v2H2zM4 2h1v2H4zM3 3h1v2H3z"/></svg></a></p>
 
       <section class="pane gen-pane" id="paneColors" aria-labelledby="hColors">
-        <div class="pane-head"><h2 class="pane-title" id="hColors">Цвета и формат</h2></div>
+        <div class="pane-head"><h2 class="pane-title" id="hColors">Цвета</h2></div>
         <p class="target-bar">Редактируется: <b id="targetLabel">Название</b></p>
         <button type="button" class="shot-btn" id="shotBtn"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M2 4h3l1-2h4l1 2h3v9H2zm6 2a3 3 0 1 0 0 6a3 3 0 0 0 0-6zm0 1.5a1.5 1.5 0 1 1 0 3a1.5 1.5 0 0 1 0-3z"/></svg><span>Узнать градиент по скриншоту</span></button>
         <div class="seg" role="group" aria-label="Режим цвета" id="seg">
@@ -212,16 +228,6 @@
         </div>
         <p class="warn" id="warn"></p>
         <p class="visually-hidden" id="warnLive" role="alert"></p>
-        <div id="fmtBlock">
-          <p class="field-label" id="fmtLabel">Форматирование</p>
-          <div class="fmt" id="fmt" role="group" aria-labelledby="fmtLabel">
-            <button type="button" data-c="l" aria-pressed="false">&amp;l Жирный</button>
-            <button type="button" data-c="o" aria-pressed="false">&amp;o Курсив</button>
-            <button type="button" data-c="n" aria-pressed="false">&amp;n Подчёркнутый</button>
-            <button type="button" data-c="m" aria-pressed="false">&amp;m Зачёркнутый</button>
-            <button type="button" data-c="k" aria-pressed="false" id="fmtK" hidden>&amp;k Мигающий</button>
-          </div>
-        </div>
       </section>
 
       <aside class="gen-side" id="genSide" aria-label="Предпросмотр и результат">
@@ -343,7 +349,8 @@
   </div>
 </dialog>
 
-<script src="/hex_generator/generator.js?v=20261015"></script>
+<script src="/hex_generator/gencore.js?v=20261016b"></script>
+<script src="/hex_generator/generator.js?v=20261016b"></script>
 <script src="/js/stats.js" defer></script>
 </body>
 </html>

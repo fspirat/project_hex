@@ -5,15 +5,16 @@
  *  - img/allay-*.webm, img/allay-anim-*.webp, img/allay-poster-*.webp — Allay, отрендерен для владельца в Blender 5.2
  *    (2026-10-14) по модели AllayModel и текстуре из клиента Minecraft 26.2 (Mojang): «текстура Allay из клиента
  *    Minecraft (Mojang), использование — на усмотрение владельца». Прежний allay.gif удалён (решение владельца 2026-10-15);
- *  - img/stage.webp — неподвижный кадр (первый) прежней анимации ночного леса за подсказкой (640×358; сама анимация
- *    stage.gif удалена по решению владельца 2026-10-15). Источник не подтверждён;
+ *  - img/stage-forest.webp — фон за подсказкой в предпросмотре: картинка леса с поляной, которую дал владелец (2026-10-15),
+ *    кадрирована (нижняя середина 1120×621 из 1672×941), свет и цвет подстроены под сайт; источник картинки — от владельца.
+ *    Прежний ночной фон stage.webp удалён (решение владельца 2026-10-15);
  *  - img/floppy.png (дискета 48×48 на кнопке «Сохранить палитру», показывается 24×24) — источник не подтверждён.
  *
  * Классы, которые создаёт generator.js, переименовывать нельзя (PLAN §3.2): .lore-row .target .active .pcard .pal-pop
  * .font-pop .mini-grid .pwrap .del .stop .node .link .leg-chip .leg-sw .cmd .n .len .len-why .warn-len .over .none .obf
  * .chips .chip .shot-* .sw .nm .bar .accent .small .icon-btn .pal-btn .pal-wrap .font-wrap .font-btn .own .font-opt
  * .pop-chips .pop-foot .pop-title .num .mv .fav .on .sym-cell .sym-empty .empty-seq .cnt .armed .bad .err .mini .sc
- * .sc-in .sc-word .sc-line .line .sub .shot-msg .sp .ar .smp .lbl .sq .pos .role .allay-motion .is-live.
+ * .sc-in .sc-word .sc-line .line .sub .shot-msg .sp .ar .smp .lbl .sq .pos .role .allay-motion .is-live .cmds-warn.
  * Пиксельный шрифт — только 16/24, 24/32 (сетка 8 px). Подписи с символами, которых нет в шрифте (★ ▾ ▴ ▼ ▲ ✕ ✓),
  * собирает скрипт — им шрифт var(--sans). */
 
@@ -220,6 +221,42 @@ video.allay-motion { opacity: .001; }
 @media (min-width: 480px) { .text-tools { grid-template-columns: minmax(0, 1fr) auto; } }
 .sym-wrap { position: static; }
 .sym-btn svg { flex: none; }
+/* Формат — панель над полями (как в текстовом редакторе). На кнопке код и образец буквы пиксельным шрифтом
+   с самим эффектом, как в игре; полное название — в aria-label и title. Отметка нажатого — квадрат ::before
+   (общий с .seg ниже): залит — у всего текста, наполовину и рамка --warn — у части, пустой — нет */
+.fmt-bar { container-type: inline-size; }
+.gen-layout p.fmt-head { margin-bottom: 8px; }
+.fmt-to { color: var(--muted); }
+.fmt-to b { font-weight: 400; color: var(--accent-bright); }
+.fmt { display: flex; flex-wrap: wrap; gap: 8px; }
+:where(.gen-layout) .fmt button { gap: 6px; padding: 8px 10px; }
+.fmt-bar .fmt button::before { width: 10px; height: 10px; }
+.fmt-code, .fmt-smp { display: inline-block; white-space: nowrap; }
+/* образец одной ширины: «бегущая» буква &k не дёргает кнопку */
+.fmt-smp { width: 16px; text-align: center; }
+/* жирный в игре — та же буква ещё раз на 1 пиксель шрифта (2 px) правее */
+.fmt-smp--l { text-shadow: 2px 0 0 currentColor; }
+/* курсив — наклон, как в игре (font-synthesis: none в общем слое не даёт браузеру наклонить шрифт сам) */
+.fmt-smp--o { transform: skewX(-14deg); }
+.fmt-smp--n, .fmt-smp--m { text-decoration-thickness: 2px; text-decoration-skip-ink: none; }
+.fmt-smp--n { text-decoration-line: underline; text-underline-offset: 2px; }
+.fmt-smp--m { text-decoration-line: line-through; }
+/* формат только у части текста: рамка --warn и наполовину залитый квадрат (как жёлтая кнопка в моде) */
+.fmt button[aria-pressed="mixed"] { color: var(--text); border-color: var(--warn); }
+.fmt button[aria-pressed="mixed"]::before { background: linear-gradient(135deg, currentColor 50%, transparent 50%); }
+.fmt-note { color: var(--warn); }
+.fmt-note:empty { display: none; }
+/* узкая колонка (телефон): пять равных кнопок в одну строку */
+@container (max-width: 420px) {
+  .fmt { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
+  :where(.gen-layout) .fmt button { min-width: 0; gap: 4px; padding: 8px 2px; }
+  .fmt-bar .fmt button::before { width: 8px; height: 8px; }
+  .fmt-smp { width: 14px; }
+}
+/* совсем узко (телефон 320 px): аккуратно в две строки, без вылета вбок */
+@container (max-width: 299px) {
+  .fmt { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 #symBtn[aria-expanded="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
 .sym-pop {
   position: absolute;
@@ -481,8 +518,7 @@ video.allay-motion { opacity: .001; }
 @container (max-width: 280px) { .stop .role { display: none; } }
 .warn { margin: 12px 0 0; padding: 8px 12px; font-size: 16px; line-height: 1.5; color: var(--text); background: rgba(255, 138, 128, .08); border-left: 4px solid var(--danger); }
 .warn:empty { display: none; }
-#fmtBlock { margin-top: 16px; }
-.fmt { display: flex; flex-wrap: wrap; gap: 8px; }
+.cmds .cmds-warn { margin: 0 0 12px; }
 
 /* /colors */
 #classicBlock { margin-top: 4px; }
@@ -582,9 +618,13 @@ video.allay-motion { opacity: .001; }
   min-height: 220px;
   padding: 24px 12px;
   overflow-x: auto;
-  background: #050505 url("img/stage.webp?v=20261015") center / cover no-repeat;
+  /* лес с поляной: светлая поляна под подсказкой, края уходят в цвет панели (виньетка — по размеру сцены при любой высоте) */
+  background:
+    radial-gradient(ellipse farthest-corner at 50% 52%,
+      rgba(16, 24, 18, 0) 52%, rgba(16, 24, 18, .24) 70%, rgba(16, 24, 18, .62) 89%, rgba(16, 24, 18, .85) 100%),
+    var(--surface) url("img/stage-forest.webp?v=20261016") 50% 62% / cover no-repeat;
   border: 1px solid var(--border);
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, .55);
+  box-shadow: inset 0 0 24px 2px rgba(16, 24, 18, .7);
 }
 .tooltip {
   position: relative;
@@ -597,6 +637,8 @@ video.allay-motion { opacity: .001; }
   font-size: 24px;
   line-height: 1.25;
   -webkit-font-smoothing: none;
+  /* у пиксельного шрифта нет курсива: &o — наклон, который рисует браузер (в общем слое font-synthesis: none) */
+  font-synthesis: style;
 }
 .tooltip::before {
   content: "";
@@ -759,6 +801,7 @@ video.allay-motion { opacity: .001; }
   .dlg-box .bar, .shot-line .bar, .shot-chars i { forced-color-adjust: none; }
   .target.active, .target-bar, .pcard.active, .lore-row.active .num { outline: 2px solid Highlight; }
   .seg button[aria-pressed="true"]::before, .fmt button[aria-pressed="true"]::before { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  .fmt button[aria-pressed="mixed"]::before { forced-color-adjust: none; background: linear-gradient(135deg, Highlight 50%, transparent 50%); }
   .chip[aria-pressed="true"] { forced-color-adjust: none; background: Highlight !important; color: HighlightText !important; border-color: Highlight !important; }
 }
 
@@ -770,17 +813,15 @@ video.allay-motion { opacity: .001; }
   .seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   .seg button { padding-left: 8px; padding-right: 8px; }
   .gen-field { margin-top: 12px; }
-  #fmtBlock { margin-top: 12px; }
 }
 
 /* шаг 2b: заметки «не применён #…» под цветами и «коды выбраны вручную» в /colors */
 .stops-note, .leg-note { margin: 8px 0 0; padding: 6px 10px; color: var(--text-2); border-left: 4px solid var(--warn); background: rgba(255, 210, 77, .06); }
 .stops-note:empty, .leg-note:empty { display: none; }
 
-/* ── Шаг 3b, телефон: «Цвета и формат» компактнее (цели по-прежнему ≥ 44 px, текст ≥ 16 px) ── */
+/* ── Шаг 3b, телефон: «Цвета» компактнее (цели по-прежнему ≥ 44 px, текст ≥ 16 px) ── */
 @media (max-width: 559.98px) {
   #stopTools, #classicBlock .tools { align-items: stretch; }
-  /* переключатели формата остаются «2 + 1 + 1»: «Подчёркнутый» не помещается в половину ширины без разрыва слова */
   /* кнопка скриншота — одна строка обычным шрифтом 16 px вместо двух строк пиксельного */
   .shot-btn { min-height: 44px; padding-top: 8px !important; padding-bottom: 8px !important; font: 600 16px/24px var(--sans) !important; }
 }

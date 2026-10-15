@@ -125,21 +125,14 @@ const valid = h => /^[0-9A-F]{6}$/.test(h);
 /** Цвета, которые реально участвуют: в режиме «Один цвет» — только первый (остальные скрыты и хранятся на потом). */
 const shownStops = st => st.mode==="solid" ? [st.stops[0]] : st.stops;
 const toRgb = h => [0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
-const mix = (a,b,t) => { const A=toRgb(a),B=toRgb(b);
-  return A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,"0")).join("").toUpperCase(); };
+/* Смешение цветов и деление текста на части — общие с логикой &k (gencore.js), формулы те же, что в моде. */
+const mix = GenCore.mix, segments = GenCore.segments;
 const shade = h => "#"+toRgb(h).map(v=>Math.floor(v/4).toString(16).padStart(2,"0")).join("");
 const css = cols => cols.length===1 ? "#"+cols[0] : `linear-gradient(90deg,${cols.map(c=>"#"+c).join(",")})`;
-function segments(chars,n){
-  const parts=n-1, out=[];
-  for(let k=0;k<parts;k++){
-    const a=Math.round(chars.length*k/parts), b=Math.round(chars.length*(k+1)/parts);
-    out.push(chars.slice(a,b));
-  }
-  return out;
-}
-/** Цвет каждого символа: текст делится на равные части, каждая переливается к следующему цвету (как в генераторе). */
+/** Цвет каждого символа: текст делится на равные части, каждая переливается к следующему цвету (как в генераторе).
+ *  text — строка или уже разбитый по символам массив. */
 function glyphColors(text,style){
-  const chars=[...text];
+  const chars=Array.isArray(text)?text:[...text];
   if(isClassic()){
     const cs=legOf(style); if(!cs.length) return chars.map(c=>({c,hex:"FFFFFF"}));
     if(cs.length===1) return chars.map(c=>({c,hex:LEG[cs[0]]}));
@@ -233,7 +226,37 @@ function fixText(t,colors){
   if(!t||typeof t!=="object"||Array.isArray(t)) t={text:typeof t==="string"?t:""};
   if(typeof t.text!=="string") t.text="";
   t.style=fixStyle(t.style,colors);
+  // Маска формата по символам: у старых сохранений её нет (весь текст — формат строки); испорченную выбрасываем.
+  if(t.mask!==undefined&&!(Array.isArray(t.mask)&&t.mask.length===GenCore.inline(t.text).length
+    &&t.mask.every(b=>Number.isInteger(b)&&b>=0&&b<32))) delete t.mask;
+  normMask(t);
   return t;
+}
+/* ---- Формат по символам (как в моде FSTWEAK 1.2.4) ----
+   style.fmt — формат строки: у всего текста, если нет маски, и у новых символов. t.mask — формат каждого видимого
+   символа (биты l=1 o=2 n=4 m=8 k=16), когда он меняется по ходу текста. Коды &k/&r в поле — сам текст, маска — по
+   видимым символам без кодов. */
+const fmtBits = f => GenCore.fmtBits(f);
+/** Маска, одинаковая у всех символов, — это просто формат строки: маска убирается, команда остаётся прежней. */
+function normMask(t){
+  if(!Array.isArray(t.mask)) return;
+  const n=t.mask.length;
+  if(n&&t.mask.some(b=>b!==t.mask[0])) return;
+  if(n) [...GenCore.LETTERS].forEach((c,i)=>{ t.style.fmt[c]=!!(t.mask[0]&(1<<i)); });
+  delete t.mask;
+}
+/** Новый текст поля: формат уцелевших символов сохраняется, вставленные берут формат соседа (HexState.setText). */
+function setText(t,v){
+  if(Array.isArray(t.mask)) t.mask=GenCore.spliceMask(GenCore.inline(t.text).visible,GenCore.inline(v).visible,t.mask,fmtBits(t.style.fmt));
+  t.text=v; normMask(t);
+}
+/** Строка для предпросмотра и команд: видимый текст в шрифте (коды &k/&r не видны и не попадают в градиент) и формат символов. */
+function lineOf(t){
+  const inl=GenCore.inline(t.text), font=fontOf(t.style), text=convert(inl.visible,font);
+  let chars=[...text];
+  if(chars.length!==inl.length) chars=[...inl.visible].map(c=>convert(c,font));   // шрифт изменил число символов — по одному
+  const fb=fmtBits(t.style.fmt), bits=GenCore.effective(t.mask,inl.bits,fb);
+  return {vis:inl.visible,text,chars,bits,fb,u:GenCore.uniform(bits,fb)};
 }
 S.name=fixText(S.name,PALETTES[0].colors); S.sponsor=fixText(S.sponsor,PALETTES[0].colors); S.nickT=fixText(S.nickT,["AAAAAA","FFFFFF"]);
 S.lore=S.lore.map(ln=>fixText(ln,PALETTES[5].colors));
@@ -442,7 +465,7 @@ function renderText(){
     const r=document.createElement("div"); r.className="lore-row target";
     const num=document.createElement("span"); num.className="num"; num.textContent=i+1;
     const inp=document.createElement("input"); inp.type="text"; inp.value=ln.text; inp.maxLength=80; inp.setAttribute("aria-label","Строка описания "+(i+1));
-    inp.addEventListener("input",()=>{ ln.text=inp.value; update(); });
+    inp.addEventListener("input",()=>{ setText(ln,inp.value); update(); });
     inp.addEventListener("focus",()=>{ if(active!==i) setActive(i); });
     const mv=document.createElement("div"); mv.className="mv";
     const up=document.createElement("button"); up.type="button"; up.textContent="▲"; up.disabled=i===0; up.setAttribute("aria-label","Выше");
@@ -462,7 +485,7 @@ function renderText(){
 }
 $("nickTarget").addEventListener("mousedown",e=>{ if(!e.target.closest("button")&&active!=="nick") setActive("nick"); });
 $("nickName").addEventListener("focus",()=>{ if(isSponsorEdit()&&active!=="nick") setActive("nick"); });
-$("name").addEventListener("input",()=>{ S.name.text=$("name").value; update(); });
+$("name").addEventListener("input",()=>{ setText(S.name,$("name").value); update(); });
 $("name").addEventListener("focus",()=>{ if(active!=="name") setActive("name"); });
 $("nameTarget").addEventListener("mousedown",e=>{ if(!e.target.closest("button")&&active!=="name") setActive("name"); });
 $("addLore").addEventListener("click",()=>{
@@ -496,7 +519,7 @@ function renderClassic(){
   const ln=$("legNote"); if(ln){ const own=legAuto.get(st)!==cs.join("")&&deriveLeg(st).join("")!==cs.join("");
     ln.textContent=own?"Коды /colors выбраны вручную — они сохраняются и не меняются вместе с HEX-цветами.":""; }
   $("legRev").disabled=cs.length<2; $("legClear").disabled=!cs.length;
-  document.querySelectorAll("#fmt button").forEach(b=>b.setAttribute("aria-pressed",!!st.fmt[b.dataset.c]));
+  renderFmtButtons();
 }
 $("legRev").addEventListener("click",()=>{ legOf(cur()).reverse(); refresh(); });
 $("legClear").addEventListener("click",()=>{ cur().legacy=[]; refresh(); });
@@ -508,7 +531,7 @@ $("legRnd").addEventListener("click",()=>{ track("gen.random",{classic:1});
 function renderStops(){
   const cl=isClassic();
   ["seg","chain","chainName","stopsLabel","stops","stopTools"].forEach(id=>$(id).hidden=cl||(id==="seg"&&isSponsor()));
-  $("classicBlock").hidden=!cl; $("fmtK").hidden=!cl;
+  $("classicBlock").hidden=!cl;
   if(cl) return renderClassic();
   const st=cur(), solid=st.mode==="solid";
   $("modeSolid").setAttribute("aria-pressed",solid); $("modeGrad").setAttribute("aria-pressed",!solid);
@@ -531,7 +554,7 @@ function renderStops(){
   });
   $("addStop").disabled = solid || st.stops.length>=maxStops();
   $("revStops").disabled = solid; $("rndStops").disabled=false;
-  document.querySelectorAll("#fmt button").forEach(b=>b.setAttribute("aria-pressed",!!st.fmt[b.dataset.c]));
+  renderFmtButtons();
   renderChain();
 }
 function renderChain(){
@@ -569,9 +592,65 @@ $("rndStops").addEventListener("click",()=>{ track("gen.random");
   if(st.mode==="solid") st.stops[0]=cols[0]; else st.stops=cols;
   refresh();
 });
-document.querySelectorAll("#fmt button").forEach(b=>b.addEventListener("click",()=>{
-  const f=cur().fmt, c=b.dataset.c; f[c]=!f[c]; b.setAttribute("aria-pressed",f[c]); update();
-}));
+/* ---- Кнопки формата: по выделению в поле или на всю строку (как toggleFormat в моде) ---- */
+/** Поле текста активной цели (название или строка описания) или null. */
+function activeInput(){
+  if(active==="name") return $("name");
+  return typeof active==="number" ? document.querySelectorAll(".lore-row input[type=text]")[active]||null : null;
+}
+// Выделение запоминается: кнопка может забрать фокус (Tab), а клик мимо поля и кнопок формата его сбрасывает.
+let fmtSel=null;
+const isTextField = e => !!(e&&e.matches&&e.matches("#name, .lore-row input[type=text]"));
+function rememberFmtSel(){
+  const a=document.activeElement; if(!isTextField(a)) return;
+  fmtSel = a.selectionStart!==a.selectionEnd ? {el:a,a:a.selectionStart,b:a.selectionEnd} : null;
+}
+document.addEventListener("selectionchange",rememberFmtSel);
+["select","keyup","mouseup"].forEach(t=>document.addEventListener(t,rememberFmtSel,true));
+document.addEventListener("pointerdown",e=>{ if(fmtSel&&e.target!==fmtSel.el&&!e.target.closest("#fmt")) fmtSel=null; },true);
+let fmtNoteTimer=null;
+function fmtNote(t){ const n=$("fmtNote"); n.textContent=t; clearTimeout(fmtNoteTimer); fmtNoteTimer=setTimeout(()=>{ n.textContent=""; },5000); }
+/** Состояние кнопки: формат у всех символов (true), у части (mixed), ни у кого (false). Учитываются и коды &k в поле. */
+function renderFmtButtons(){
+  const t=targetObj(active), st=t.style, whole=active==="nick"||active==="sponsor";
+  const bits = whole ? [] : lineOf(t).bits;
+  document.querySelectorAll("#fmt button").forEach(b=>{
+    const c=b.dataset.c, bit=GenCore.BIT[c], cnt=bits.filter(v=>v&bit).length;
+    b.setAttribute("aria-pressed", !bits.length ? String(!!st.fmt[c]) : cnt===bits.length ? "true" : cnt ? "mixed" : "false");
+  });
+}
+function toggleFmt(c){
+  const bit=GenCore.BIT[c], t=targetObj(active), f=t.style.fmt;
+  if(active==="nick"||active==="sponsor"){ f[c]=!f[c]; renderFmtButtons(); update(); return; }
+  const el=activeInput(), focused=!!el&&document.activeElement===el, inl=GenCore.inline(t.text), n=inl.length, fb=fmtBits(f);
+  const sel = fmtSel&&el&&fmtSel.el===el&&el.value===t.text ? [inl.visibleIndex(fmtSel.a),inl.visibleIndex(fmtSel.b)] : null;
+  const a=sel?Math.min(n,sel[0]):0, b=sel?Math.max(a,Math.min(n,sel[1])):n;
+  const eff=GenCore.effective(t.mask,inl.bits,fb);
+  let all = b>a ? true : (fb&bit)!==0;
+  for(let i=a;i<b;i++) if(!(eff[i]&bit)) all=false;
+  let moved=false;
+  if(all&&bit===GenCore.K&&inl.bits.slice(a,b).some(v=>v)){
+    // Снять &k, который дают коды в поле, можно только убрав коды: они переносятся в формат символов (materializeCodes).
+    t.text=inl.visible; t.mask=eff; moved=true;
+  }
+  if(b>a){ if(!t.mask) t.mask=new Array(n).fill(fb);
+    for(let i=a;i<b;i++) t.mask[i] = all ? t.mask[i]&~bit : t.mask[i]|bit; }
+  if(!sel) f[c]=!all;
+  normMask(t);
+  if(el&&moved){
+    // курсор и выделение остаются на тех же видимых символах
+    const pos=[el.selectionStart,el.selectionEnd].map(p=>GenCore.inline(t.text).rawOffset(inl.visibleIndex(p)));
+    el.value=t.text; el.setSelectionRange(pos[0],pos[1]);
+    if(sel) fmtSel={el,a:pos[0],b:pos[1]};
+    fmtNote("Коды &k/&r перенесены из текста в формат");
+  }
+  if(sel&&el){ el.setSelectionRange(fmtSel.a,fmtSel.b); if(focused) el.focus({preventScroll:true}); }
+  update();
+}
+document.querySelectorAll("#fmt button").forEach(b=>{
+  b.addEventListener("mousedown",e=>e.preventDefault());   // фокус и выделение остаются в поле
+  b.addEventListener("click",()=>toggleFmt(b.dataset.c));
+});
 
 /* ================= Сохранение своей палитры ================= */
 $("savePal").addEventListener("click",()=>{
@@ -692,8 +771,12 @@ function obfSync(){
 function setObfRunning(on){ obfAllowed=on; obfSync(); }
 setObfRunning(!matchMedia("(prefers-reduced-motion: reduce)").matches);
 function glyphEl(c,hex,f){
-  if(f.k&&isClassic()&&c!==" "){ const sp=document.createElement("span"); sp.className="obf"; sp.textContent=OBF[0];
-    sp.style.color="#"+hex; sp.style.textShadow=`${U()}px ${U()}px 0 ${shade(hex)}`; if(f.l) sp.style.fontWeight="700"; return sp; }
+  // &k — «бегущие» символы в любом формате (разрешён ли &k, решает сервер)
+  if(f.k&&c!==" "){ const sp=document.createElement("span"); sp.className="obf"; sp.textContent=OBF[0];
+    sp.style.color="#"+hex; sp.style.textShadow=`${U()}px ${U()}px 0 ${shade(hex)}`; if(f.l) sp.style.fontWeight="700";
+    if(f.o) sp.style.fontStyle="italic";
+    const deco=[f.n?"underline":"",f.m?"line-through":""].filter(Boolean).join(" "); if(deco) sp.style.textDecoration=deco;
+    return sp; }
   const g=makeGlyph(c,hex,f); if(g) return g;
   const u=U(), col="#"+hex, sh=shade(hex), sp=document.createElement("span");
   sp.textContent=c; sp.style.color=col;
@@ -704,8 +787,12 @@ function glyphEl(c,hex,f){
   if(deco) sp.style.textDecoration=deco;
   return sp;
 }
-function renderLine(el,text,style){
-  glyphColors(convert(text,fontOf(style)),style).forEach(g=>el.appendChild(glyphEl(g.c,g.hex,style.fmt)));
+/** Формат символа объектом {l,o,n,m,k} из битов. */
+const bitsFmt = b => Object.fromEntries([...GenCore.LETTERS].map((c,i)=>[c,!!(b&(1<<i))]));
+/** Строка предпросмотра: коды &k/&r не видны, градиент — по видимым символам, формат — у каждого свой. */
+function renderLine(el,t){
+  const L=lineOf(t);
+  glyphColors(L.chars,t.style).forEach((g,i)=>el.appendChild(glyphEl(g.c,g.hex,bitsFmt(L.bits[i]))));
 }
 /** Цвет в точке t∈[0,1] сплошного градиента (как colorAt в генераторе — для sponsor). */
 function colorAt(stops,t){
@@ -731,91 +818,59 @@ function renderPreview(){
     const d=line(), st=S.name.style, ns=S.nickT.style;
     if(!shownStops(st).every(valid)||!shownStops(ns).every(valid)) return;
     // Префикс и ник — каждый со своим градиентом, как в команде.
-    const paint=(text,style)=>{ const ch=[...text], n=ch.length;
-      ch.forEach((c,i)=>d.appendChild(glyphEl(c, style.mode==="solid"?style.stops[0]:colorAt(style.stops,n>1?i/(n-1):0), style.fmt))); };
-    paint(convert(S.name.text,fontOf(st)),st);
+    const paint=(ch,style,fmtAt)=>{ const n=ch.length;
+      ch.forEach((c,i)=>d.appendChild(glyphEl(c, style.mode==="solid"?style.stops[0]:colorAt(style.stops,n>1?i/(n-1):0), fmtAt(i)))); };
+    const L=lineOf(S.name);
+    paint(L.chars,st,i=>bitsFmt(L.bits[i]));
     d.appendChild(document.createTextNode(" "));
-    paint(S.nick||"nickname",ns);
+    paint([...(S.nick||"nickname")],ns,()=>ns.fmt);
     return;
   }
   const nm=line();
-  if(showName()){ if(S.name.text && shownStops(S.name.style).every(valid)) renderLine(nm,S.name.text,S.name.style); }
+  if(showName()){ if(S.name.text && shownStops(S.name.style).every(valid)) renderLine(nm,S.name); }
   else plain(nm,"Paper","#fff");
-  if(showLore()) S.lore.forEach(ln=>{ const d=line(); if(shownStops(ln.style).every(valid)) renderLine(d,ln.text,ln.style); });
+  if(showLore()) S.lore.forEach(ln=>{ const d=line(); if(shownStops(ln.style).every(valid)) renderLine(d,ln); });
   const sub=line(); sub.className="line sub"; sub.textContent="minecraft:paper";
 }
 
 /* ================= Команды для сервера — те же форматы, что в HEX-генераторе ================= */
 const LIMITS={"/itemname":64,"/itemlore":65};   // AgeMagic: лимит на текст после команды
-const BB={l:"B",o:"I",n:"U",m:"S"}, MM={l:"b",o:"i",n:"u",m:"st"};
-const mmEscape=c=>c.replace(/\\/g,"\\\\").replace(/</g,"\\<");
-const onFmt = style => Object.keys(style.fmt).filter(k=>style.fmt[k]&&(k!=="k"||isClassic()));
-/** AgeMagic: {#HEX>}текст{#HEX<>}текст{#HEX<} — как в генераторе. */
-function ageMagic(text,style){
-  const codes=onFmt(style).map(k=>"&"+k).join("");
-  const st = style.mode==="solid" ? [style.stops[0],style.stops[0]] : style.stops;
-  let s=""; segments([...text],st.length).forEach((seg,k)=>{ s+=`{#${st[k]}${k===0?">":"<>"}}`+codes+seg.join(""); });
-  return s+`{#${st[st.length-1]}<}`;
-}
-/** Другие форматы: цвет каждой буквы — тот же, что в предпросмотре. */
-function formatOther(kind,text,style){
-  const on=onFmt(style), f=style.fmt, glyphs=glyphColors(text,style);
-  const amp=on.map(k=>"&"+k).join(""), sect=on.map(k=>"§"+k).join("");
-  const plainSpace=c=>c===" "&&!f.n&&!f.m;
-  if(kind==="minimessage"){
-    const open = style.mode==="solid" ? "<#"+style.stops[0]+">" : "<gradient:"+style.stops.map(h=>"#"+h).join(":")+">";
-    const close = style.mode==="solid" ? "" : "</gradient>";
-    return open+on.map(k=>"<"+MM[k]+">").join("")+[...text].map(mmEscape).join("")+on.slice().reverse().map(k=>"</"+MM[k]+">").join("")+close;
-  }
-  if(kind==="bbcode"){
-    return on.map(k=>"["+BB[k]+"]").join("")
-      +glyphs.map(g=>plainSpace(g.c)?" ":"[COLOR=#"+g.hex+"]"+g.c+"[/COLOR]").join("")
-      +on.slice().reverse().map(k=>"[/"+BB[k]+"]").join("");
-  }
-  if(kind==="birdflop"){
-    const tpl=S.tpl||DEFAULT_TPL;
-    return glyphs.map(g=>{ let part=tpl; for(let i=0;i<6;i++) part=part.split("$"+(i+1)).join(g.hex[i]);
-      return part.split("$f").join(amp).split("$c").join(g.c); }).join("");
-  }
-  const color=h=>kind==="nickname"?"&#"+h : kind==="chat"?"<#"+h+">"
-    : kind==="legacy"?"&x"+[...h].map(d=>"&"+d).join("") : "§x"+[...h].map(d=>"§"+d).join("");
-  const codes=kind==="console"?sect:amp;
-  let out="", started=false;
-  glyphs.forEach(g=>{ if(started&&plainSpace(g.c)){ out+=" "; return; } out+=color(g.hex)+codes+g.c; started=true; });
-  return out;
-}
+/* Сами форматы (AgeMagic, другие, /colors) — в gencore.js: та же логика, что в моде, её можно проверить без браузера.
+   Пока формат одинаковый у всей строки, команда та же, что и раньше. */
 const withCmd = (cmd,body) => cmd&&cmd.trim() ? cmd.trim()+" "+body : body;   // только пробелы — без команды
-/** Классические цвета: &c текст &6 текст … — после каждого цвета повторяются коды формата (цвет их сбрасывает). */
-function classicBody(text,style){
-  const cs=legOf(style), codes=onFmt(style).map(k=>"&"+k).join(""), chars=[...text];
-  if(!cs.length) return codes+text;
-  const segs = cs.length===1 ? [chars] : segments(chars,cs.length+1);
-  return segs.map((seg,i)=>seg.length?"&"+cs[i]+codes+seg.join(""):"").join("");
+/** Тело команды строки в текущем формате. */
+function lineBody(L,style){
+  const other=otherKind();
+  if(isClassic()) return GenCore.classicBody(L,legOf(style));
+  if(!other) return GenCore.ageMagic(L,style.mode==="solid"?[style.stops[0],style.stops[0]]:style.stops);
+  // одинаковый формат — буквы как раньше (шрифт ко всей строке), разный — по символам вместе с маской
+  const glyphs=glyphColors(L.u>=0?L.text:L.chars,style);
+  return GenCore.formatOther(other,{text:L.text,glyphs,bits:L.u>=0?glyphs.map(()=>L.u):L.bits,u:L.u,
+    mode:style.mode,stops:style.stops,tpl:S.tpl||DEFAULT_TPL});
 }
-/** Команда для названия или строки описания. Пустая строка описания — пропуск строки: &k. */
+/** Команда для названия или строки описания. Пустая строка описания — пропуск строки: &k (и строка, где одни коды). */
 function buildLine(isName,t){
-  const other=otherKind(), text=convert(t.text,fontOf(t.style)), empty=!t.text.trim(), b=base();
+  const other=otherKind(), L=lineOf(t), empty=!L.vis.trim(), b=base();
   let cmd, limit=256;
   if(b==="item"||b==="/itemname"||b==="/itemlore"){ cmd=isName?"/itemname":"/itemlore"; limit=LIMITS[cmd]; }
   else if(other) cmd=(isName?S.cmdName:S.cmdLore)||"";
   else cmd="";
-  const body = empty ? (other==="console"?"§k":"&k") : isClassic() ? classicBody(text,t.style)
-    : other ? formatOther(other,text,t.style) : ageMagic(text,t.style);
+  const body = empty ? (other==="console"?"§k":"&k") : lineBody(L,t.style);
   const full=withCmd(cmd,body);
   // Для /itemname и /itemlore лимит считается по тексту после команды, как в генераторе.
   // тело без команды считается только у самих /itemname и /itemlore (свой ключ LIMITS), не у префикса fmt:* («toString» и т. п.)
-  return {full,len:!other&&Object.prototype.hasOwnProperty.call(LIMITS,cmd)?body.length:full.length,limit};
+  return {full,len:!other&&Object.prototype.hasOwnProperty.call(LIMITS,cmd)?body.length:full.length,limit,
+    obf:!empty&&L.bits.some(v=>v&GenCore.K)};
 }
 function sponsorLine(){
   return {full:"/sponsor prefix "+sponsorColors().map(c=>"{#"+c+"}").join("")+" {#"+nickColor()+"}",limit:256};
 }
 /** <gradient:…>префикс<gradient:…> — второй градиент сервер применяет к нику. */
 function sponsorEditLine(){
-  const st=S.name.style, ns=S.nickT.style, on=onFmt(st), non=onFmt(ns);
+  const st=S.name.style, ns=S.nickT.style;
   const tag=x => x.mode==="solid" ? "<#"+x.stops[0]+">" : "<gradient:"+x.stops.map(h=>"#"+h).join(":")+">";
-  const prefix=tag(st)+on.map(k=>"<"+MM[k]+">").join("")+[...convert(S.name.text,fontOf(st))].map(mmEscape).join("")
-    +on.slice().reverse().map(k=>"</"+MM[k]+">").join("");          // формат префикса не переходит на ник
-  return {full:"/sponsor editprefix "+prefix+tag(ns)+non.map(k=>"<"+MM[k]+">").join(""),limit:256};
+  const prefix=GenCore.editPrefix(lineOf(S.name),tag(st));          // формат префикса не переходит на ник
+  return {full:"/sponsor editprefix "+prefix+tag(ns)+GenCore.mmOpen(fmtBits(ns.fmt)),limit:256};
 }
 function cmdRow(num,line){
   if(line.len===undefined) line.len=line.full.length;
@@ -848,17 +903,20 @@ function renderCommands(){
   const box=$("cmds"); box.innerHTML="";
   const h=t=>{ const e=document.createElement("h3"); e.textContent=t; box.appendChild(e); };
   const none=t=>{ const p=document.createElement("p"); p.className="none"; p.textContent=t; box.appendChild(p); };
-  const lines=[];
-  const add=(num,l)=>{ lines.push(l.full); box.appendChild(cmdRow(num,l)); };
+  const lines=[]; let obf=false;
+  const add=(num,l)=>{ lines.push(l.full); if(l.obf) obf=true; box.appendChild(cmdRow(num,l)); };
   if(isSponsor()){ h("Префикс:"); add("",sponsorLine()); }
-  else if(isSponsorEdit()){ h("Префикс:"); if(S.name.text.trim()) add("",sponsorEditLine()); else none("Введи текст префикса."); }
+  else if(isSponsorEdit()){ h("Префикс:"); if(GenCore.inline(S.name.text).visible.trim()) add("",sponsorEditLine()); else none("Введи текст префикса."); }
   else {
     if(showName()){ h(base()==="item"||base()==="/itemname"?"Название:":"Текст:");
-      if(S.name.text.trim()) add("",buildLine(true,S.name)); else none("Текст не задан."); }
+      if(GenCore.inline(S.name.text).visible.trim()) add("",buildLine(true,S.name)); else none("Текст не задан."); }
     if(showLore()){ h("Описание:");
       if(!S.lore.length) none("Строк нет.");
       S.lore.forEach((ln,i)=>add((i+1)+" -",buildLine(false,ln))); }
   }
+  if(obf&&otherKind()==="bbcode"){   // тега для &k в BBCode нет: текст остаётся, эффекта не будет
+    const w=document.createElement("p"); w.className="notice notice--warn cmds-warn";
+    w.textContent="В BBCode нет &k: «бегущие» символы будут обычным текстом."; box.prepend(w); }
   lastAll=lines.join("\n");
   $("copyAll").disabled=!lines.length;
   const other=otherKind();
@@ -1017,7 +1075,7 @@ function update(){
     : !shownStops(cur()).every(valid) ? "Каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !allOk ? badTargets(all)+": каждый цвет должен состоять из 6 символов HEX, например FF8F5A."
     : !nickOk ? "Цвет ника должен состоять из 6 символов HEX, например FD2177." : "";
-  renderPreview();
+  renderPreview(); renderFmtButtons();
   if(!allOk||!nickOk){ $("cmds").innerHTML='<p class="none">Исправь цвета — команды появятся здесь.</p>'; lastAll=""; $("copyAll").disabled=true; $("outNote").textContent=""; }
   else renderCommands();
   save();
@@ -1397,10 +1455,10 @@ function copyAnnounce(ok,all){
   sel.addEventListener("change",render); render();
 })();
 
-/* --- что редактируется: подпись в шапке палитр повторяет «Редактируется: …» --- */
+/* --- что редактируется: подписи в шапке палитр и у панели формата повторяют «Редактируется: …» --- */
 (function(){
-  const src=$("targetLabel"), dst=$("palTarget"); if(!src||!dst) return;
-  const sync=()=>{ dst.textContent=src.textContent; };
+  const src=$("targetLabel"), dst=["palTarget","fmtTarget"].map($).filter(Boolean); if(!src||!dst.length) return;
+  const sync=()=>{ dst.forEach(d=>{ d.textContent=src.textContent; }); };
   new MutationObserver(sync).observe(src,{childList:true,characterData:true,subtree:true}); sync();
 })();
 
@@ -1415,14 +1473,16 @@ function copyAnnounce(ok,all){
 (function(){
   const tt=$("tooltip"), ul=$("previewText"); if(!tt||!ul) return;
   const ok=st=>st&&Array.isArray(st.stops)&&shownStops(st).every(valid);
-  const say=(t,st)=>!ok(st)?"(цвета с ошибкой)":!t.trim()?"(пустая строка)":isClassic()&&st.fmt&&st.fmt.k?"(скрытый текст)":t;
+  // текст без кодов &k/&r; «бегущие» символы — как в игре, их не прочитать
+  const say=(tt,st)=>{ if(!ok(st)) return "(цвета с ошибкой)"; const L=lineOf(tt);
+    return !L.vis.trim()?"(пустая строка)":L.bits.every(v=>v&GenCore.K)?"(скрытый текст)":L.vis; };
   function fill(){
     const items=[];
     if(isSponsor()) items.push(ok(S.sponsor.style)&&valid(nickColor()) ? "sponsor "+(S.nick||"nickname") : "(цвета с ошибкой)");
-    else if(isSponsorEdit()) items.push(ok(S.name.style)&&ok(S.nickT.style) ? S.name.text+" "+(S.nick||"nickname") : "(цвета с ошибкой)");
+    else if(isSponsorEdit()) items.push(ok(S.name.style)&&ok(S.nickT.style) ? GenCore.inline(S.name.text).visible+" "+(S.nick||"nickname") : "(цвета с ошибкой)");
     else {
-      items.push(showName() ? (S.name.text ? say(S.name.text,S.name.style) : "(без названия)") : "Paper");
-      if(showLore()) S.lore.forEach(ln=>items.push(say(ln.text,ln.style)));
+      items.push(showName() ? (S.name.text ? say(S.name,S.name.style) : "(без названия)") : "Paper");
+      if(showLore()) S.lore.forEach(ln=>items.push(say(ln,ln.style)));
       items.push("minecraft:paper");
     }
     ul.replaceChildren(...items.map(t=>{ const li=document.createElement("li"); li.textContent=t; return li; }));
@@ -1655,9 +1715,14 @@ document.addEventListener("focusin",e=>{
   }).observe(bar,{attributes:true,attributeFilter:["hidden"]});
 })();
 
-/* PERF-2: мигающий &k меняет буквы только пока подсказка на экране и вкладка видна (ещё и «уменьшить движение» — выше) */
+/* PERF-2: мигающий &k меняет буквы только пока подсказка или кнопка &k на экране и вкладка видна
+   (ещё и «уменьшить движение» — выше) */
 (function(){
   const tt=$("tooltip"); if(!tt) return;
-  if("IntersectionObserver" in window) new IntersectionObserver(es=>{ obfInView=es[es.length-1].isIntersecting; obfSync(); }).observe(tt);
+  if("IntersectionObserver" in window){
+    const seen=new Map();
+    const io=new IntersectionObserver(es=>{ es.forEach(e=>seen.set(e.target,e.isIntersecting)); obfInView=[...seen.values()].some(Boolean); obfSync(); });
+    [tt,$("fmtK")].forEach(e=>{ if(e) io.observe(e); });
+  }
   document.addEventListener("visibilitychange",obfSync);
 })();
