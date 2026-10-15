@@ -2,8 +2,10 @@
 /**
  * FSTWEAK: мод сообщает, кто в игре (ник, версии, сервер), и узнаёт последнюю версию.
  *   POST {"nick":"...","mod":"1.2","mc":"1.21.11","server":"...","lang":"ru_ru","join":1,"use":{"copy":2}}
- *   → {"version":"1.2","url":"https://fspirat.xyz/fstweak/","notes":"..."}
+ *   → {"version":"1.2","url":"https://fspirat.xyz/fstweak/","notes":"...","push":3}
  * Последняя версия и текст «что нового» — в fstweak-version.json рядом.
+ * push — номер ручной рассылки из админки: сменился — мод (с 1.2.4) ещё раз пишет о новой версии.
+ * Обычный режим остаётся: мод сам пишет об обновлении один раз за запуск игры.
  * Данные лежат в базе статистики (/var/lib/fspirat-stats), видны во вкладке «FSTWEAK» админки.
  */
 
@@ -18,14 +20,28 @@ header('Cache-Control: no-store');
 $latest = json_decode((string)@file_get_contents(__DIR__ . '/fstweak-version.json'), true) ?: [];
 $lang = substr((is_string($_GET['lang'] ?? null) ? $_GET['lang'] : ''), 0, 2);
 
-function answer(array $latest, string $lang): void
+/** Ответ моду: последняя версия, ссылка, «что нового» и номер ручной рассылки. */
+function reply(array $latest, string $lang): array
 {
     $notes = $latest['notes'] ?? [];
-    json_out([
+    $push = 0;
+    try {
+        $db = stats_db();
+        if ($db) $push = update_push($db)['id'];
+    } catch (Throwable $e) {
+        error_log('fstweak mod.php push: ' . $e->getMessage());
+    }
+    return [
         'version' => (string)($latest['version'] ?? ''),
         'url' => (string)($latest['url'] ?? 'https://fspirat.xyz/fstweak/'),
         'notes' => (string)($notes[$lang] ?? $notes['en'] ?? $notes['ru'] ?? ''),
-    ]);
+        'push' => $push,
+    ];
+}
+
+function answer(array $latest, string $lang): void
+{
+    json_out(reply($latest, $lang));
     exit;
 }
 
@@ -76,12 +92,7 @@ if ($db && preg_match('/^[A-Za-z0-9_]{1,16}$/', $nick)) {
         error_log('fstweak mod.php: ' . $e->getMessage());
     }
 }
-$notes = $latest['notes'] ?? [];
-json_out([
-    'version' => (string)($latest['version'] ?? ''),
-    'url' => (string)($latest['url'] ?? 'https://fspirat.xyz/fstweak/'),
-    'notes' => (string)($notes[$lang] ?? $notes['en'] ?? $notes['ru'] ?? ''),
-]);
+json_out(reply($latest, $lang));
 finish_response();
 if ($newPlayer) notify('player', $newPlayer);
 if ($db) stats_housekeeping($db);

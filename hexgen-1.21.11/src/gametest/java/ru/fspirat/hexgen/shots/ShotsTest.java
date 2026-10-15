@@ -25,8 +25,9 @@ import ru.fspirat.hexgen.SettingsScreen;
 import ru.fspirat.hexgen.SymbolsScreen;
 
 /**
- * Снимает окна FSTWEAK для страницы мода на сайте.
- * Запуск: gradle runClientGameTest — файлы появятся в build/run/clientGameTest/screenshots.
+ * Снимает окна FSTWEAK для страницы мода на сайте и проверяет &k и окно /log в живой игре.
+ * Запуск: gradle runClientGameTest — файлы появятся в build/run/clientGameTest/screenshots,
+ * итоги проверок — строки «[checks]» в логе.
  */
 public class ShotsTest implements FabricClientGameTest {
     private static final int SCALE = 3;
@@ -118,7 +119,12 @@ public class ShotsTest implements FabricClientGameTest {
             ctx.takeScreenshot("chat");
             ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
             ctx.waitTicks(3);
+
+            // Проверки в живой игре: &k в генераторе и окно /log (сайт — локальная заглушка).
+            ObfChecks.run(ctx);
+            LogViewChecks.run(ctx, sp);
         }
+        if (!LogViewChecks.fails().isEmpty()) throw new AssertionError("Не прошли проверки: " + LogViewChecks.fails());
     }
 
     /** Убирает всплывающие уведомления о рецептах и достижениях и их строки в чате. */

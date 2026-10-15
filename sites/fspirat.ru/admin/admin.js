@@ -21,8 +21,24 @@
     }
     return el;
   }
+  /** Таблица в своём блоке: широкая прокручивается внутри него, а не вся страница */
+  function feed(thead, tbody) { return h('div', { class: 'adm-scroll' }, h('table', { class: 'feed' }, thead, tbody)); }
   var svgNS = 'http://www.w3.org/2000/svg';
   function s(tag, attrs) { var el = document.createElementNS(svgNS, tag); for (var k in attrs) el.setAttribute(k, attrs[k]); return el; }
+  /** Пиксельный значок в духе Minecraft (как .px-arrow в site.css): клетки-прямоугольники, без сглаживания, цвет — currentColor.
+   *  [ширина, высота в клетках, контур, второй слой потусклее] */
+  var PX = {
+    pin: [7, 7, 'M1 0h5v1H1zM2 1h3v2H2zM0 3h7v1H0z', 'M3 4h1v3H3z'],
+    up: [7, 4, 'M3 0h1v1H3zM2 1h3v1H2zM1 2h5v1H1zM0 3h7v1H0z'],
+    down: [7, 4, 'M0 0h7v1H0zM1 1h5v1H1zM2 2h3v1H2zM3 3h1v1H3z']
+  };
+  function px(name) {
+    var d = PX[name], el = s('svg', { 'class': 'px-ico px-' + name, viewBox: '0 0 ' + d[0] + ' ' + d[1], width: d[0] * 2, height: d[1] * 2,
+      'aria-hidden': 'true', focusable: 'false', 'shape-rendering': 'crispEdges' });
+    el.appendChild(s('path', { fill: 'currentColor', d: d[2] }));
+    if (d[3]) el.appendChild(s('path', { fill: 'currentColor', 'fill-opacity': '.6', d: d[3] }));
+    return el;
+  }
 
   if (window.top !== window.self) { try { window.top.location = window.location.href; } catch (e) {} }
 
@@ -43,7 +59,7 @@
     if (post) headers['Content-Type'] = 'application/json';
     return fetch(API + '?' + q, { method: post ? 'POST' : 'GET', body: post ? JSON.stringify(post) : undefined,
       credentials: 'omit', cache: 'no-store', headers: headers }).then(function (r) {
-      if (r.status === 401 && params.q !== 'login') { token(null); showLogin('Вход истёк — войдите снова.'); throw new Error('auth'); }
+      if (r.status === 401 && params.q !== 'login') { token(null); showLogin('Вход истёк — войди снова.'); throw new Error('auth'); }
       return r.json().catch(function () { return {}; }).then(function (j) {
         if (!r.ok) { var e = new Error('HTTP ' + r.status); e.data = j; e.status = r.status; throw e; }
         return j;
@@ -87,9 +103,9 @@
       if (d.error === 'locked') msg = 'Слишком много неверных попыток. Вход с этого адреса закрыт ещё на ' + Math.ceil((d.wait || 900) / 60) + ' мин.';
       else if (d.error === 'password') msg = 'Неверный пароль. Осталось попыток: ' + d.left + '.';
       else if (d.error === 'code') msg = 'Неверный код. Осталось попыток: ' + d.left + '.';
-      else if (d.error === 'expired') { msg = 'Код истёк — введите пароль ещё раз, придёт новый код.'; codeStep(false); }
-      else if (d.error === 'telegram') msg = 'Пароль верный, но код в Telegram отправить не удалось. Попробуйте через минуту.';
-      else msg = 'Сервер статистики не отвечает. Попробуйте позже.';
+      else if (d.error === 'expired') { msg = 'Код истёк — введи пароль ещё раз, придёт новый код.'; codeStep(false); }
+      else if (d.error === 'telegram') msg = 'Пароль верный, но код в Telegram отправить не удалось. Попробуй через минуту.';
+      else msg = 'Сервер статистики не отвечает. Попробуй позже.';
       $('loginErr').textContent = msg; $('loginErr').hidden = false;
       (pending ? $('code') : $('pw')).select();
     }).then(function () { btn.disabled = false; });
@@ -114,7 +130,8 @@
   };
   var AUDIT = { chatlog_deleted: 'Удалён чат-лог', chatlog_pinned: 'Лог закреплён', chatlog_unpinned: 'Лог откреплён', login_ok: 'Вход', login_fail: 'Неверный пароль',
     login_blocked: 'Вход заблокирован', logout: 'Выход', setup: 'Первая настройка', password_changed: 'Пароль изменён',
-    backup_made: 'Создана копия базы', backup_downloaded: 'Скачана копия базы', notify_changed: 'Изменены уведомления' };
+    backup_made: 'Создана копия базы', backup_downloaded: 'Скачана копия базы', notify_changed: 'Изменены уведомления',
+    update_push: 'Разослано уведомление об обновлении' };
   var pageName = function (p) { return PAGES[p] || p; };
   var fmtName = function (f) { return FMT[f] || f; };
   var evName = function (e) { return EV_NAME[e] || e; };
@@ -154,7 +171,7 @@
 
   function vidButton(vid) { return h('button', { type: 'button', class: 'vid', title: 'Вся история посетителя', onclick: function () { openVisitor(vid); } }, shortId(vid)); }
   function who(r) {
-    var tags = h('span');
+    var tags = h('span', { class: 'adm-tags' });
     if (r.device) tags.appendChild(h('span', { class: 'tag', text: r.device }));
     if (r.browser) tags.appendChild(h('span', { class: 'tag', text: r.browser }));
     if (r.source) tags.appendChild(h('span', { class: 'tag', text: r.source }));
@@ -168,10 +185,22 @@
   function show(tab) {
     current = tab;
     document.querySelectorAll('[data-pane]').forEach(function (p) { p.hidden = p.getAttribute('data-pane') !== tab; });
-    document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
+    document.querySelectorAll('.tabs button').forEach(function (b) {
+      var on = b.getAttribute('data-tab') === tab;
+      b.setAttribute('aria-selected', String(on));
+      if (on) b.removeAttribute('tabindex'); else b.setAttribute('tabindex', '-1');
+    });
     load();
   }
   document.querySelectorAll('.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.getAttribute('data-tab')); }); });
+  document.querySelector('.tabs').addEventListener('keydown', function (e) {
+    var tabs = [].slice.call(document.querySelectorAll('.tabs button')), i = tabs.indexOf(document.activeElement);
+    if (i < 0) return;
+    var j = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+      : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1;
+    if (j < 0) return;
+    e.preventDefault(); tabs[j].focus(); show(tabs[j].getAttribute('data-tab'));
+  });
   function load() {
     clearTimeout(timer);
     var next = { overview: liveOpen ? 15000 : 60000, mod: 60000 }[current];
@@ -196,7 +225,8 @@
   function delta(cur, prev) {
     if (!prev) return null;
     var p = Math.round((cur - prev) / prev * 100);
-    return h('span', { class: p >= 0 ? 'up' : 'down', text: (p >= 0 ? '▲ ' : '▼ ') + Math.abs(p) + '%' });
+    return h('span', { class: p >= 0 ? 'up' : 'down' }, px(p >= 0 ? 'up' : 'down'),
+      h('span', { class: 'visually-hidden', text: p >= 0 ? 'рост ' : 'спад ' }), Math.abs(p) + '%');
   }
   function card(label, value, d, extra) {
     return h('div', { class: 'card' + (extra ? ' ' + extra : '') }, h('div', { class: 'l', text: label }), h('div', { class: 'v', text: value }),
@@ -305,7 +335,7 @@
     });
     // наведение: перекрестие + подсказка
     var cross = s('line', { class: 'cross', y1: T, y2: H - B, x1: 0, x2: 0, visibility: 'hidden' });
-    var dots = SERIES.map(function (S) { return s('circle', { r: 4.5, fill: S.color, stroke: '#0d120d', 'stroke-width': 2, cx: 0, cy: 0, visibility: 'hidden' }); });
+    var dots = SERIES.map(function (S) { return s('circle', { r: 4.5, fill: S.color, stroke: 'var(--surface)', 'stroke-width': 2, cx: 0, cy: 0, visibility: 'hidden' }); });
     svg.appendChild(cross); dots.forEach(function (c) { svg.appendChild(c); });
     var tip = h('div', { class: 'tip', hidden: '' });
     var hit = s('rect', { class: 'hit', x: L, y: T, width: W - L - R, height: H - T - B });
@@ -353,7 +383,7 @@
         ul.appendChild(h('li', { title: String(r.k) }, h('i', { class: 'b', style: 'width:' + Math.max(2, r.n / max * 100) + '%' }),
           h('span', { class: 'k', text: name }), h('span', { class: 'n', text: num(r.n) }), h('span', { class: 'u', text: num(r.u) })));
       });
-      box.appendChild(h('div', { class: 'panel' }, h('div', { class: 'ph' }, h('h2', { text: cfg[1] })),
+      box.appendChild(h('div', { class: 'pane adm-pane' }, h('div', { class: 'pane-head' }, h('h2', { class: 'adm-title', text: cfg[1] })),
         list.length ? h('div', { class: 'top-head' }, h('span', { text: cfg[2] }), h('span', { text: 'людей' })) : null,
         list.length ? ul : h('p', { class: 'empty', text: 'Пока пусто' })));
     });
@@ -373,7 +403,7 @@
           h('td', null, who(x)),
           h('td', { class: 't' }, 'на сайте ' + ago(r.now - x.started), h('br'), h('small', { class: 'muted', text: 'активен ' + ago(Math.max(0, r.now - x.last_seen)) + ' назад' }))));
       });
-      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Посетитель' }), h('th', { text: 'Где сейчас' }), h('th', { text: 'Кто' }), h('th', { text: 'Время' }))), tb));
+      box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Посетитель' }), h('th', { text: 'Где сейчас' }), h('th', { text: 'Кто' }), h('th', { text: 'Время' }))), tb));
     });
   }
 
@@ -390,7 +420,7 @@
         sel.value = cur;
       }
       var box = $('journal');
-      if (!more) { box.textContent = ''; lastDay = ''; box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Время' }), h('th', { text: 'Посетитель' }), h('th', { text: 'Действие' }), h('th', { text: 'Страница' }), h('th', { text: 'Кто' }))), h('tbody'))); }
+      if (!more) { box.textContent = ''; lastDay = ''; box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Время' }), h('th', { text: 'Посетитель' }), h('th', { text: 'Действие' }), h('th', { text: 'Страница' }), h('th', { text: 'Кто' }))), h('tbody'))); }
       var tb = box.querySelector('tbody');
       if (!more && !r.list.length) tb.appendChild(h('tr', null, h('td', { colspan: 5, class: 'empty', text: 'Ничего не найдено.' })));
       r.list.forEach(function (x) {
@@ -418,7 +448,7 @@
     var box = $('visitor'); box.textContent = 'Загрузка…';
     api({ q: 'visitor', vid: vid }).then(function (r) {
       var v = r.visitor; box.textContent = '';
-      box.appendChild(h('div', { class: 'ph' }, h('h2', null, 'Посетитель ', h('b', { text: shortId(v.vid) })), h('span', { class: 'muted', text: 'полный номер ' + v.vid })));
+      box.appendChild(h('div', { class: 'pane-head' }, h('h2', { class: 'adm-title' }, 'Посетитель ', h('b', { text: shortId(v.vid) })), h('span', { class: 'muted', text: 'полный номер ' + v.vid })));
       var info = [['Первый визит', date(v.first_seen) + ' ' + time(v.first_seen)], ['Последняя активность', date(v.last_seen) + ' ' + time(v.last_seen)],
         ['Визитов', num(v.visits)], ['Пришёл впервые из', v.source || '—'], ['Устройство', [v.device, v.browser, v.os].filter(Boolean).join(' · ')]];
       var vh = h('div', { class: 'vhead' }); box.appendChild(vh);
@@ -430,7 +460,7 @@
         tb.appendChild(h('tr', null, h('td', { class: 't', text: time(x.ts) }), h('td', null, x.visit ? h('span', { class: 'tag', text: 'визит ' + x.visit }) : ''),
           h('td', { class: 'ev', text: describe(x.ev, x.data) }), h('td', null, pageName(x.path), h('br'), h('small', { class: 'muted', text: x.host }))));
       });
-      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Время' }), h('th', { text: 'Визит' }), h('th', { text: 'Действие' }), h('th', { text: 'Страница' }))), tb));
+      box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Время' }), h('th', { text: 'Визит' }), h('th', { text: 'Действие' }), h('th', { text: 'Страница' }))), tb));
       if (r.events.length >= 500) box.appendChild(h('p', { class: 'muted', text: 'Показаны последние 500 действий.' }));
     }).catch(function () { box.textContent = 'Посетитель не найден (данные хранятся 90 дней).'; });
   }
@@ -451,10 +481,44 @@
       cards.append(card('Сейчас в игре', num(c.online), 'активность за 15 минут', 'live'), card('Всего игроков', num(c.total), null),
         card('За сутки', num(c.day), null), card('За 7 дней', num(c.week), 'новых: ' + num(c.fresh)),
         card('Последняя версия', r.latest || '—', old ? old + ' на старой версии' : 'все обновлены'));
+      renderPush(r);
       renderMod();
       renderUsage(r.usage || []);
       loadDownloads();
     });
+  }
+
+  // Ручная рассылка уведомления об обновлении. Обычный режим не меняется: мод сам пишет о новой версии
+  // один раз за запуск игры. Кнопка просит все моды со старой версией написать ещё раз (умеют с FSTWEAK 1.2.4).
+  var PUSH_FROM = '1.2.4';
+  function renderPush(r) {
+    var box = $('updPush'); box.textContent = '';
+    var p = r.push || { id: 0, ts: 0, version: '' };
+    $('pushInfo').textContent = p.ts ? 'последняя рассылка: ' + date(p.ts) + ' ' + time(p.ts).slice(0, 5) + (p.version ? ' · версия ' + p.version : '')
+      : 'вручную ещё не рассылали';
+    var now = Date.now() / 1000;
+    var old = r.list.filter(function (x) { return r.latest && cmpVer(x.mod, r.latest) < 0; });
+    var can = old.filter(function (x) { return cmpVer(x.mod, PUSH_FROM) >= 0; });
+    var online = can.filter(function (x) { return now - x.last_seen < 900; }).length;
+    var legacy = old.length - can.length;
+    var btn = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Разослать уведомление', onclick: function () {
+      if (!confirm('Разослать уведомление о версии ' + r.latest + '?\n\nЕго ещё раз увидят в чате игроки со старой версией FSTWEAK (' + PUSH_FROM +
+          ' и новее): кто сейчас в игре — в течение 10 минут, остальные — при следующем входе в мир.')) return;
+      btn.disabled = true; btn.textContent = 'Отправляю…';
+      api({ q: 'update_push' }, {}).then(function () { loadMod(); }, function (e) {
+        var d = e.data || {};
+        btn.disabled = false;
+        btn.textContent = d.error === 'wait' ? 'Подожди ' + d.wait + ' с и нажми ещё раз' : 'Не получилось — ещё раз';
+        if (d.error === 'wait') setTimeout(function () { btn.textContent = 'Разослать уведомление'; }, d.wait * 1000);
+      });
+    } });
+    btn.disabled = !r.latest;
+    box.appendChild(h('div', { class: 'adm-actions' }, btn, h('span', { class: 'muted', text: r.latest
+      ? 'версия на сайте ' + r.latest + ' · на старой версии ' + old.length + ' (получат по кнопке: ' + can.length + ', из них сейчас в игре: ' + online + ')'
+      : 'версия на сайте не указана (api/fstweak-version.json)' })));
+    box.appendChild(h('p', { class: 'muted', text: 'Автоматически мод сам проверяет версию при входе в мир и раз в 10 минут и пишет о новой один раз за запуск игры — так и остаётся. ' +
+      'Кнопка — ручная рассылка: уведомление придёт ещё раз. Версии до ' + PUSH_FROM + ' кнопку не понимают и получают только автоматическое' +
+      (legacy ? ' (таких игроков: ' + legacy + ').' : '.') }));
   }
 
   // что делают в моде — счётчики приходят вместе с проверкой обновлений (с версии 1.2.2)
@@ -488,11 +552,11 @@
         tb.appendChild(h('tr', null, h('td', null, h('div', { class: 'ev', text: f.file.replace(/^fstweak-|\.jar$/g, '') })),
           h('td', { class: 't', text: num(f.site) }), h('td', { class: 't', text: num(f.github) }), h('td', { class: 't', text: num(f.site + f.github) })));
       });
-      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Minecraft' }), h('th', { text: 'С сервера' }), h('th', { text: 'GitHub (раньше)' }), h('th', { text: 'Всего' }))), tb));
+      box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Minecraft' }), h('th', { text: 'С сервера' }), h('th', { text: 'GitHub (раньше)' }), h('th', { text: 'Всего' }))), tb));
       var days = (r.days || []).map(function (d) { return d.day.slice(8, 10) + '.' + d.day.slice(5, 7) + ': ' + num(d.n); }).join(' · ');
       box.appendChild(h('p', { class: 'muted', text: 'Всего скачиваний FSTWEAK: ' + num(tg + ts) + ' (с сервера ' + num(ts) + ', с GitHub до переезда ' + num(tg) + '). Повторное скачивание с одного адреса за сутки не считается.' }));
       if (days) box.appendChild(h('p', { class: 'muted', text: 'По дням (30 дней): ' + days }));
-    }).catch(function (e) { if (e.message !== 'auth') { $('downloads').textContent = 'Не удалось загрузить счётчик — попробуйте позже.'; } });
+    }).catch(function (e) { if (e.message !== 'auth') { $('downloads').textContent = 'Не удалось загрузить счётчик — попробуй позже.'; } });
   }
 
 
@@ -506,7 +570,7 @@
     api({ q: 'player', nick: nick }).then(function (r) {
       var p = r.player, now = Date.now() / 1000; box.textContent = '';
       var online = now - p.last_seen < 900;
-      box.appendChild(h('div', { class: 'ph' }, h('h2', null, 'Игрок ', h('b', { text: p.nick })), online ? h('span', { class: 'tag new', text: 'сейчас в игре' }) : h('span', { class: 'muted', text: 'был ' + date(p.last_seen) + ' ' + time(p.last_seen) })));
+      box.appendChild(h('div', { class: 'pane-head' }, h('h2', { class: 'adm-title' }, 'Игрок ', h('b', { text: p.nick })), online ? h('span', { class: 'tag new', text: 'сейчас в игре' }) : h('span', { class: 'muted', text: 'был ' + date(p.last_seen) + ' ' + time(p.last_seen) })));
       var vh = h('div', { class: 'vhead' }); box.appendChild(vh);
       [['Первый заход', date(p.first_seen) + ' ' + time(p.first_seen)], ['Последняя активность', date(p.last_seen) + ' ' + time(p.last_seen)],
         ['Заходов в мир', num(p.joins)], ['Сейчас', 'FSTWEAK ' + (p.mod || '?') + ' · MC ' + (p.mc || '?')], ['Язык игры', p.lang || '—']
@@ -519,17 +583,17 @@
             h('td', { text: x.server === 'singleplayer' ? 'одиночная игра' : x.server || 'меню' }),
             h('td', { class: 't', text: date(x.first_seen) + ' — ' + date(x.last_seen) })));
         });
-        box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Версии' }), h('th', { text: 'Сервер' }), h('th', { text: 'Когда' }))), tb));
+        box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Версии' }), h('th', { text: 'Сервер' }), h('th', { text: 'Когда' }))), tb));
       } else box.appendChild(h('p', { class: 'empty', text: 'История появится со следующего захода игрока (собирается с этого обновления).' }));
       box.appendChild(h('div', { class: 'sub-h', text: 'Чат-логи игрока' }));
       if (r.chatlogs.length) {
         var tl = h('tbody');
         r.chatlogs.forEach(function (x) {
           tl.appendChild(h('tr', null, h('td', { class: 't', text: date(x.created) + ' ' + time(x.created) }),
-            h('td', null, x.pinned ? '📌 ' : '', h('a', { href: LOG_VIEW + x.id, target: '_blank', rel: 'noopener noreferrer', text: x.id })),
+            h('td', null, x.pinned ? px('pin') : null, x.pinned ? h('span', { class: 'visually-hidden', text: 'закреплён ' }) : null, h('a', { href: LOG_VIEW + x.id, target: '_blank', rel: 'noopener noreferrer', text: x.id })),
             h('td', { text: x.server || '—' }), h('td', { class: 't', text: num(x.n) + ' сообщ. · ' + num(x.views) + ' просм.' })));
         });
-        box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }), h('th', { text: 'Сервер' }), h('th', { text: 'Размер' }))), tl));
+        box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }), h('th', { text: 'Сервер' }), h('th', { text: 'Размер' }))), tl));
       } else box.appendChild(h('p', { class: 'empty', text: 'Этот игрок не сохранял чат командой /log.' }));
     }).catch(function () { box.textContent = 'Игрок не найден.'; });
   }
@@ -546,13 +610,13 @@
       var online = now - p.last_seen < 900, outdated = r.latest && cmpVer(p.mod, r.latest) < 0;
       tb.appendChild(h('tr', null,
         h('td', { class: 'who' }, h('button', { type: 'button', class: 'vid', title: 'Карточка игрока', text: p.nick, onclick: function () { openPlayer(p.nick); } }),
-          online ? h('span', { class: 'tag new', text: 'в игре', style: 'margin-left:6px' }) : null),
+          online ? h('span', { class: 'tag new', text: 'в игре' }) : null),
         h('td', null, h('span', { class: 'tag' + (outdated ? ' bad' : ''), text: 'FSTWEAK ' + (p.mod || '?') }), h('span', { class: 'tag', text: 'MC ' + (p.mc || '?') })),
         h('td', null, h('small', { class: 'muted', text: p.server === 'singleplayer' ? 'одиночная игра' : p.server || '—' })),
         h('td', { class: 't' }, online ? 'сейчас' : date(p.last_seen) + ' ' + time(p.last_seen), h('br'), h('small', { class: 'muted', text: 'впервые ' + date(p.first_seen) })),
         h('td', { class: 't', text: num(p.joins) + ' ' + plural(p.joins, 'заход', 'захода', 'заходов') })));
     });
-    box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Ник' }), h('th', { text: 'Версии' }),
+    box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Ник' }), h('th', { text: 'Версии' }),
       h('th', { text: 'Сервер' }), h('th', { text: 'Последний раз' }), h('th', { text: 'Заходы' }))), tb));
   }
   $('modQ').addEventListener('input', renderMod);
@@ -566,16 +630,16 @@
       if (!r.list.length) { box.appendChild(h('p', { class: 'empty', text: 'Пока никто не загружал логи. Команда в игре: /log' })); return; }
       var tb = h('tbody');
       r.list.forEach(function (x) {
-        var del = h('button', { type: 'button', class: 'small', text: 'Удалить', onclick: function () {
+        var del = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Удалить', onclick: function () {
           if (!confirm('Удалить чат-лог ' + x.id + '? Ссылка перестанет открываться.')) return;
           del.disabled = true;
           api({ q: 'chatlog_delete' }, { id: x.id }).then(function () { loadChatlogs(); }, function () { del.disabled = false; });
         } });
-        var pin = h('button', { type: 'button', class: 'pin', 'aria-pressed': String(!!x.pinned), text: '📌',
-          title: x.pinned ? 'Закреплён: не удалится через 30 дней. Нажмите, чтобы открепить' : 'Закрепить: лог не удалится через 30 дней', onclick: function () {
+        var pin = h('button', { type: 'button', class: 'pin', 'aria-pressed': String(!!x.pinned), 'aria-label': 'Закрепить лог ' + x.id,
+          title: x.pinned ? 'Закреплён: не удалится через 30 дней. Нажми, чтобы открепить' : 'Закрепить: лог не удалится через 30 дней', onclick: function () {
             pin.disabled = true;
             api({ q: 'chatlog_pin' }, { id: x.id, pinned: !x.pinned }).then(function () { loadChatlogs(); }, function () { pin.disabled = false; });
-          } });
+          } }, px('pin'));
         tb.appendChild(h('tr', { class: x.pinned ? 'pinned' : null },
           h('td', { class: 't' }, date(x.created) + ' ' + time(x.created), h('br'),
             h('small', { class: 'muted', text: x.pinned ? 'хранится бессрочно' : 'удалится ' + date(x.created + 30 * 86400) })),
@@ -586,9 +650,9 @@
           h('td', { class: 't', text: num(x.views) }),
           h('td', { class: 't' }, pin, del)));
       });
-      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }),
+      box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Ссылка' }),
         h('th', { text: 'Игрок · сервер' }), h('th', { text: 'Размер' }), h('th', { text: 'Просмотры' }), h('th', { text: '' }))), tb));
-      box.appendChild(h('p', { class: 'muted', text: 'Всего ' + num(r.count) + ' логов, ' + bytes(r.bytes) + ' текста. Старше 30 дней удаляются сами, кроме закреплённых 📌.' }));
+      box.appendChild(h('p', { class: 'muted', text: 'Всего ' + num(r.count) + ' ' + plural(r.count, 'лог', 'лога', 'логов') + ', ' + bytes(r.bytes) + ' текста. Старше 30 дней удаляются сами, кроме закреплённых булавкой.' }));
     });
   }
 
@@ -629,18 +693,18 @@
   function renderBackups(r) {
     $('bkInfo').textContent = 'автоматически раз в сутки, хранятся ' + r.backup_keep + ' последних · база сейчас ' + bytes(r.db);
     var box = $('backups'); box.textContent = '';
-    var make = h('button', { type: 'button', class: 'small accent', text: 'Сделать копию сейчас', onclick: function () {
+    var make = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Сделать копию сейчас', onclick: function () {
       make.disabled = true; make.textContent = 'Копирую…';
       api({ q: 'backup_now' }, {}).then(function () { loadService(); }, function () { make.disabled = false; make.textContent = 'Не получилось — ещё раз'; });
     } });
-    box.appendChild(h('div', { class: 'field' }, make, h('span', { class: 'muted', text: 'Копия — файл SQLite: его можно открыть в DB Browser for SQLite или вернуть на сервер вместо stats.sqlite.' })));
+    box.appendChild(h('div', { class: 'adm-actions' }, make, h('span', { class: 'muted', text: 'Копия — файл SQLite: его можно открыть в DB Browser for SQLite или вернуть на сервер вместо stats.sqlite.' })));
     if (!r.backups.length) { box.appendChild(h('p', { class: 'empty', text: 'Копий пока нет — первая появится в течение часа после выкладки.' })); return; }
     var tb = h('tbody');
     r.backups.forEach(function (b) {
-      var dl = h('button', { type: 'button', class: 'small', text: 'Скачать', onclick: function () { download(b.name, dl); } });
+      var dl = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Скачать', onclick: function () { download(b.name, dl); } });
       tb.appendChild(h('tr', null, h('td', { class: 't', text: date(b.time) + ' ' + time(b.time).slice(0, 5) }), h('td', { text: b.name }), h('td', { class: 't', text: bytes(b.size) }), h('td', null, dl)));
     });
-    box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Файл' }), h('th', { text: 'Размер' }), h('th', { text: '' }))), tb));
+    box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Файл' }), h('th', { text: 'Размер' }), h('th', { text: '' }))), tb));
   }
   function download(name, btn) {
     btn.disabled = true;
@@ -653,43 +717,43 @@
       }).catch(function () { alert('Не удалось скачать копию.'); }).then(function () { btn.disabled = false; });
   }
 
-  var NOTIFY_ERR = { token: 'Токен не подошёл — проверьте, что скопировали его целиком из @BotFather.', network: 'Сервер не смог связаться с api.telegram.org.',
-    chat: 'Сначала выберите чат.', send: 'Telegram не принял сообщение', write: 'Не удалось сохранить настройки на сервере.' };
+  var NOTIFY_ERR = { token: 'Токен не подошёл — проверь, что скопировал его целиком из @BotFather', network: 'Сервер не смог связаться с api.telegram.org',
+    chat: 'Сначала выбери чат', send: 'Telegram не принял сообщение', write: 'Не удалось сохранить настройки на сервере' };
   function notifyErr(e) { var d = e.data || {}; return (NOTIFY_ERR[d.error] || 'Ошибка') + (d.detail ? ': ' + d.detail : '.'); }
   function renderNotify(n) {
     var box = $('notify'); box.textContent = '';
     var msg = h('p', { class: 'msg', role: 'status' });
     function say(t, cls) { msg.textContent = t; msg.className = 'msg ' + (cls || ''); }
-    $('tgState').textContent = n.token && n.chat ? 'включены' + (n.bot ? ' · @' + n.bot : '') : n.token ? 'бот подключён, выберите чат' : 'не настроены';
+    $('tgState').textContent = n.token && n.chat ? 'включены' + (n.bot ? ' · @' + n.bot : '') : n.token ? 'бот подключён, выбери чат' : 'не настроены';
     if (!n.token) {
-      box.appendChild(h('p', { class: 'note' }, '1. В Telegram откройте ', h('b', { text: '@BotFather' }), ', отправьте ', h('b', { text: '/newbot' }),
-        ' и придумайте имя — он пришлёт токен.', h('br'), '2. Вставьте токен сюда и нажмите «Подключить».'));
-      var tok = h('input', { type: 'password', placeholder: '123456789:AA…', 'aria-label': 'Токен бота', autocomplete: 'off' });
-      var save = h('button', { type: 'button', class: 'small accent', text: 'Подключить', onclick: function () {
+      box.appendChild(h('div', { class: 'notice' }, h('p', null, '1. В Telegram открой ', h('b', { text: '@BotFather' }), ', отправь ', h('b', { text: '/newbot' }),
+        ' и придумай имя — он пришлёт токен.', h('br'), '2. Вставь токен сюда и нажми «Подключить».')));
+      var tok = h('input', { class: 'input', type: 'password', placeholder: '123456789:AA…', 'aria-label': 'Токен бота', autocomplete: 'off' });
+      var save = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Подключить', onclick: function () {
         save.disabled = true; say('Проверяю токен…');
         api({ q: 'notify_save' }, { token: tok.value.trim() }).then(function () { loadService(); }, function (e) { save.disabled = false; say(notifyErr(e), 'bad'); });
       } });
-      box.append(h('div', { class: 'field' }, tok, save), msg);
+      box.append(h('div', { class: 'adm-actions' }, tok, save), msg);
       return;
     }
     // выбор чата
     if (!n.chat) {
-      box.appendChild(h('p', { class: 'note' }, 'Напишите вашему боту ', n.bot ? h('b', { text: '@' + n.bot }) : 'в Telegram', ' любое сообщение, затем нажмите «Найти чат».'));
+      box.appendChild(h('div', { class: 'notice' }, h('p', null, 'Напиши своему боту ', n.bot ? h('b', { text: '@' + n.bot }) : 'в Telegram', ' любое сообщение, затем нажми «Найти чат».')));
       var chats = h('div', { class: 'chats' });
-      var find = h('button', { type: 'button', class: 'small accent', text: 'Найти чат', onclick: function () {
+      var find = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Найти чат', onclick: function () {
         find.disabled = true; say('Ищу…'); chats.textContent = '';
         api({ q: 'notify_chats' }, {}).then(function (r) {
           find.disabled = false;
-          if (!r.chats.length) { say('Сообщений боту пока нет — напишите ему и нажмите ещё раз.', 'warn'); return; }
-          say('Выберите, куда присылать уведомления:');
+          if (!r.chats.length) { say('Сообщений боту пока нет — напиши ему и нажми ещё раз.', 'warn'); return; }
+          say('Выбери, куда присылать уведомления:');
           r.chats.forEach(function (c) {
-            chats.appendChild(h('button', { type: 'button', class: 'small', text: (c.name || c.user || c.id) + (c.user ? ' (@' + c.user + ')' : ''), onclick: function () {
+            chats.appendChild(h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: (c.name || c.user || c.id) + (c.user ? ' (@' + c.user + ')' : ''), onclick: function () {
               api({ q: 'notify_save' }, { chat: c.id }).then(function () { loadService(); }, function (e) { say(notifyErr(e), 'bad'); });
             } }));
           });
         }, function (e) { find.disabled = false; say(notifyErr(e), 'bad'); });
       } });
-      box.append(h('div', { class: 'field' }, find), chats, msg);
+      box.append(h('div', { class: 'adm-actions' }, find), chats, msg);
     } else {
       box.appendChild(h('div', { class: 'sub-h', text: 'О чём сообщать' }));
       var checks = h('div', { class: 'checks' });
@@ -702,20 +766,20 @@
         checks.appendChild(h('label', null, cb, ev.label));
       });
       box.appendChild(checks);
-      var test = h('button', { type: 'button', class: 'small accent', text: 'Отправить проверку', onclick: function () {
+      var test = h('button', { type: 'button', class: 'btn btn-primary btn-sm', text: 'Отправить проверку', onclick: function () {
         test.disabled = true; say('Отправляю…');
-        api({ q: 'notify_test' }, {}).then(function () { test.disabled = false; say('Отправлено — проверьте Telegram.', 'ok'); }, function (e) { test.disabled = false; say(notifyErr(e), 'bad'); });
+        api({ q: 'notify_test' }, {}).then(function () { test.disabled = false; say('Отправлено — проверь Telegram.', 'ok'); }, function (e) { test.disabled = false; say(notifyErr(e), 'bad'); });
       } });
-      var other = h('button', { type: 'button', class: 'small', text: 'Другой чат', onclick: function () {
+      var other = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Другой чат', onclick: function () {
         api({ q: 'notify_save' }, { chat: '' }).then(function () { loadService(); });
       } });
-      box.append(h('div', { class: 'field' }, test, other), msg);
+      box.append(h('div', { class: 'adm-actions' }, test, other), msg);
     }
-    var off = h('button', { type: 'button', class: 'small', text: 'Отключить бота', onclick: function () {
+    var off = h('button', { type: 'button', class: 'btn btn-secondary btn-sm', text: 'Отключить бота', onclick: function () {
       if (!confirm('Отключить уведомления и удалить токен бота с сервера?')) return;
       api({ q: 'notify_save' }, { token: '' }).then(function () { loadService(); });
     } });
-    box.appendChild(h('div', { class: 'field', style: 'margin-top:10px' }, off));
+    box.appendChild(h('div', { class: 'adm-actions adm-actions--sep' }, off));
   }
 
   // ---------- журнал входов ----------
@@ -730,7 +794,7 @@
           h('td', { text: x.ip || '' }), h('td', null, h('small', { class: 'muted', text: x.detail || '' }))));
       });
       if (!r.list.length) tb.appendChild(h('tr', null, h('td', { colspan: 4, class: 'empty', text: 'Записей нет.' })));
-      box.appendChild(h('table', { class: 'feed' }, h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Событие' }), h('th', { text: 'IP' }), h('th', { text: 'Сайт · браузер' }))), tb));
+      box.appendChild(feed(h('thead', null, h('tr', null, h('th', { text: 'Когда' }), h('th', { text: 'Событие' }), h('th', { text: 'IP' }), h('th', { text: 'Сайт · браузер' }))), tb));
     });
   }
 

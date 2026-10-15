@@ -130,6 +130,16 @@ function meta_set(PDO $db, string $k, string $v): void
     $db->prepare('INSERT INTO meta(k, v) VALUES(?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v')->execute([$k, $v]);
 }
 
+/**
+ * Ручная рассылка уведомления об обновлении FSTWEAK (кнопка в админке). Номер растёт с каждым нажатием;
+ * api/mod.php отдаёт его моду, и мод (с 1.2.4) показывает уведомление ещё раз, если его версия старее.
+ */
+function update_push(PDO $db): array
+{
+    $p = json_decode((string)meta_get($db, 'update_push'), true);
+    return ['id' => (int)($p['id'] ?? 0), 'ts' => (int)($p['ts'] ?? 0), 'version' => (string)($p['version'] ?? '')];
+}
+
 /** Удаление данных старше 90 дней. */
 function stats_cleanup(PDO $db): void
 {

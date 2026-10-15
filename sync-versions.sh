@@ -3,15 +3,16 @@
 # Код правится только в hexgen-1.21.11, затем: ./sync-versions.sh
 # Различия 26.x: GuiGraphics → GuiGraphicsExtractor, render → extractRenderState,
 # drawString → text, renderItem → item, setScreen идёт через minecraft.gui (только 26.2),
-# afterRender → afterExtract, KeyBindingHelper → KeyMappingHelper, ClientCommandManager → ClientCommands.
+# afterRender → afterExtract, KeyBindingHelper → KeyMappingHelper, ClientCommandManager → ClientCommands,
+# сообщения в чат — addClientSystemMessage (в 26.2 чат — через gui.hud). Логгер чата /log — пакет fslog, правится тоже здесь.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 SRC=hexgen-1.21.11/src/main
 for TARGET in hexgen-26.2 hexgen-26.1.2; do
   DST=$TARGET/src/main
-  mkdir -p "$DST/java/ru/fspirat/hexgen/mixin" "$DST/resources/assets/hexgen/lang"
-  for f in "$SRC"/java/ru/fspirat/hexgen/*.java "$SRC"/java/ru/fspirat/hexgen/mixin/*.java; do
+  mkdir -p "$DST/java/ru/fspirat/hexgen/mixin" "$DST/java/ru/fspirat/hexgen/fslog" "$DST/resources/assets/hexgen/lang"
+  for f in "$SRC"/java/ru/fspirat/hexgen/*.java "$SRC"/java/ru/fspirat/hexgen/mixin/*.java "$SRC"/java/ru/fspirat/hexgen/fslog/*.java; do
     rel=${f#"$SRC"/}
     sed -e 's/import net.minecraft.client.gui.GuiGraphics;/import net.minecraft.client.gui.GuiGraphicsExtractor;/' \
         -e 's/\bGuiGraphics g\b/GuiGraphicsExtractor g/g' \
