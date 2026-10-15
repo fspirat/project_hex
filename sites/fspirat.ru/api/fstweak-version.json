@@ -1,9 +1,9 @@
 {
-  "version": "1.2.3",
+  "version": "1.2.4",
   "url": "https://fspirat.xyz/fstweak/",
   "notes": {
-    "ru": "Новый адрес сайта — fspirat.xyz: логи /log и проверка обновлений идут туда.",
-    "en": "New site address — fspirat.xyz: /log and update checks now use it.",
-    "uk": "Нова адреса сайту — fspirat.xyz: логи /log і перевірка оновлень працюють через неї."
+    "ru": "Лог чата в игре: /log открывает окно с поиском (Ctrl+F), на сайт — только по кнопке «Выгрузить на сайт». В генераторе — «бегущий» текст &k: Цена: §k12345§r монет. Новый значок кнопки.",
+    "en": "In-game chat log: /log opens a viewer with search (Ctrl+F); it goes to the site only via “Upload to site”. Scrambled &k text in the generator: Price: §k12345§r coins. New button icon.",
+    "uk": "Лог чату в грі: /log відкриває вікно з пошуком (Ctrl+F), на сайт — лише кнопкою «Вивантажити на сайт». У генераторі — «миготливий» текст &k: Ціна: §k12345§r монет. Новий значок кнопки."
   }
 }
