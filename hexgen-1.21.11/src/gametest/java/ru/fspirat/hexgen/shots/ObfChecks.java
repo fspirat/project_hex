@@ -7,6 +7,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.input.KeyEvent;
 import org.lwjgl.glfw.GLFW;
 
 import ru.fspirat.hexgen.HexCore;
@@ -100,10 +101,12 @@ final class ObfChecks {
         });
     }
 
+    /**
+     * Ctrl+клавиша прямо в окно (его настоящий обработчик keyPressed). Через ctx.getInput() зажатый Ctrl
+     * в событие не попадает: в CI Ctrl+Z и Ctrl+V приходили как простые Z и V.
+     */
     private static void ctrl(ClientGameTestContext ctx, int key) {
-        ctx.getInput().holdKey(GLFW.GLFW_KEY_LEFT_CONTROL);
-        ctx.getInput().pressKey(key);
-        ctx.getInput().releaseKey(GLFW.GLFW_KEY_LEFT_CONTROL);
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, 0, GLFW.GLFW_MOD_CONTROL)));
         ctx.waitTicks(3);
     }
 
