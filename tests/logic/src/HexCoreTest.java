@@ -83,8 +83,28 @@ public final class HexCoreTest {
         String outB = HexCore.gradientCommand("", bold.visibleText(), STOPS, bold.effectiveMask(), bold.colors, 0);
         eq(outB, "{#B04DFF>}&l&k12345{#FF8FE0<}", "&k + жирный");
         String outP = HexCore.gradientCommand("/itemname ", paste.visibleText(), STOPS, paste.effectiveMask(), paste.colors, 0);
-        check(outP.contains("}&k1") && outP.contains("}&k5") && !outP.contains("&kЦ") && !outP.contains("&kм"),
-                "«Цена: &k12345&r монет»: &k только перед цифрами → " + outP);
+        eq(outP, "/itemname {#B04DFF>}Цена: {#CB64F4<>}&k12345{#E478EB<>} монет{#FF8FE0<}",
+                "«Цена: &k12345&r монет»: короткая строка, &k только у цифр, на границах — цвет того же градиента");
+        // Скриншот владельца: &k у «qwerty », у цифр нет — раньше каждая буква красилась отдельно (173 символа).
+        HexState part = typed("qwerty 9999999999");
+        for (int i = 0; i < 7; i++) part.mask[i] = K;
+        String outQ = HexCore.gradientCommand("", part.visibleText(), STOPS, part.effectiveMask(), part.colors, 0);
+        eq(outQ, "{#B04DFF>}&kqwerty {#D068F2<>}9999999999{#FF8FE0<}", "&k у части текста — короткая строка");
+        check(outQ.length() <= 64, "влезает в лимит /itemname: " + outQ.length());
+        HexCore.Parsed backQ = HexCore.parse(outQ);
+        check(backQ != null && backQ.stops().equals(STOPS) && Arrays.equals(backQ.mask(), part.effectiveMask()),
+                "повторный импорт: те же 2 цвета и тот же формат");
+        HexState boldPart = typed("AB CD");
+        boldPart.mask[3] = HexCore.BOLD; boldPart.mask[4] = HexCore.BOLD;
+        String outBP = HexCore.gradientCommand("", boldPart.visibleText(), STOPS, boldPart.effectiveMask(), boldPart.colors, 0);
+        check(outBP.startsWith("{#B04DFF>}AB {#") && outBP.contains("<>}&lCD{#FF8FE0<}"), "жирный у части текста тоже коротко: " + outBP);
+        List<String> three = List.of("FF0000", "00FF00", "0000FF");
+        String out3 = HexCore.gradientCommand("", paste.visibleText(), three, paste.effectiveMask(), paste.colors, 0);
+        HexCore.Parsed back3 = HexCore.parse(out3);
+        check(back3 != null && back3.stops().equals(three) && Arrays.equals(back3.mask(), paste.effectiveMask()),
+                "3 цвета + &k у части: повторный импорт сохраняет цвета пользователя → " + out3);
+        HexCore.Parsed own3 = HexCore.parse("{#FF0000>}AB{#FFFF00<>}CD{#0000FF<}");
+        check(own3 != null && own3.stops().equals(List.of("FF0000", "FFFF00", "0000FF")), "свои 3 цвета при импорте не теряются");
         HexCore.Parsed back = HexCore.parse(outP);
         check(back != null, "повторный импорт сгенерированной строки");
         if (back != null) {

@@ -3,12 +3,9 @@ package ru.fspirat.hexgen.fslog;
 import net.fabricmc.loader.api.FabricLoader;
 
 /**
- * FSLOG — логгер чата: запоминает весь входящий чат; /log открывает его для чтения прямо в игре,
+ * Логгер чата FSTWEAK (FSLOG): запоминает весь входящий чат; /log открывает его для чтения прямо в игре,
  * а кнопка «Выгрузить на сайт» сохраняет показанное на fspirat.xyz и даёт ссылку.
- *
- * Всё лежит в пакете ru.fspirat.fslog и запускается одним вызовом {@link #init()},
- * поэтому позже его можно встроить в FSTWEAK: скопировать пакет и вызвать FsLog.init()
- * из клиентской точки входа FSTWEAK.
+ * Запускается одним вызовом {@link #init()} из HexGenClient.
  */
 public final class FsLog {
     private FsLog() {}

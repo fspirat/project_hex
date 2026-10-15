@@ -6,7 +6,7 @@
  *   POST ?q=login_code {"pending": "...", "code": "123456"} → {"token": "...", "device": "..."}  (код пришёл в Telegram)
  *   POST ?q=logout  (с токеном)
  *   GET  ?q=summary|live|events|visitor|modplayers|player|downloads|chatlogs|service|audit|backup  (с токеном: Authorization: Bearer ...)
- *   POST ?q=chatlog_delete|chatlog_pin|backup_now|notify_save|notify_test|notify_chats  (с токеном)
+ *   POST ?q=chatlog_delete|chatlog_pin|backup_now|notify_save|notify_test|notify_chats|update_push  (с токеном)
  */
 
 declare(strict_types=1);
@@ -26,6 +26,9 @@ function from_site(): string
     $o = parse_url($_SERVER['HTTP_ORIGIN'] ?? '', PHP_URL_HOST) ?: ($_SERVER['HTTP_HOST'] ?? '');
     return preg_replace('~^www\.~', '', (string)$o);
 }
+
+/** Не чаще одной ручной рассылки в минуту — от случайного двойного нажатия. */
+const UPDATE_PUSH_GAP = 60;
 
 $q = $_GET['q'] ?? '';
 if ($method === 'POST' && $q === 'login') {
@@ -113,6 +116,19 @@ if ($method === 'POST' && $q === 'backup_now') {
         json_out(['error' => 'server'], 500);
     }
     exit;
+}
+// Ручная рассылка уведомления об обновлении FSTWEAK: моды со старой версией (1.2.4+) напишут об этом ещё раз.
+if ($method === 'POST' && $q === 'update_push') {
+    $latest = json_decode((string)@file_get_contents(__DIR__ . '/../api/fstweak-version.json'), true) ?: [];
+    $ver = (string)($latest['version'] ?? '');
+    if ($ver === '') { json_out(['error' => 'version'], 500); exit; }
+    $prev = update_push($db);
+    $wait = $prev['ts'] + UPDATE_PUSH_GAP - time();
+    if ($wait > 0) { json_out(['error' => 'wait', 'wait' => $wait], 429); exit; }   // от случайного двойного нажатия
+    $p = ['id' => $prev['id'] + 1, 'ts' => time(), 'version' => $ver];
+    meta_set($db, 'update_push', json_encode($p));
+    audit($db, 'update_push', 'FSTWEAK ' . $ver . ' · рассылка №' . $p['id']);
+    json_out(['ok' => 1, 'push' => $p]); exit;
 }
 if ($method === 'POST' && in_array($q, ['notify_save', 'notify_test', 'notify_chats'], true)) {
     $in = json_decode((string)file_get_contents('php://input', false, null, 0, 2048), true);
@@ -339,6 +355,7 @@ try {
                         FROM mod_players', [$now - 900, $now - 86400, $now - 7 * 86400, $now - 7 * 86400])[0];
         json_out([
             'latest' => (string)($latest['version'] ?? ''),
+            'push' => update_push($db),
             'counts' => array_map('intval', $c),
             'versions' => rows($db, 'SELECT mod k, COUNT(*) n FROM mod_players GROUP BY mod ORDER BY n DESC'),
             'mc' => rows($db, 'SELECT mc k, COUNT(*) n FROM mod_players GROUP BY mc ORDER BY n DESC'),

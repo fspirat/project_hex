@@ -16,7 +16,7 @@ import ru.fspirat.hexgen.HexState;
 
 /**
  * &k в генераторе в настоящей игре: ввод с клавиатуры, вставка, отмена/повтор, кнопка «K»
- * и два снимка предпросмотра подряд (символы «бегут» — кадры разные).
+ * и два снимка предпросмотра подряд (символы «бегут» — кадры разные). Системный буфер обмена не трогается.
  */
 final class ObfChecks {
     private ObfChecks() {}
@@ -60,13 +60,15 @@ final class ObfChecks {
         ctrl(ctx, GLFW.GLFW_KEY_Y);
         LogViewChecks.check(TYPED.equals(ctx.computeOnClient(mc -> HexState.S.text)), "Ctrl+Y вернул ввод");
 
-        // Вставка из буфера обмена.
-        ctx.runOnClient(mc -> mc.keyboardHandler.setClipboard(" &KAB"));
+        // Вставка куска текста (то же, что делает Ctrl+V, но без системного буфера обмена — тесты его не трогают).
         focusTextBox(ctx);
-        ctrl(ctx, GLFW.GLFW_KEY_V);
+        ctx.runOnClient(mc -> {
+            if (mc.screen.getFocused() instanceof EditBox b) b.insertText(" &KAB");
+        });
+        ctx.waitTicks(3);
         String pasted = ctx.computeOnClient(mc -> HexState.S.text);
         LogViewChecks.check(pasted.endsWith("монет &KAB") && ctx.computeOnClient(mc -> HexState.S.visibleText()).endsWith("монет AB"),
-                "вставка &K из буфера («" + pasted + "»)");
+                "вставка «&KAB» в поле («" + pasted + "»)");
         ctrl(ctx, GLFW.GLFW_KEY_Z);
         LogViewChecks.check(TYPED.equals(ctx.computeOnClient(mc -> HexState.S.text)), "Ctrl+Z отменил вставку");
 

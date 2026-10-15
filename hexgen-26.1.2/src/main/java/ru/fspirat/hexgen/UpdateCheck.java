@@ -22,7 +22,8 @@ import net.minecraft.network.chat.Style;
 /**
  * Связь с fspirat.xyz: при заходе в мир и раз в 10 минут мод сообщает ник, версии и сервер
  * (список игроков во вкладке «FSTWEAK» админки) и узнаёт последнюю версию мода.
- * Если вышла новая — один раз за запуск игры пишет об этом в чат.
+ * Если вышла новая — один раз за запуск игры пишет об этом в чат, и ещё раз — когда в админке
+ * нажали «Разослать уведомление» (см. {@link UpdateNotice}).
  */
 final class UpdateCheck {
     private UpdateCheck() {}
@@ -30,7 +31,7 @@ final class UpdateCheck {
     private static final String ENDPOINT = "https://fspirat.xyz/api/mod.php";
     private static final int HEARTBEAT_TICKS = 20 * 60 * 10;
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
-    private static boolean notified;
+    private static final UpdateNotice NOTICE = new UpdateNotice();
     private static int ticks;
 
     static void register() {
@@ -73,12 +74,12 @@ final class UpdateCheck {
                 .build();
         HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenAccept(r -> {
             if (r.statusCode() == 200 && use.size() > 0) Usage.sent(use);
-            if (r.statusCode() != 200 || notified) return;
+            if (r.statusCode() != 200) return;
             try {
                 JsonObject a = JsonParser.parseString(r.body()).getAsJsonObject();
                 String latest = a.has("version") ? a.get("version").getAsString() : "";
-                if (latest.isEmpty() || compare(latest, mine) <= 0) return;
-                notified = true;
+                long push = a.has("push") ? a.get("push").getAsLong() : 0;
+                if (!NOTICE.onAnswer(latest, mine, push)) return;
                 String url = a.has("url") ? a.get("url").getAsString() : "https://fspirat.xyz/fstweak/";
                 String notes = a.has("notes") ? a.get("notes").getAsString() : "";
                 mc.execute(() -> mc.gui.getChat().addClientSystemMessage(message(latest, mine, url, notes)));
@@ -100,23 +101,5 @@ final class UpdateCheck {
                 .append(Component.literal("[" + HexUi.tr("update.download") + "]").withStyle(link))
                 .append(Component.literal(" · "))
                 .append(whatsNew);
-    }
-
-    /** Сравнение версий вида 1.2 / 1.10.1: >0 — a новее b. */
-    static int compare(String a, String b) {
-        String[] x = a.split("[.+-]"), y = b.split("[.+-]");
-        for (int i = 0; i < Math.max(x.length, y.length); i++) {
-            int d = num(i < x.length ? x[i] : "0") - num(i < y.length ? y[i] : "0");
-            if (d != 0) return d;
-        }
-        return 0;
-    }
-
-    private static int num(String s) {
-        try {
-            return Integer.parseInt(s.replaceAll("\\D", ""));
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 }

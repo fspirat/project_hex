@@ -433,11 +433,13 @@ public final class HexCore {
 
     /**
      * Команда с учётом маски и своих цветов: если формат одинаковый и своих цветов нет,
-     * получается короткий градиент, иначе каждый символ пишется своим цветом {#RRGGBB} со своими кодами.
+     * получается короткий градиент; если формат меняется по ходу текста — тоже короткий, с метками {#…<>}
+     * на границах (см. {@link #runsCommand}); со своими цветами частей каждый символ пишется своим цветом.
      */
     public static String gradientCommand(String prefix, String text, List<String> stops, int[] mask, int[] colors, int fallback) {
         int uniform = uniformBits(mask, fallback);
         if (uniform >= 0 && !hasOverrides(colors)) return gradientCommand(prefix, text, stops, uniform);
+        if (!hasOverrides(colors) && mask.length == text.codePointCount(0, text.length())) return runsCommand(prefix, text, stops, mask);
         StringBuilder sb = new StringBuilder(prefix);
         int prevBits = -1, prevRgb = -1;
         for (StyledGlyph g : styled(text, stops, mask, colors, fallback)) {
@@ -530,6 +532,7 @@ public final class HexCore {
             }
         }
         if (tags == 0 || text.length() == 0) return null;
+        dropInlineStops(stops);
         return finish(command, text.toString(), stops, mask, colors, null, "");
     }
 
@@ -777,6 +780,33 @@ public final class HexCore {
     }
 
     /** Общий хвост разбора: если градиента нет — крайние цвета становятся его точками, цвета букв остаются как есть. */
+    /**
+     * Убирает из градиента промежуточные цвета, которые лежат на прямой между соседними (с точностью до 2
+     * по каждому каналу): это метки на границах формата из {@link #runsCommand}, а не цвета пользователя.
+     */
+    static void dropInlineStops(List<String> stops) {
+        for (int i = 1; i + 1 < stops.size(); ) {
+            int p = rgb(stops.get(i - 1)), m = rgb(stops.get(i)), q = rgb(stops.get(i + 1));
+            if (between(p, m, q)) stops.remove(i);
+            else i++;
+        }
+    }
+
+    private static boolean between(int p, int m, int q) {
+        int[] sh = {16, 8, 0};
+        int best = 0;
+        for (int k = 0; k < 3; k++) if (Math.abs(((q >> sh[k]) & 255) - ((p >> sh[k]) & 255)) > Math.abs(((q >> sh[best]) & 255) - ((p >> sh[best]) & 255))) best = k;
+        int dp = ((q >> sh[best]) & 255) - ((p >> sh[best]) & 255);
+        double t = dp == 0 ? 0 : (((m >> sh[best]) & 255) - ((p >> sh[best]) & 255)) / (double) dp;
+        if (t < 0 || t > 1) return false;
+        return close(mix(p, q, t), m);
+    }
+
+    private static boolean close(int a, int b) {
+        for (int sh = 0; sh <= 16; sh += 8) if (Math.abs(((a >> sh) & 255) - ((b >> sh) & 255)) > 2) return false;
+        return true;
+    }
+
     private static Parsed finish(int format, String text, List<String> stops, List<Integer> mask, List<Integer> colors,
                                  String nickHex, String prefix) {
         int[] cm = colors.stream().mapToInt(Integer::intValue).toArray();
@@ -789,6 +819,42 @@ public final class HexCore {
         }
         while (stops.size() > 6) stops.remove(stops.size() - 2);
         return new Parsed(format, text, stops, mask.stream().mapToInt(Integer::intValue).toArray(), cm, nickHex, prefix);
+    }
+
+    /**
+     * Градиент, в котором формат меняется по ходу текста (например, &k только у части).
+     * На сервере формат сбрасывается на каждой метке {#…}, поэтому текст режется на куски с одинаковым
+     * форматом: на границе куска ставится метка {#RRGGBB<>} с цветом того же градиента в этом месте
+     * (посередине между соседними буквами), за ней — коды куска. Метки цветов пользователя остаются как есть.
+     * Так строка остаётся короткой, а не красит каждую букву отдельно.
+     */
+    static String runsCommand(String prefix, String text, List<String> stops, int[] mask) {
+        int[] cps = text.codePoints().toArray();
+        int n = cps.length, parts = Math.max(1, stops.size() - 1);
+        // начало каждого отрезка между цветами пользователя — как в segments()
+        int[] segStart = new int[parts + 1];
+        for (int k = 0; k <= parts; k++) segStart[k] = (int) Math.round(n * (double) k / parts);
+        StringBuilder sb = new StringBuilder(prefix);
+        int seg = 0;
+        for (int i = 0; i < n; i++) {
+            while (seg + 1 < parts && i >= segStart[seg + 1]) seg++;
+            boolean segBoundary = i == segStart[seg];
+            boolean fmtBoundary = i > 0 && mask[i] != mask[i - 1];
+            if (i == 0) {
+                sb.append("{#").append(stops.get(0)).append(">}");
+            } else if (segBoundary) {
+                sb.append("{#").append(stops.get(seg)).append("<>}");
+            } else if (fmtBoundary) {
+                int a = segStart[seg], len = segStart[seg + 1] - a;
+                double t = len > 1 ? (i - 0.5 - a) / (len - 1) : 0;
+                int c = mix(rgb(stops.get(seg)), rgb(stops.get(Math.min(seg + 1, stops.size() - 1))), Math.max(0, Math.min(1, t)));
+                sb.append("{#").append(hex(c)).append("<>}");
+            }
+            if (i == 0 || segBoundary || fmtBoundary) sb.append(formatCodes(mask[i]));
+            sb.appendCodePoint(cps[i]);
+        }
+        sb.append("{#").append(stops.get(stops.size() - 1)).append("<}");
+        return sb.toString();
     }
 
     /** Формат {#AAAAAA>}текст{#BBBBBB<>}текст{#CCCCCC<} для /itemname, /itemlore и «без команды». */
