@@ -112,7 +112,8 @@ public final class HexUi {
             int bits = g.bits();
             Style st = Style.EMPTY.withColor(g.rgb())
                     .withBold((bits & HexCore.BOLD) != 0).withItalic((bits & HexCore.ITALIC) != 0)
-                    .withUnderlined((bits & HexCore.UNDERLINE) != 0).withStrikethrough((bits & HexCore.STRIKE) != 0);
+                    .withUnderlined((bits & HexCore.UNDERLINE) != 0).withStrikethrough((bits & HexCore.STRIKE) != 0)
+                    .withObfuscated((bits & HexCore.OBFUSCATED) != 0);
             root.append(Component.literal(g.ch()).withStyle(st));
         }
         return root;

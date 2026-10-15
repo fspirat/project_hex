@@ -1,0 +1,23 @@
+name: Logic tests
+
+# Проверки логики без Minecraft: генератор (&k, форматы, импорт) и выгрузка лога (LogUpload) — tests/logic/run.sh.
+on:
+  push:
+    paths:
+      - "tests/logic/**"
+      - "hexgen-*/src/main/java/**"
+      - "fslog-*/src/main/java/**"
+      - ".github/workflows/logic-tests.yml"
+  workflow_dispatch:
+
+jobs:
+  logic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+      - name: Run logic tests
+        run: bash tests/logic/run.sh

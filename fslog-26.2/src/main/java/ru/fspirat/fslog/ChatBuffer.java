@@ -14,7 +14,7 @@ import net.minecraft.network.chat.TextColor;
 
 /**
  * Последние {@link #MAX} сообщений чата: текст с цветами и оформлением, время и сервер.
- * Хранится только в памяти игры; на диск и в сеть уходит лишь по команде /log.
+ * Хранится только в памяти игры; в сеть уходит лишь по кнопке «Выгрузить на сайт» в окне /log.
  */
 public final class ChatBuffer {
     private ChatBuffer() {}
@@ -29,6 +29,8 @@ public final class ChatBuffer {
     public record Entry(long time, boolean player, String server, List<Seg> segs) {}
 
     private static final ArrayDeque<Entry> BUF = new ArrayDeque<>();
+    /** Сколько сообщений пришло за всё время (не уменьшается при очистке) — окно лога по нему видит новые. */
+    private static long added;
 
     static void register() {
         ClientReceiveMessageEvents.CHAT.register((message, signed, sender, params, time) -> add(message, true));
@@ -41,18 +43,25 @@ public final class ChatBuffer {
     public static void add(Component message, boolean player) {
         List<Seg> segs = segments(message);
         if (segs.isEmpty()) return;
-        Entry e = new Entry(System.currentTimeMillis(), player, currentServer(), segs);
+        Entry e = new Entry(System.currentTimeMillis(), player, currentServer(), List.copyOf(segs));
         synchronized (BUF) {
             BUF.addLast(e);
+            added++;
             while (BUF.size() > MAX) BUF.removeFirst();
         }
     }
 
-    /** Последние n сообщений (или все, если их меньше). */
+    /** Последние n сообщений (или все, если их меньше) — неизменяемый снимок. */
     public static List<Entry> last(int n) {
         synchronized (BUF) {
             List<Entry> all = new ArrayList<>(BUF);
-            return all.subList(Math.max(0, all.size() - n), all.size());
+            return List.copyOf(all.subList(Math.max(0, all.size() - n), all.size()));
+        }
+    }
+
+    public static long added() {
+        synchronized (BUF) {
+            return added;
         }
     }
 

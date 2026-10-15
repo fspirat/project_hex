@@ -4,7 +4,8 @@
 #  2) встроенная копия в FSTWEAK (hexgen-*): пакет ru.fspirat.hexgen.fslog — чтобы не конфликтовать
 #     с отдельным FSLOG, если стоят оба (тогда встроенный просто не включается).
 # Различия 26.x: ClientCommandManager → ClientCommands, сообщения в чат — addClientSystemMessage,
-# в 26.2 чат — через gui.hud.
+# окно лога: GuiGraphics → GuiGraphicsExtractor, render → extractRenderState, drawString → text;
+# в 26.2 чат — через gui.hud, окна открываются через minecraft.gui.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -13,9 +14,16 @@ SRC=fslog-1.21.11/src/main
 port() {  # port <файл> <версия: 1.21.11|26.1.2|26.2>
   if [ "$2" != 1.21.11 ]; then
     sed -i -e 's/\bClientCommandManager\b/ClientCommands/g' \
-           -e 's/gui\.getChat()\.addMessage(/gui.getChat().addClientSystemMessage(/g' "$1"
+           -e 's/gui\.getChat()\.addMessage(/gui.getChat().addClientSystemMessage(/g' \
+           -e 's/import net.minecraft.client.gui.GuiGraphics;/import net.minecraft.client.gui.GuiGraphicsExtractor;/' \
+           -e 's/\bGuiGraphics g\b/GuiGraphicsExtractor g/g' \
+           -e 's/public void render(GuiGraphicsExtractor/public void extractRenderState(GuiGraphicsExtractor/' \
+           -e 's/super\.render(g,/super.extractRenderState(g,/' \
+           -e 's/g\.drawString(/g.text(/g' "$1"
   fi
-  if [ "$2" = 26.2 ]; then sed -i 's/gui\.getChat()/gui.hud.getChat()/g' "$1"; fi
+  if [ "$2" = 26.2 ]; then
+    sed -i -e 's/gui\.getChat()/gui.hud.getChat()/g' -e 's/client\.setScreen(/client.gui.setScreen(/g' "$1"
+  fi
 }
 
 for V in 26.2 26.1.2; do

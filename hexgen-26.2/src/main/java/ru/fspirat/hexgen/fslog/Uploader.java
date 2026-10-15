@@ -14,18 +14,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.client.Minecraft;
 
-/** Отправка лога на fspirat.xyz в фоне (игра не подвисает). */
+/** Отправка лога на fspirat.xyz в фоне (игра не подвисает). Вызывается только из {@link LogUpload#start()}. */
 final class Uploader {
     private Uploader() {}
 
-    /** url — ссылка на лог; иначе error — код причины (rate, size, server, offline), waitSec — сколько секунд подождать. */
-    record Result(String url, String error, int waitSec) {}
-
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
-    static CompletableFuture<Result> upload(List<ChatBuffer.Entry> entries) {
+    static CompletableFuture<LogUpload.Result> upload(List<ChatBuffer.Entry> entries) {
         String body = json(entries).toString();
-        HttpRequest req = HttpRequest.newBuilder(URI.create(FsLog.ENDPOINT))
+        HttpRequest req = HttpRequest.newBuilder(URI.create(FsLog.endpoint()))
                 .timeout(Duration.ofSeconds(30))
                 .header("Content-Type", "application/json; charset=utf-8")
                 .header("User-Agent", "FSLOG/" + FsLog.version("hexgen") + " (Minecraft " + FsLog.version("minecraft") + ")")
@@ -33,18 +30,31 @@ final class Uploader {
                 .build();
         return HTTP.sendAsync(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)).thenApply(r -> {
             // сервер логов не настроен или временно недоступен
-            if (r.statusCode() == 404 || r.statusCode() == 502 || r.statusCode() == 503) return new Result(null, "offline", 0);
+            if (r.statusCode() == 404 || r.statusCode() == 502 || r.statusCode() == 503) return new LogUpload.Result(null, "offline", 0);
             JsonObject o;
             try {
                 o = JsonParser.parseString(r.body()).getAsJsonObject();
             } catch (RuntimeException e) {
-                return new Result(null, "server", 0);
+                return new LogUpload.Result(null, "server", 0);
             }
-            if (r.statusCode() == 200 && o.has("url")) return new Result(o.get("url").getAsString(), null, 0);
+            if (r.statusCode() == 200 && o.has("url")) {
+                String url = o.get("url").getAsString();
+                return isWebLink(url) ? new LogUpload.Result(url, null, 0) : new LogUpload.Result(null, "server", 0);
+            }
             String err = o.has("error") ? o.get("error").getAsString() : "server";
             if (!err.matches("rate|size|server|offline")) err = "server";
-            return new Result(null, err, o.has("wait") ? o.get("wait").getAsInt() : 0);
+            return new LogUpload.Result(null, err, o.has("wait") ? o.get("wait").getAsInt() : 0);
         });
+    }
+
+    /** Ссылку показываем и открываем, только если это обычный адрес http(s). */
+    private static boolean isWebLink(String url) {
+        try {
+            URI u = URI.create(url);
+            return ("https".equals(u.getScheme()) || "http".equals(u.getScheme())) && u.getHost() != null;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private static JsonObject json(List<ChatBuffer.Entry> entries) {
