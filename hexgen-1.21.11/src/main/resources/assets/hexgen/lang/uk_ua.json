@@ -335,11 +335,11 @@
   "fstweak.format.colors.hint": "Для /itemname, /itemlore і «без команди»: HEX-градієнт (для спонсорів) або класичні кольори /colors (&a, &c…) для звичайних гравців",
   "fslog.view.title": "Лог чату",
   "fslog.view.count": "Повідомлень: %s · знімок о %s",
-  "fslog.view.keys": "коліщатко, ↑↓, PgUp/PgDn, Home/End",
+  "fslog.view.keys": "коліщатко, ↑↓, PgUp/PgDn, Home/End, Ctrl+F — пошук",
   "fslog.view.empty": "Чат поки порожній — нові повідомлення з'являться після «Оновити».",
   "fslog.view.layout": "розмітка %s / %s…",
   "fslog.view.upload": "Вивантажити на сайт",
-  "fslog.view.upload.hint": "Надіслати показані повідомлення на fspirat.xyz і отримати посилання. Без натискання нічого не надсилається.",
+  "fslog.view.upload.hint": "Надіслати весь знімок із цього вікна на fspirat.xyz і отримати посилання (пошук на вивантаження не впливає). Без натискання нічого не надсилається.",
   "fslog.view.retry": "Повторити",
   "fslog.view.open_link": "Відкрити посилання",
   "fslog.view.copy_link": "Копіювати",
@@ -350,5 +350,11 @@
   "fslog.view.close": "Закрити",
   "fslog.view.busy": "Попередній лог ще надсилається — зачекайте.",
   "fslog.view.hint": "Це лише перегляд: на сайт лог піде за кнопкою «Вивантажити на сайт».",
-  "fslog.view.reopen": "Відкрийте /log, щоб спробувати ще раз."
+  "fslog.view.reopen": "Відкрийте /log, щоб спробувати ще раз.",
+  "fslog.view.search": "Пошук",
+  "fslog.view.search.hint": "Пошук…",
+  "fslog.view.search.tip": "Пошук у тексті повідомлень без урахування регістру. Ctrl+F — перейти до поля.",
+  "fslog.view.found": "Знайдено: %s з %s",
+  "fslog.view.notfound": "Нічого не знайдено.",
+  "fslog.view.search.note": "Пошук — лише у вікні: на сайт піде весь знімок (%s повід.)."
 }

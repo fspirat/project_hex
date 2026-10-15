@@ -15,11 +15,11 @@
   "fslog.error.offline": "сервер логов сейчас недоступен, попробуйте позже",
   "fslog.view.title": "Лог чата",
   "fslog.view.count": "Сообщений: %s · снимок в %s",
-  "fslog.view.keys": "колесо, ↑↓, PgUp/PgDn, Home/End",
+  "fslog.view.keys": "колесо, ↑↓, PgUp/PgDn, Home/End, Ctrl+F — поиск",
   "fslog.view.empty": "Чат пока пуст — новые сообщения появятся после «Обновить».",
   "fslog.view.layout": "разметка %s / %s…",
   "fslog.view.upload": "Выгрузить на сайт",
-  "fslog.view.upload.hint": "Отправить показанные сообщения на fspirat.xyz и получить ссылку. Без нажатия ничего не отправляется.",
+  "fslog.view.upload.hint": "Отправить весь снимок из этого окна на fspirat.xyz и получить ссылку (поиск на выгрузку не влияет). Без нажатия ничего не отправляется.",
   "fslog.view.retry": "Повторить",
   "fslog.view.open_link": "Открыть ссылку",
   "fslog.view.copy_link": "Копировать",
@@ -30,5 +30,11 @@
   "fslog.view.close": "Закрыть",
   "fslog.view.busy": "Предыдущий лог ещё отправляется — подождите.",
   "fslog.view.hint": "Это только просмотр: на сайт лог уйдёт по кнопке «Выгрузить на сайт».",
-  "fslog.view.reopen": "Откройте /log, чтобы попробовать ещё раз."
+  "fslog.view.reopen": "Откройте /log, чтобы попробовать ещё раз.",
+  "fslog.view.search": "Поиск",
+  "fslog.view.search.hint": "Поиск…",
+  "fslog.view.search.tip": "Поиск по тексту сообщений без учёта регистра. Ctrl+F — перейти к полю.",
+  "fslog.view.found": "Найдено: %s из %s",
+  "fslog.view.notfound": "Ничего не найдено.",
+  "fslog.view.search.note": "Поиск — только в окне: на сайт уйдёт весь снимок (%s сообщ.)."
 }

@@ -21,6 +21,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.language.I18n;
 import org.lwjgl.glfw.GLFW;
 
@@ -108,6 +109,10 @@ final class LogViewChecks {
     }
 
     private static void steps(ClientGameTestContext ctx, TestSingleplayerContext sp, Stub stub) {
+        String ver = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("hexgen")
+                .map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
+        check("1.2.4".equals(ver), "версия мода 1.2.4 (" + ver + ")");
+
         // /log clear — очищает и окно не открывает.
         command(ctx, "/log clear");
         ctx.waitTicks(5);
@@ -160,6 +165,24 @@ final class LogViewChecks {
         ctx.getInput().pressKey(GLFW.GLFW_KEY_END);
         ctx.waitTicks(2);
 
+        // Поиск: Ctrl+F, регистр не важен; пустой запрос — снова все сообщения; в сеть ничего не уходит.
+        ctrl(ctx, GLFW.GLFW_KEY_F);
+        ctx.getInput().typeChars("НОМЕР 1");
+        ctx.waitTicks(3);
+        check(s1.shownCount() == 11, "поиск «НОМЕР 1» нашёл 11 сообщ. (" + s1.shownCount() + ")");
+        waitUntil(ctx, mc -> s1.laidOut(), 100);
+        ctx.waitTicks(3);
+        ctx.takeScreenshot("log-search");
+        ctx.getInput().typeChars("zzz");
+        ctx.waitTicks(3);
+        check(s1.shownCount() == 0, "поиск без совпадений — пустой список");
+        ctx.takeScreenshot("log-search-none");
+        ctrl(ctx, GLFW.GLFW_KEY_A);
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(GLFW.GLFW_KEY_BACKSPACE, 0, 0)));
+        ctx.waitTicks(3);
+        check(s1.shownCount() == snap, "поиск очищен — снова все " + snap + " сообщ. (" + s1.shownCount() + ")");
+        check(stub.requests.get() == 0, "поиск ничего не отправил");
+
         // Новое сообщение во время чтения в снимок не попадает.
         sp.getServer().runCommand("tellraw @a {\"text\":\"NEWAFTERSNAPSHOT\"}");
         waitUntil(ctx, mc -> bufferContainsNow("NEWAFTERSNAPSHOT"), 100);
@@ -178,6 +201,13 @@ final class LogViewChecks {
         sp.getServer().runCommand("tellraw @a {\"text\":\"NEWWHILEREADING\"}");
         waitUntil(ctx, mc -> bufferContainsNow("NEWWHILEREADING"), 100);
 
+        // Поиск во время выгрузки: показана часть, а на сайт уходит весь снимок.
+        ctrl(ctx, GLFW.GLFW_KEY_F);
+        ctx.getInput().typeChars("номер 2");
+        ctx.waitTicks(3);
+        int found2 = s2.shownCount();
+        check(found2 > 0 && found2 < snap2, "поиск перед выгрузкой: показано " + found2 + " из " + snap2);
+
         // Двойной клик (ответ сайта медленный): ушёл один запрос.
         stub.mode = Stub.Mode.SLOW;
         click(ctx, I18n.get("fslog.view.upload"));
@@ -191,7 +221,7 @@ final class LogViewChecks {
         check(s2.upload().state() == LogUpload.State.DONE && s2.upload().result().url().startsWith(stub.base()),
                 "успех: ссылка получена");
         JsonArray msgs = messages(stub.lastBody());
-        check(msgs != null && msgs.size() == snap2, "отправлено ровно " + snap2 + " сообщ. (" + (msgs == null ? "—" : msgs.size()) + ")");
+        check(msgs != null && msgs.size() == snap2, "отправлен весь снимок, поиск не влияет: " + snap2 + " сообщ. (" + (msgs == null ? "—" : msgs.size()) + ")");
         check(stub.lastBody().contains("NEWAFTERSNAPSHOT") && !stub.lastBody().contains("NEWWHILEREADING"),
                 "отправлен показанный снимок, без сообщений после открытия");
         check(segFlags(msgs, "OBFSECRET") == 16, "&k уходит на сайт с флагом 16");
@@ -286,6 +316,12 @@ final class LogViewChecks {
 
     private static LogViewScreen current(ClientGameTestContext ctx) {
         return ctx.computeOnClient(mc -> mc.screen instanceof LogViewScreen v ? v : null);
+    }
+
+    /** Ctrl+клавиша прямо в окно: зажатый Ctrl из ctx.getInput() в событие не попадает (см. ObfChecks). */
+    private static void ctrl(ClientGameTestContext ctx, int key) {
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, 0, GLFW.GLFW_MOD_CONTROL)));
+        ctx.waitTicks(2);
     }
 
     private static void escape(ClientGameTestContext ctx) {
