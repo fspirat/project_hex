@@ -21,7 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /**
  * Просмотр накопленного чата внутри игры (/log). Показывается снимок сообщений на момент открытия;
@@ -226,7 +226,7 @@ public final class LogViewScreen extends Screen {
 
     /** Ссылка открывается через обычное окно игры «Открыть ссылку?», после него — обратно сюда. */
     private void openLink(String url) {
-        ConfirmLinkScreen.confirmLinkNow(this, url);
+        ConfirmLinkScreen.confirmLinkNow(this, java.net.URI.create(url));
     }
 
     @Override
@@ -323,19 +323,19 @@ public final class LogViewScreen extends Screen {
 
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (event.hasControlDown() && event.key() == GLFW.GLFW_KEY_F) {
+        if (event.hasControlDown() && event.key() == InputConstants.KEY_F) {
             this.setFocused(searchBox);
             return true;
         }
         // Home/End в непустом поле поиска двигают курсор, а не список.
         boolean editing = searchBox != null && searchBox.isFocused() && !searchBox.getValue().isEmpty();
         switch (event.key()) {
-            case GLFW.GLFW_KEY_UP -> { scrollBy(1); return true; }
-            case GLFW.GLFW_KEY_DOWN -> { scrollBy(-1); return true; }
-            case GLFW.GLFW_KEY_PAGE_UP -> { scrollBy(rows() - 1); return true; }
-            case GLFW.GLFW_KEY_PAGE_DOWN -> { scrollBy(-(rows() - 1)); return true; }
-            case GLFW.GLFW_KEY_HOME -> { if (editing) break; scroll = maxScroll(); return true; }
-            case GLFW.GLFW_KEY_END -> { if (editing) break; scroll = 0; return true; }
+            case InputConstants.KEY_UP -> { scrollBy(1); return true; }
+            case InputConstants.KEY_DOWN -> { scrollBy(-1); return true; }
+            case InputConstants.KEY_PAGEUP -> { scrollBy(rows() - 1); return true; }
+            case InputConstants.KEY_PAGEDOWN -> { scrollBy(-(rows() - 1)); return true; }
+            case InputConstants.KEY_HOME -> { if (editing) break; scroll = maxScroll(); return true; }
+            case InputConstants.KEY_END -> { if (editing) break; scroll = 0; return true; }
             default -> {}
         }
         return super.keyPressed(event);

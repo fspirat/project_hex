@@ -32,3 +32,16 @@ java {
 	sourceCompatibility = JavaVersion.VERSION_25
 	targetCompatibility = JavaVersion.VERSION_25
 }
+
+// Проверки в живой игре: gradle runClientGameTest (в CI — workflow screenshots.yml).
+// Код проверок генерируется из hexgen-1.21.11/src/gametest скриптом sync-versions.sh и в мод не попадает.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "fstweak-shots"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+		username = "fspirat"
+	}
+}

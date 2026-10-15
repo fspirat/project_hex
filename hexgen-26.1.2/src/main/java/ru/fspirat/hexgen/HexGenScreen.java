@@ -16,7 +16,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /** Окно HEX-генератора внутри игры. */
 public class HexGenScreen extends Screen {
@@ -426,8 +426,8 @@ public class HexGenScreen extends Screen {
     public boolean keyPressed(KeyEvent event) {
         if (event.hasControlDown()) {
             int k = event.key();
-            if (k == GLFW.GLFW_KEY_Z && !event.hasShiftDown()) { undo(); return true; }
-            if (k == GLFW.GLFW_KEY_Y || (k == GLFW.GLFW_KEY_Z && event.hasShiftDown())) { redo(); return true; }
+            if (k == InputConstants.KEY_Z && !event.hasShiftDown()) { undo(); return true; }
+            if (k == InputConstants.KEY_Y || (k == InputConstants.KEY_Z && event.hasShiftDown())) { redo(); return true; }
         }
         return super.keyPressed(event);
     }

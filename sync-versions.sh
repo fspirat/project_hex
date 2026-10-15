@@ -5,6 +5,8 @@
 # drawString → text, renderItem → item, setScreen идёт через minecraft.gui (26.2 и 26.3),
 # afterRender → afterExtract, KeyBindingHelper → KeyMappingHelper, ClientCommandManager → ClientCommands,
 # сообщения в чат — addClientSystemMessage (в 26.2+ чат — через gui.hud). Логгер чата /log — пакет fslog, правится тоже здесь.
+# В 26.3 окно игры на SDL вместо GLFW: коды клавиш берутся из InputConstants (они верные в каждой версии),
+# а RawInput.java для 26.3 лежит отдельно — hexgen-26.3/platform/.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -33,7 +35,31 @@ for TARGET in hexgen-26.3 hexgen-26.2 hexgen-26.1.2; do
              -e 's/gui\.getChat()/gui.hud.getChat()/g' "$DST/$rel"
     fi
   done
+  # Файлы, которые в этой версии устроены иначе (26.3: окно на SDL вместо GLFW), лежат в $TARGET/platform.
+  if [ -d "$TARGET/platform" ]; then cp "$TARGET"/platform/*.java "$DST/java/ru/fspirat/hexgen/"; fi
+  # В 26.3 окно «Открыть ссылку?» принимает URI, а не строку.
+  if [ "$TARGET" = hexgen-26.3 ]; then
+    sed -i 's/ConfirmLinkScreen\.confirmLinkNow(this, url)/ConfirmLinkScreen.confirmLinkNow(this, java.net.URI.create(url))/' \
+      "$DST/java/ru/fspirat/hexgen/fslog/LogViewScreen.java"
+  fi
   cp "$SRC"/resources/assets/hexgen/icon.png "$DST/resources/assets/hexgen/icon.png"
   cp "$SRC"/resources/assets/hexgen/lang/*.json "$DST/resources/assets/hexgen/lang/"
 done
-echo "OK: hexgen-26.3, hexgen-26.2 и hexgen-26.1.2 обновлены"
+
+# Проверки в живой игре (src/gametest) гоняются ещё и на самой новой версии — 26.3.
+# В 26.x текущее окно, оверлей и всплывашки — у minecraft.gui, чат — у gui.hud.
+GT=hexgen-1.21.11/src/gametest
+for TARGET in hexgen-26.3; do
+  DST=$TARGET/src/gametest
+  rm -rf "$DST" && mkdir -p "$DST/java/ru/fspirat/hexgen/shots" "$DST/resources"
+  for f in "$GT"/java/ru/fspirat/hexgen/shots/*.java; do
+    sed -e 's/\bmc\.screen\b/mc.gui.screen()/g' \
+        -e 's/\bmc\.setScreen(/mc.gui.setScreen(/g' \
+        -e 's/\bmc\.getToastManager()/mc.gui.toastManager()/g' \
+        -e 's/\bmc\.getOverlay()/mc.gui.overlay()/g' \
+        -e 's/\bmc\.gui\.getChat()/mc.gui.hud.getChat()/g' \
+        "$f" > "$DST/java/ru/fspirat/hexgen/shots/${f##*/}"
+  done
+  cp "$GT"/resources/fabric.mod.json "$DST/resources/"
+done
+echo "OK: hexgen-26.3 (с проверками в игре), hexgen-26.2 и hexgen-26.1.2 обновлены"

@@ -23,7 +23,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.resources.language.I18n;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import ru.fspirat.hexgen.fslog.ChatBuffer;
 import ru.fspirat.hexgen.fslog.LogUpload;
@@ -159,14 +159,14 @@ final class LogViewChecks {
         check(!bufferContains(ctx, "CLICKED"), "клик по сообщению в окне ничего не выполнил");
 
         // Прокрутка к самому старому и обратно.
-        ctx.getInput().pressKey(GLFW.GLFW_KEY_HOME);
+        ctx.getInput().pressKey(InputConstants.KEY_HOME);
         ctx.waitTicks(3);
         ctx.takeScreenshot("log-view-top");
-        ctx.getInput().pressKey(GLFW.GLFW_KEY_END);
+        ctx.getInput().pressKey(InputConstants.KEY_END);
         ctx.waitTicks(2);
 
         // Поиск: Ctrl+F, регистр не важен; пустой запрос — снова все сообщения; в сеть ничего не уходит.
-        ctrl(ctx, GLFW.GLFW_KEY_F);
+        ctrl(ctx, InputConstants.KEY_F);
         ctx.getInput().typeChars("НОМЕР 1");
         ctx.waitTicks(3);
         check(s1.shownCount() == 11, "поиск «НОМЕР 1» нашёл 11 сообщ. (" + s1.shownCount() + ")");
@@ -177,8 +177,8 @@ final class LogViewChecks {
         ctx.waitTicks(3);
         check(s1.shownCount() == 0, "поиск без совпадений — пустой список");
         ctx.takeScreenshot("log-search-none");
-        ctrl(ctx, GLFW.GLFW_KEY_A);
-        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(GLFW.GLFW_KEY_BACKSPACE, 0, 0)));
+        ctrl(ctx, InputConstants.KEY_A);
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(InputConstants.KEY_BACKSPACE, 0, 0)));
         ctx.waitTicks(3);
         check(s1.shownCount() == snap, "поиск очищен — снова все " + snap + " сообщ. (" + s1.shownCount() + ")");
         check(stub.requests.get() == 0, "поиск ничего не отправил");
@@ -202,7 +202,7 @@ final class LogViewChecks {
         waitUntil(ctx, mc -> bufferContainsNow("NEWWHILEREADING"), 100);
 
         // Поиск во время выгрузки: показана часть, а на сайт уходит весь снимок.
-        ctrl(ctx, GLFW.GLFW_KEY_F);
+        ctrl(ctx, InputConstants.KEY_F);
         ctx.getInput().typeChars("номер 2");
         ctx.waitTicks(3);
         int found2 = s2.shownCount();
@@ -211,7 +211,7 @@ final class LogViewChecks {
         // Двойной клик (ответ сайта медленный): ушёл один запрос.
         stub.mode = Stub.Mode.SLOW;
         click(ctx, I18n.get("fslog.view.upload"));
-        ctx.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         ctx.runOnClient(mc -> s2.pressUpload());   // третье нажатие во время отправки
         check(ctx.computeOnClient(mc -> s2.upload().state()) == LogUpload.State.SENDING, "после нажатия — «Отправка…»");
         ctx.takeScreenshot("log-sending");
@@ -279,7 +279,7 @@ final class LogViewChecks {
         check(s5.upload().state() == LogUpload.State.DONE, "ответ после закрытия окна получен");
         check(ctx.computeOnClient(mc -> mc.screen == null), "окно само не открылось");
         check(stub.requests.get() == 4, "после закрытия повторной отправки нет");
-        ctx.getInput().pressKey(GLFW.GLFW_KEY_T);
+        ctx.getInput().pressKey(InputConstants.KEY_T);
         ctx.waitTicks(5);
         ctx.takeScreenshot("log-closed-announce");
         escape(ctx);
@@ -288,10 +288,10 @@ final class LogViewChecks {
     // ---------------------------------------------------------------- помощники
 
     private static void command(ClientGameTestContext ctx, String cmd) {
-        ctx.getInput().pressKey(GLFW.GLFW_KEY_T);
+        ctx.getInput().pressKey(InputConstants.KEY_T);
         ctx.waitTicks(3);
         ctx.getInput().typeChars(cmd);
-        ctx.getInput().pressKey(GLFW.GLFW_KEY_ENTER);
+        ctx.getInput().pressKey(InputConstants.KEY_RETURN);
         ctx.waitTicks(2);
     }
 
@@ -320,12 +320,12 @@ final class LogViewChecks {
 
     /** Ctrl+клавиша прямо в окно: зажатый Ctrl из ctx.getInput() в событие не попадает (см. ObfChecks). */
     private static void ctrl(ClientGameTestContext ctx, int key) {
-        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, 0, GLFW.GLFW_MOD_CONTROL)));
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, 0, InputConstants.MOD_CONTROL)));
         ctx.waitTicks(2);
     }
 
     private static void escape(ClientGameTestContext ctx) {
-        ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+        ctx.getInput().pressKey(InputConstants.KEY_ESCAPE);
         ctx.waitTicks(3);
     }
 
@@ -346,7 +346,7 @@ final class LogViewChecks {
         }
         ctx.getInput().setCursorPos(p[0], p[1]);
         ctx.waitTicks(1);
-        ctx.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         ctx.waitTicks(1);
     }
 
@@ -362,7 +362,7 @@ final class LogViewChecks {
         });
         ctx.getInput().setCursorPos(p[0], p[1]);
         ctx.waitTicks(1);
-        ctx.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
     }
 
     private static void waitCooldown(ClientGameTestContext ctx) {

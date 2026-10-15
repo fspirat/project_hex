@@ -74,6 +74,11 @@ jobs:
             echo "=================== $c"
             javap -cp "$CP" -public -constants "$c" 2>&1 | head -n 400
           done
+          echo "=================== bytecode: KeyEvent / InputWithModifiers / ConfirmLinkScreen / SDLMouse"
+          javap -cp "$CP" -c net.minecraft.client.input.KeyEvent 2>&1 | sed -n '/shortcutKey()/,/^$/p' | head -n 60
+          javap -cp "$CP" -c net.minecraft.client.input.InputWithModifiers 2>&1 | sed -n '/isSelectAll()/,/^$/p;/hasControlDown()/,/^$/p' | head -n 60
+          javap -cp "$CP" -public net.minecraft.client.gui.screens.ConfirmLinkScreen 2>&1 | grep -i confirmLinkNow
+          javap -cp "$CP" -public -constants org.lwjgl.sdl.SDLMouse 2>&1 | grep -E 'SDL_GetMouseState|SDL_BUTTON_LMASK|SDL_GetGlobalMouseState' | head
           for c in net.minecraft.client.Minecraft net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.GuiGraphicsExtractor net.minecraft.client.gui.GuiGraphics; do
             echo "=================== $c (filtered)"
             javap -cp "$CP" -public "$c" 2>&1 | grep -iE 'shift|control|alt|key|mouse|cursor|screen|gui|hud|window|text\(|drawString|fill\(|class |error' | head -n 120

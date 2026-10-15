@@ -9,7 +9,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /** Ввод имени для своего пресета. */
 public class NamePresetScreen extends Screen {
@@ -99,7 +99,7 @@ public class NamePresetScreen extends Screen {
     @Override
     public boolean keyPressed(KeyEvent event) {
         int k = event.key();
-        if (k == GLFW.GLFW_KEY_ENTER || k == GLFW.GLFW_KEY_KP_ENTER) {
+        if (k == InputConstants.KEY_RETURN || k == InputConstants.KEY_NUMPADENTER) {
             save();
             return true;
         }
