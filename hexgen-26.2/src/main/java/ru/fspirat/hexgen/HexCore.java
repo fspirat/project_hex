@@ -70,9 +70,13 @@ public final class HexCore {
         "➜", "«", "»", "◆", "◇", "▲", "●", "⚜"
     };
 
-    /** Биты форматирования: &l, &o, &n, &m. */
-    public static final int BOLD = 1, ITALIC = 2, UNDERLINE = 4, STRIKE = 8;
-    private static final String[] FORMAT_CODES = {"&l", "&o", "&n", "&m"};
+    /** Биты форматирования: &l, &o, &n, &m и &k (obfuscated — «бегущие» символы). Значения старых битов не менялись. */
+    public static final int BOLD = 1, ITALIC = 2, UNDERLINE = 4, STRIKE = 8, OBFUSCATED = 16;
+    /** Сколько стилей и маска всех битов: все циклы по стилям идут до STYLE_COUNT. */
+    public static final int STYLE_COUNT = 5, ALL_BITS = (1 << STYLE_COUNT) - 1;
+    /** Буквы кодов в порядке битов. */
+    public static final String STYLE_LETTERS = "lonmk";
+    private static final String[] FORMAT_CODES = {"&l", "&o", "&n", "&m", "&k"};
     public static final String SPONSOR_PREFIX = "sponsor";
 
     public record Preset(String name, String[] colors) {}
@@ -214,8 +218,82 @@ public final class HexCore {
 
     public static String formatCodes(int bits) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append(FORMAT_CODES[i]);
+        for (int i = 0; i < STYLE_COUNT; i++) if ((bits & (1 << i)) != 0) sb.append(FORMAT_CODES[i]);
         return sb.toString();
+    }
+
+    // ------------------------------------------------------------ коды прямо в поле текста
+
+    /**
+     * Текст поля, разобранный на видимые символы. В поле можно писать &k (или &K, §k) — дальше символы
+     * «бегут» (obfuscated) — и &r — сброс этого эффекта. Сами коды не видны и не считаются символами градиента.
+     *
+     * @param visible видимый текст без кодов
+     * @param bits    бит OBFUSCATED от кодов для каждого видимого символа (code point)
+     * @param rawAt   позиция (UTF-16) каждого видимого символа в исходном тексте; rawAt[n] = длина исходного текста
+     */
+    public record Inline(String visible, int[] bits, int[] rawAt) {
+        public int length() { return bits.length; }
+
+        /** Сколько видимых символов стоит перед позицией курсора (UTF-16) в исходном тексте. */
+        public int visibleIndex(int rawPos) {
+            int i = 0;
+            while (i < bits.length && rawAt[i] < rawPos) i++;
+            return i;
+        }
+
+        /** Позиция (UTF-16) в исходном тексте перед видимым символом с этим номером. */
+        public int rawOffset(int visibleIndex) {
+            return rawAt[Math.max(0, Math.min(visibleIndex, bits.length))];
+        }
+    }
+
+    /** Код эффекта в поле: &k / &K / §k включают obfuscated, &r / &R / §r выключают. */
+    private static boolean inlineCode(String raw, int i) {
+        if (i + 1 >= raw.length()) return false;
+        char a = raw.charAt(i), b = Character.toLowerCase(raw.charAt(i + 1));
+        return (a == '&' || a == '§') && (b == 'k' || b == 'r');
+    }
+
+    public static Inline inline(String raw) {
+        String s = raw == null ? "" : raw;
+        StringBuilder vis = new StringBuilder();
+        List<Integer> bits = new ArrayList<>(), at = new ArrayList<>();
+        boolean obf = false;
+        int i = 0;
+        while (i < s.length()) {
+            if (inlineCode(s, i)) {
+                obf = Character.toLowerCase(s.charAt(i + 1)) == 'k';
+                i += 2;
+                continue;
+            }
+            int cp = s.codePointAt(i);
+            vis.appendCodePoint(cp);
+            bits.add(obf ? OBFUSCATED : 0);
+            at.add(i);
+            i += Character.charCount(cp);
+        }
+        at.add(s.length());
+        return new Inline(vis.toString(), bits.stream().mapToInt(Integer::intValue).toArray(),
+                at.stream().mapToInt(Integer::intValue).toArray());
+    }
+
+    public static String visibleText(String raw) {
+        return inline(raw).visible();
+    }
+
+    /** Есть ли в тексте поля коды &k/&r. */
+    public static boolean hasInlineCodes(String raw) {
+        if (raw == null) return false;
+        for (int i = 0; i + 1 < raw.length(); i++) if (inlineCode(raw, i)) return true;
+        return false;
+    }
+
+    /** Маска символов с учётом кодов в поле: свой формат символа | obfuscated от &k. */
+    public static int[] effectiveMask(int[] mask, Inline in) {
+        int[] out = new int[in.length()];
+        for (int i = 0; i < out.length; i++) out[i] = (mask != null && i < mask.length ? mask[i] : 0) | in.bits()[i];
+        return out;
     }
 
     /**
@@ -246,7 +324,7 @@ public final class HexCore {
     /** Формат, общий для всех символов (для команд, где формат задаётся на весь текст). */
     public static int commonBits(int[] mask, int fallback) {
         if (mask == null || mask.length == 0) return fallback;
-        int b = 0xF;
+        int b = ALL_BITS;
         for (int m : mask) b &= m;
         return b;
     }
@@ -262,9 +340,9 @@ public final class HexCore {
     /** /sponsor editprefix <gradient:#A:#B>префикс<#ник>: формат префикса на ник не переходит. */
     public static String editPrefixCommand(String text, List<String> stops, int bits, String nickHex) {
         StringBuilder sb = new StringBuilder(COMMANDS[SPONSOR_EDIT]).append(mmColorTag(stops));
-        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append('<').append(MM_TAGS[i]).append('>');
+        for (int i = 0; i < STYLE_COUNT; i++) if ((bits & (1 << i)) != 0) sb.append('<').append(MM_TAGS[i]).append('>');
         text.codePoints().forEach(c -> sb.append(mmEscape(new String(Character.toChars(c)))));
-        for (int i = 3; i >= 0; i--) if ((bits & (1 << i)) != 0) sb.append("</").append(MM_TAGS[i]).append('>');
+        for (int i = STYLE_COUNT - 1; i >= 0; i--) if ((bits & (1 << i)) != 0) sb.append("</").append(MM_TAGS[i]).append('>');
         return sb.append("<#").append(nickHex).append('>').toString();
     }
 
@@ -355,11 +433,13 @@ public final class HexCore {
 
     /**
      * Команда с учётом маски и своих цветов: если формат одинаковый и своих цветов нет,
-     * получается короткий градиент, иначе каждый символ пишется своим цветом {#RRGGBB} со своими кодами.
+     * получается короткий градиент; если формат меняется по ходу текста — тоже короткий, с метками {#…<>}
+     * на границах (см. {@link #runsCommand}); со своими цветами частей каждый символ пишется своим цветом.
      */
     public static String gradientCommand(String prefix, String text, List<String> stops, int[] mask, int[] colors, int fallback) {
         int uniform = uniformBits(mask, fallback);
         if (uniform >= 0 && !hasOverrides(colors)) return gradientCommand(prefix, text, stops, uniform);
+        if (!hasOverrides(colors) && mask.length == text.codePointCount(0, text.length())) return runsCommand(prefix, text, stops, mask);
         StringBuilder sb = new StringBuilder(prefix);
         int prevBits = -1, prevRgb = -1;
         for (StyledGlyph g : styled(text, stops, mask, colors, fallback)) {
@@ -383,7 +463,7 @@ public final class HexCore {
     public record Parsed(int command, String text, List<String> stops, int[] mask, int[] colors, String nickHex, String prefix) {}
 
     private static final java.util.regex.Pattern TOKEN =
-            java.util.regex.Pattern.compile("\\{#([0-9A-Fa-f]{6})(>|<>|<)?\\}|&([0-9a-fk-orA-FK-OR])");
+            java.util.regex.Pattern.compile("\\{#([0-9A-Fa-f]{6})(>|<>|<)?\\}|[&§]([0-9a-fk-orA-FK-OR])");
 
     /** Разбирает команду /itemname, /itemlore, /sponsor prefix или просто текст с тегами. Null — если это не похоже на градиент. */
     public static Parsed parse(String raw) {
@@ -446,23 +526,31 @@ public final class HexCore {
                 }
             } else {
                 char c = Character.toLowerCase(m.group(3).charAt(0));
-                int idx = "lonm".indexOf(c);
+                int idx = STYLE_LETTERS.indexOf(c);
                 if (idx >= 0) bits |= 1 << idx;
                 else if (c == 'r') { bits = 0; solid = -1; }
             }
         }
         if (tags == 0 || text.length() == 0) return null;
+        dropInlineStops(stops);
         return finish(command, text.toString(), stops, mask, colors, null, "");
     }
 
     // ------------------------------------------------------------ другие форматы
 
-    private static final String[] BB_TAGS = {"B", "I", "U", "S"};
-    private static final String[] MM_TAGS = {"b", "i", "u", "st"};
+    /** У BBCode нет тега для obfuscated (null) — эффект в этот формат не переносится, текст остаётся как есть. */
+    private static final String[] BB_TAGS = {"B", "I", "U", "S", null};
+    /** MiniMessage: <obf> — короткое официальное имя тега <obfuscated>, закрывается </obf>. */
+    private static final String[] MM_TAGS = {"b", "i", "u", "st", "obf"};
+
+    /** Поддерживает ли формат вывода эффект &k (obfuscated). Нет — только BBCode. */
+    public static boolean supportsObfuscated(int format) {
+        return format != BBCODE;
+    }
 
     private static String codes(int bits, char sign) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < 4; i++) if ((bits & (1 << i)) != 0) sb.append(sign).append("lonm".charAt(i));
+        for (int i = 0; i < STYLE_COUNT; i++) if ((bits & (1 << i)) != 0) sb.append(sign).append(STYLE_LETTERS.charAt(i));
         return sb.toString();
     }
 
@@ -488,9 +576,10 @@ public final class HexCore {
 
     /** Открыть/закрыть теги формата при смене формата между символами (BBCode, MiniMessage). */
     private static void switchTags(StringBuilder sb, int from, int to, boolean bb) {
+        if (bb) { from &= ~OBFUSCATED; to &= ~OBFUSCATED; }   // в BBCode тега нет
         if (from == to) return;
-        for (int i = 3; i >= 0; i--) if ((from & (1 << i)) != 0) sb.append(bb ? "[/" + BB_TAGS[i] + "]" : "</" + MM_TAGS[i] + ">");
-        for (int i = 0; i < 4; i++) if ((to & (1 << i)) != 0) sb.append(bb ? "[" + BB_TAGS[i] + "]" : "<" + MM_TAGS[i] + ">");
+        for (int i = STYLE_COUNT - 1; i >= 0; i--) if ((from & (1 << i)) != 0) sb.append(bb ? "[/" + BB_TAGS[i] + "]" : "</" + MM_TAGS[i] + ">");
+        for (int i = 0; i < STYLE_COUNT; i++) if ((to & (1 << i)) != 0) sb.append(bb ? "[" + BB_TAGS[i] + "]" : "<" + MM_TAGS[i] + ">");
     }
 
     /** Текст в одном из других RGB-форматов (без команды — её добавляет вызывающий). */
@@ -559,7 +648,7 @@ public final class HexCore {
             + "|<color:#([0-9a-f]{6})>"                            // 5  MiniMessage
             + "|<gradient((?::#[0-9a-f]{6})+)(?::[-0-9.]+)?>"      // 6  MiniMessage gradient
             + "|(</gradient>|\\[/color\\]|</color>|</#[0-9a-f]{6}>)" // 7  закрытие цвета
-            + "|<(/?)(b|bold|i|italic|u|underlined|st|strikethrough)>" // 8, 9  MiniMessage формат
+            + "|<(/?)(b|bold|i|italic|u|underlined|st|strikethrough|obf|obfuscated)>" // 8, 9  MiniMessage формат
             + "|\\[(/?)([bius])\\]"                                  // 10, 11  BBCode формат
             + "|[&§]([0-9a-fk-or])");                              // 12  коды & и §
 
@@ -569,6 +658,7 @@ public final class HexCore {
             case "i", "italic" -> ITALIC;
             case "u", "underlined" -> UNDERLINE;
             case "st", "strikethrough", "s" -> STRIKE;
+            case "obf", "obfuscated" -> OBFUSCATED;
             default -> 0;
         };
     }
@@ -634,7 +724,7 @@ public final class HexCore {
                 bits = close ? bits & ~bit : bits | bit;
             } else if (m.group(12) != null) {
                 char c = Character.toLowerCase(m.group(12).charAt(0));
-                int idx = "lonm".indexOf(c);
+                int idx = STYLE_LETTERS.indexOf(c);
                 if (idx >= 0) bits |= 1 << idx;
                 else if (c == 'r') { bits = 0; solid = -1; }
             }
@@ -690,6 +780,33 @@ public final class HexCore {
     }
 
     /** Общий хвост разбора: если градиента нет — крайние цвета становятся его точками, цвета букв остаются как есть. */
+    /**
+     * Убирает из градиента промежуточные цвета, которые лежат на прямой между соседними (с точностью до 2
+     * по каждому каналу): это метки на границах формата из {@link #runsCommand}, а не цвета пользователя.
+     */
+    static void dropInlineStops(List<String> stops) {
+        for (int i = 1; i + 1 < stops.size(); ) {
+            int p = rgb(stops.get(i - 1)), m = rgb(stops.get(i)), q = rgb(stops.get(i + 1));
+            if (between(p, m, q)) stops.remove(i);
+            else i++;
+        }
+    }
+
+    private static boolean between(int p, int m, int q) {
+        int[] sh = {16, 8, 0};
+        int best = 0;
+        for (int k = 0; k < 3; k++) if (Math.abs(((q >> sh[k]) & 255) - ((p >> sh[k]) & 255)) > Math.abs(((q >> sh[best]) & 255) - ((p >> sh[best]) & 255))) best = k;
+        int dp = ((q >> sh[best]) & 255) - ((p >> sh[best]) & 255);
+        double t = dp == 0 ? 0 : (((m >> sh[best]) & 255) - ((p >> sh[best]) & 255)) / (double) dp;
+        if (t < 0 || t > 1) return false;
+        return close(mix(p, q, t), m);
+    }
+
+    private static boolean close(int a, int b) {
+        for (int sh = 0; sh <= 16; sh += 8) if (Math.abs(((a >> sh) & 255) - ((b >> sh) & 255)) > 2) return false;
+        return true;
+    }
+
     private static Parsed finish(int format, String text, List<String> stops, List<Integer> mask, List<Integer> colors,
                                  String nickHex, String prefix) {
         int[] cm = colors.stream().mapToInt(Integer::intValue).toArray();
@@ -702,6 +819,42 @@ public final class HexCore {
         }
         while (stops.size() > 6) stops.remove(stops.size() - 2);
         return new Parsed(format, text, stops, mask.stream().mapToInt(Integer::intValue).toArray(), cm, nickHex, prefix);
+    }
+
+    /**
+     * Градиент, в котором формат меняется по ходу текста (например, &k только у части).
+     * На сервере формат сбрасывается на каждой метке {#…}, поэтому текст режется на куски с одинаковым
+     * форматом: на границе куска ставится метка {#RRGGBB<>} с цветом того же градиента в этом месте
+     * (посередине между соседними буквами), за ней — коды куска. Метки цветов пользователя остаются как есть.
+     * Так строка остаётся короткой, а не красит каждую букву отдельно.
+     */
+    static String runsCommand(String prefix, String text, List<String> stops, int[] mask) {
+        int[] cps = text.codePoints().toArray();
+        int n = cps.length, parts = Math.max(1, stops.size() - 1);
+        // начало каждого отрезка между цветами пользователя — как в segments()
+        int[] segStart = new int[parts + 1];
+        for (int k = 0; k <= parts; k++) segStart[k] = (int) Math.round(n * (double) k / parts);
+        StringBuilder sb = new StringBuilder(prefix);
+        int seg = 0;
+        for (int i = 0; i < n; i++) {
+            while (seg + 1 < parts && i >= segStart[seg + 1]) seg++;
+            boolean segBoundary = i == segStart[seg];
+            boolean fmtBoundary = i > 0 && mask[i] != mask[i - 1];
+            if (i == 0) {
+                sb.append("{#").append(stops.get(0)).append(">}");
+            } else if (segBoundary) {
+                sb.append("{#").append(stops.get(seg)).append("<>}");
+            } else if (fmtBoundary) {
+                int a = segStart[seg], len = segStart[seg + 1] - a;
+                double t = len > 1 ? (i - 0.5 - a) / (len - 1) : 0;
+                int c = mix(rgb(stops.get(seg)), rgb(stops.get(Math.min(seg + 1, stops.size() - 1))), Math.max(0, Math.min(1, t)));
+                sb.append("{#").append(hex(c)).append("<>}");
+            }
+            if (i == 0 || segBoundary || fmtBoundary) sb.append(formatCodes(mask[i]));
+            sb.appendCodePoint(cps[i]);
+        }
+        sb.append("{#").append(stops.get(stops.size() - 1)).append("<}");
+        return sb.toString();
     }
 
     /** Формат {#AAAAAA>}текст{#BBBBBB<>}текст{#CCCCCC<} для /itemname, /itemlore и «без команды». */

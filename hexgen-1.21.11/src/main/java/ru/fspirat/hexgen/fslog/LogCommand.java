@@ -1,12 +1,11 @@
 package ru.fspirat.hexgen.fslog;
 
 import java.net.URI;
-import java.util.List;
 
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -16,65 +15,64 @@ import net.minecraft.network.chat.Style;
 
 /**
  * Клиентские команды (на сервер Minecraft не уходят):
- *   /log           — выгрузить весь накопленный чат
- *   /log 200       — выгрузить последние 200 сообщений
+ *   /log           — открыть накопленный чат для чтения
+ *   /log 200       — открыть последние 200 сообщений
  *   /log clear     — очистить накопленное
  * /chatlog — то же самое (на случай, если у сервера есть своя /log).
+ * Сама команда ничего не отправляет: на сайт лог уходит только по кнопке в окне.
  */
 final class LogCommand {
     private LogCommand() {}
 
     private static final int GREEN = 0x9BE052, GRAY = 0xA0A0A0, RED = 0xFF5555, LINK = 0x55FFFF;
-    private static final long COOLDOWN_MS = 15_000;
-    private static volatile boolean busy;
-    private static volatile long lastUpload;
+    /** Окно открывается на следующем тике: сразу после команды игра сама закрывает чат. */
+    private static int pendingCount;
 
     static void register() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> {
             for (String name : new String[]{"log", "chatlog"}) {
                 dispatcher.register(ClientCommandManager.literal(name)
-                        .executes(ctx -> upload(ctx.getSource(), ChatBuffer.MAX))
+                        .executes(ctx -> open(ChatBuffer.MAX))
                         .then(ClientCommandManager.literal("clear").executes(ctx -> {
                             ChatBuffer.clear();
                             ctx.getSource().sendFeedback(prefix().append(Component.translatable("fslog.cleared").withStyle(Style.EMPTY.withColor(GRAY))));
                             return 1;
                         }))
                         .then(ClientCommandManager.argument("count", IntegerArgumentType.integer(1, ChatBuffer.MAX))
-                                .executes(ctx -> upload(ctx.getSource(), IntegerArgumentType.getInteger(ctx, "count")))));
+                                .executes(ctx -> open(IntegerArgumentType.getInteger(ctx, "count")))));
             }
+        });
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (pendingCount <= 0) return;
+            int n = pendingCount;
+            pendingCount = 0;
+            client.setScreen(new LogViewScreen(n));
         });
     }
 
-    private static int upload(FabricClientCommandSource source, int count) {
-        List<ChatBuffer.Entry> entries = ChatBuffer.last(count);
-        if (entries.isEmpty()) {
-            source.sendFeedback(prefix().append(Component.translatable("fslog.empty").withStyle(Style.EMPTY.withColor(GRAY))));
-            return 0;
-        }
-        long wait = lastUpload + COOLDOWN_MS - System.currentTimeMillis();
-        if (busy || wait > 0) {
-            source.sendFeedback(prefix().append(Component.translatable("fslog.wait", Math.max(1, (wait + 999) / 1000)).withStyle(Style.EMPTY.withColor(GRAY))));
-            return 0;
-        }
-        busy = true;
-        source.sendFeedback(prefix().append(Component.translatable("fslog.uploading", entries.size()).withStyle(Style.EMPTY.withColor(GRAY))));
-        Uploader.upload(entries).whenComplete((result, error) -> {
-            busy = false;
-            Minecraft client = Minecraft.getInstance();
-            Component msg;
-            if (error == null && result.url() != null) {
-                lastUpload = System.currentTimeMillis();
-                msg = prefix().append(Component.translatable("fslog.done", entries.size()).withStyle(Style.EMPTY.withColor(GREEN)))
-                        .append(" ").append(link(result.url()))
-                        .append(" ").append(copy(result.url()));
-            } else {
-                String why = error != null ? Component.translatable("fslog.error.network").getString()
-                        : Component.translatable("fslog.error." + result.error(), result.waitSec()).getString();
-                msg = prefix().append(Component.translatable("fslog.failed", why).withStyle(Style.EMPTY.withColor(RED)));
-            }
-            client.execute(() -> client.gui.getChat().addMessage(msg));
-        });
+    private static int open(int count) {
+        pendingCount = count;
         return 1;
+    }
+
+    /** Ответ сайта пришёл, когда окно уже закрыли: ссылка или причина ошибки — сообщением в чат. */
+    static void announce(LogUpload.Result r, int count) {
+        Component msg;
+        if (r.url() != null) {
+            msg = prefix().append(Component.translatable("fslog.done", count).withStyle(Style.EMPTY.withColor(GREEN)))
+                    .append(" ").append(link(r.url()))
+                    .append(" ").append(copy(r.url()));
+        } else {
+            msg = prefix().append(Component.translatable("fslog.failed", reason(r)).withStyle(Style.EMPTY.withColor(RED)))
+                    .append(" ").append(Component.translatable("fslog.view.reopen").withStyle(Style.EMPTY.withColor(GRAY)));
+        }
+        Minecraft.getInstance().gui.getChat().addMessage(msg);
+    }
+
+    /** Причина ошибки выгрузки — понятным текстом. */
+    static String reason(LogUpload.Result r) {
+        String code = r == null || r.error() == null ? "server" : r.error();
+        return Component.translatable("fslog.error." + code, r == null ? 0 : r.waitSec()).getString();
     }
 
     private static MutableComponent prefix() {

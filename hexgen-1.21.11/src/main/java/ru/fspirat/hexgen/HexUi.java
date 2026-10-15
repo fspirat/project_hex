@@ -112,7 +112,8 @@ public final class HexUi {
             int bits = g.bits();
             Style st = Style.EMPTY.withColor(g.rgb())
                     .withBold((bits & HexCore.BOLD) != 0).withItalic((bits & HexCore.ITALIC) != 0)
-                    .withUnderlined((bits & HexCore.UNDERLINE) != 0).withStrikethrough((bits & HexCore.STRIKE) != 0);
+                    .withUnderlined((bits & HexCore.UNDERLINE) != 0).withStrikethrough((bits & HexCore.STRIKE) != 0)
+                    .withObfuscated((bits & HexCore.OBFUSCATED) != 0);
             root.append(Component.literal(g.ch()).withStyle(st));
         }
         return root;
@@ -234,8 +235,8 @@ public final class HexUi {
     };
 
     /**
-     * Кнопка в инвентаре: светлая, как у кнопок с предметами (InventoryBinds и др.), с иконкой 16×16 —
-     * звёздочка, залитая градиентом генератора, с тёмным контуром (видна и в обычном, и в творческом инвентаре).
+     * Кнопка в инвентаре: светлая, как у кнопок с предметами (InventoryBinds и др.), с иконкой 14×14 —
+     * звёздочка FSPIRAT (зелёная → светлая → жёлтая) с тёмным контуром (видна и в обычном, и в творческом инвентаре).
      */
     public static void drawInventoryIcon(GuiGraphics g, int x, int y, int size, boolean hover) {
         g.fill(x, y, x + size, y + size, hover ? 0xFFFFFFFF : 0xFF373737);
@@ -244,28 +245,34 @@ public final class HexUi {
         g.fill(x + 1, y + 1, x + 2, y + size - 1, 0xFFFFFFFF);
         g.fill(x + 1, y + size - 2, x + size - 1, y + size - 1, 0xFF8B8B8B);
         g.fill(x + size - 2, y + 1, x + size - 1, y + size - 1, 0xFF8B8B8B);
-        int ix = x + (size - 16) / 2, iy = y + (size - 16) / 2;
-        // контур: звёздочка, сдвинутая на пиксель в четыре стороны
+        // Звёздочка FSPIRAT 7×7 точек в масштабе 2: сверху зелёная, посередине светлая, снизу жёлтая.
+        int px = 2, sw = STAR[0].length() * px, ix = x + (size - sw) / 2, iy = y + (size - sw) / 2;
+        // контур: звёздочка, сдвинутая на пиксель в четыре стороны (на сером фоне светлые цвета иначе теряются)
         int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
         for (int[] d : dirs) {
-            for (int row = 0; row < SPARKLE.length; row++) {
-                String line = SPARKLE[row];
-                int start = line.indexOf('#'), end = line.lastIndexOf('#') + 1;
-                int yy = iy + row + d[1];
-                if (yy < y + 1 || yy >= y + size - 1) continue;
-                g.fill(Math.max(x + 1, ix + start + d[0]), yy, Math.min(x + size - 1, ix + end + d[0]), yy + 1, 0xFF2A0A3A);
+            for (int row = 0; row < STAR.length; row++) {
+                int start = STAR[row].indexOf('#'), end = STAR[row].lastIndexOf('#') + 1;
+                int y0 = Math.max(y + 1, iy + row * px + d[1]), y1 = Math.min(y + size - 1, iy + (row + 1) * px + d[1]);
+                g.fill(Math.max(x + 1, ix + start * px + d[0]), y0, Math.min(x + size - 1, ix + end * px + d[0]), y1, 0xFF1F2E15);
             }
         }
-        // заливка: градиент сверху вниз (фиолетовый → розовый)
-        for (int row = 0; row < SPARKLE.length; row++) {
-            String line = SPARKLE[row];
-            int start = line.indexOf('#'), end = line.lastIndexOf('#') + 1;
-            int c = HexCore.colorAt(TITLE_STOPS, row / (double) (SPARKLE.length - 1));
-            g.fill(ix + start, iy + row, ix + end, iy + row + 1, 0xFF000000 | c);
+        for (int row = 0; row < STAR.length; row++) {
+            int start = STAR[row].indexOf('#'), end = STAR[row].lastIndexOf('#') + 1;
+            g.fill(ix + start * px, iy + row * px, ix + end * px, iy + (row + 1) * px, STAR_COLORS[row]);
         }
-        // блик
-        g.fill(ix + 7, iy + 3, ix + 8, iy + 6, 0xFFFFE6FF);
     }
+
+    /** Значок кнопки над инвентарём — как звёздочка FSPIRAT на сайте. */
+    private static final String[] STAR = {
+        "...#...",
+        "...#...",
+        "..###..",
+        "#######",
+        "..###..",
+        "...#...",
+        "...#..."
+    };
+    private static final int[] STAR_COLORS = {C_GREEN, C_GREEN, C_GREEN, C_GREEN_LT, 0xFFFFD24D, 0xFFFFD24D, 0xFFFFD24D};
 
     public static void drawSparkle(GuiGraphics g, int x, int y) {
         // Сначала тень со сдвигом на пиксель, потом сама звёздочка — рядами, чтобы не рисовать по пикселю.

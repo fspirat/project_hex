@@ -45,7 +45,7 @@ public class HexGenScreen extends Screen {
     private int top;
     private SelectableEditBox textBox;
     private EditBox nickColorBox;
-    private final Button[] formatButtons = new Button[4];
+    private final Button[] formatButtons = new Button[HexCore.STYLE_COUNT];
     private Button itemButton;
     private final List<Button> swatchButtons = new ArrayList<>();
     private String status = "";
@@ -237,14 +237,17 @@ public class HexGenScreen extends Screen {
             // Шрифт: клик — следующий, Shift + клик — предыдущий (12 шрифтов, как на сайте)
             this.addRenderableWidget(Button.builder(Component.literal(HexCore.fontLabel(s().font)),
                     b -> change(() -> s().font = Math.floorMod(s().font + (HexUi.shiftDown() ? -1 : 1), HexCore.FONTS.length)))
-                    .bounds(left, y2, 96, 20).tooltip(HexUi.tip(HexUi.tr("font.hint"))).build());
+                    .bounds(left, y2, 86, 20).tooltip(HexUi.tip(HexUi.tr("font.hint"))).build());
 
-            String[] tips = {HexUi.tr("format.bold"), HexUi.tr("format.italic"), HexUi.tr("format.underline"), HexUi.tr("format.strike")};
-            for (int i = 0; i < 4; i++) {
+            // L O N M K: жирный, курсив, подчёркнутый, зачёркнутый, обфускация (&k)
+            String[] tips = {HexUi.tr("format.bold"), HexUi.tr("format.italic"), HexUi.tr("format.underline"), HexUi.tr("format.strike"),
+                    HexUi.tr("format.obfuscated")};
+            for (int i = 0; i < HexCore.STYLE_COUNT; i++) {
                 final int bit = 1 << i;
+                String hint = i == 4 ? HexUi.tr("format.obfuscated.hint") : HexUi.tr("format.hint");
                 formatButtons[i] = Button.builder(Component.empty(), b -> toggleFormat(bit))
-                        .bounds(left + 100 + i * 22, y2, 20, 20)
-                        .tooltip(HexUi.tip(tips[i] + "\n" + HexUi.tr("format.hint")))
+                        .bounds(left + 90 + i * 22, y2, 20, 20)
+                        .tooltip(HexUi.tip(tips[i] + "\n" + hint))
                         .build();
                 this.addRenderableWidget(formatButtons[i]);
             }
@@ -252,7 +255,7 @@ public class HexGenScreen extends Screen {
 
             this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("symbols")),
                     b -> open(Usage.counted("symbols", new SymbolsScreen(this, this::insertSymbol))))
-                    .bounds(left + 190, y2, 72, 20).tooltip(HexUi.tip(HexUi.tr("symbols.hint"))).build());
+                    .bounds(left + 202, y2, 60, 20).tooltip(HexUi.tip(HexUi.tr("symbols.hint"))).build());
 
             if (sponsorEdit()) {
                 nickColorBox = new EditBox(this.font, left + 266, y2 + 1, 74, 12, Component.literal(HexUi.tr("nick_color")));
@@ -453,9 +456,7 @@ public class HexGenScreen extends Screen {
             st.nickHex = p.nickHex();
             st.lastEndSynced = st.stops.get(st.stops.size() - 1);
         } else {
-            st.text = p.text();
-            st.mask = p.mask();
-            st.colors = p.colors();
+            st.load(p.text(), p.mask(), p.colors());
             st.font = 0;
             st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
             cursor = highlight = st.text.length();
@@ -466,7 +467,7 @@ public class HexGenScreen extends Screen {
     }
 
     private String overLimitMessage(int len, int limit) {
-        boolean perChar = HexCore.uniformBits(s().mask, s().defaultBits) < 0 || HexCore.hasOverrides(s().colors);
+        boolean perChar = HexCore.uniformBits(s().effectiveMask(), s().defaultBits) < 0 || HexCore.hasOverrides(s().colors);
         return HexUi.tr("over_limit", len, limit) + (perChar ? HexUi.tr("over_limit.per_char") : "");
     }
 
@@ -481,7 +482,8 @@ public class HexGenScreen extends Screen {
         List<Integer> mask = new ArrayList<>(), colors = new ArrayList<>();
         name.visit((style, part) -> {
             int bits = (style.isBold() ? HexCore.BOLD : 0) | (style.isItalic() ? HexCore.ITALIC : 0)
-                    | (style.isUnderlined() ? HexCore.UNDERLINE : 0) | (style.isStrikethrough() ? HexCore.STRIKE : 0);
+                    | (style.isUnderlined() ? HexCore.UNDERLINE : 0) | (style.isStrikethrough() ? HexCore.STRIKE : 0)
+                    | (style.isObfuscated() ? HexCore.OBFUSCATED : 0);
             int rgb = style.getColor() != null ? style.getColor().getValue() & 0xFFFFFF : -1;
             for (int cp : part.codePoints().toArray()) {
                 text.appendCodePoint(cp);
@@ -494,10 +496,8 @@ public class HexGenScreen extends Screen {
         HexCore.Parsed p = HexCore.fromGlyphs(s().command, text.toString(), mask, colors);
         HexState.push();
         HexState st = s();
-        st.text = p.text();
-        st.mask = p.mask();
         boolean anyColor = colors.stream().anyMatch(c -> c >= 0);
-        st.colors = anyColor ? p.colors() : HexCore.spliceMask("", st.text, null, -1);
+        st.load(p.text(), p.mask(), anyColor ? p.colors() : null);
         if (anyColor) st.stops = new ArrayList<>(p.stops());
         st.font = 0;
         st.defaultBits = HexCore.uniformBits(p.mask(), 0) >= 0 ? HexCore.uniformBits(p.mask(), 0) : 0;
@@ -507,7 +507,10 @@ public class HexGenScreen extends Screen {
         flash(HexUi.tr("take_item.done"));
     }
 
-    /** Выделение в поле текста в символах (code points): {начало, конец} или null. */
+    /**
+     * Выделение в поле текста в видимых символах: {начало, конец} или null. Коды &k/&r в поле — не символы:
+     * позиции поля (UTF-16, вместе с кодами) переводятся в номера видимых символов.
+     */
     private int[] selection() {
         if (textBox == null) return null;
         String sel = textBox.getHighlighted();
@@ -516,8 +519,8 @@ public class HexGenScreen extends Screen {
         int c = textBox.getCursorPosition();
         int start = v.startsWith(sel, c) ? c : c - sel.length();
         if (start < 0 || start + sel.length() > v.length()) return null;
-        int a = v.codePointCount(0, start);
-        return new int[]{a, a + sel.codePointCount(0, sel.length())};
+        HexCore.Inline in = HexCore.inline(v);
+        return new int[]{in.visibleIndex(start), in.visibleIndex(start + sel.length())};
     }
 
     /** Включает/выключает формат для выделения или для всего текста. */
@@ -525,32 +528,50 @@ public class HexGenScreen extends Screen {
         HexState.push();
         HexState st = s();
         int[] sel = selection();
-        int a = 0, b = st.mask.length;
+        HexCore.Inline in = st.inline();
+        int n = in.length(), a = 0, b = n;
         if (sel != null) {
-            a = Math.max(0, sel[0]);
-            b = Math.min(st.mask.length, sel[1]);
-        } else {
-            st.defaultBits ^= bit;
+            a = Math.max(0, Math.min(n, sel[0]));
+            b = Math.max(a, Math.min(n, sel[1]));
         }
-        if (b > a) {
-            boolean all = true;
-            for (int i = a; i < b; i++) if ((st.mask[i] & bit) == 0) all = false;
-            for (int i = a; i < b; i++) st.mask[i] = all ? st.mask[i] & ~bit : st.mask[i] | bit;
-            if (sel == null) st.defaultBits = all ? st.defaultBits & ~bit : st.defaultBits | bit;
+        int[] eff = st.effectiveMask();
+        boolean all = b > a ? true : (st.defaultBits & bit) != 0;
+        for (int i = a; i < b; i++) if ((eff[i] & bit) == 0) all = false;
+        if (all && bit == HexCore.OBFUSCATED) {
+            // Снять эффект, который дают коды &k в поле, можно только убрав коды: переносим их в маску.
+            boolean fromCodes = false;
+            for (int i = a; i < b; i++) fromCodes |= (in.bits()[i] & bit) != 0;
+            if (fromCodes) materializeCodes(in);
         }
+        for (int i = a; i < b; i++) st.mask[i] = all ? st.mask[i] & ~bit : st.mask[i] | bit;
+        if (sel == null) st.defaultBits = all ? st.defaultBits & ~bit : st.defaultBits | bit;
         refreshFormatButtons();
     }
 
-    /** Зелёный — формат у всего текста, жёлтый — у части, серый — нет. */
+    /** Убирает коды &k/&r из поля в маску; курсор и выделение остаются на тех же видимых символах. */
+    private void materializeCodes(HexCore.Inline in) {
+        saveCursor();
+        int vc = in.visibleIndex(cursor), vh = in.visibleIndex(highlight);
+        if (!s().materializeInline()) return;
+        String v = s().text;
+        cursor = v.offsetByCodePoints(0, Math.min(vc, v.codePointCount(0, v.length())));
+        highlight = v.offsetByCodePoints(0, Math.min(vh, v.codePointCount(0, v.length())));
+        textBox = null;   // иначе rebuild() снова запомнит позиции старого текста
+        rebuild();
+        flash(HexUi.tr("format.obfuscated.moved"), 0xFFFFD24D);
+    }
+
+    /** Зелёный — формат у всего текста, жёлтый — у части, серый — нет. Учитываются и коды &k в поле. */
     private void refreshFormatButtons() {
-        String[] letters = {"L", "O", "N", "M"};
-        int[] mask = s().mask;
-        for (int i = 0; i < 4; i++) {
+        String[] letters = {"L", "O", "N", "M", "K"};
+        int[] mask = s().effectiveMask();
+        for (int i = 0; i < HexCore.STYLE_COUNT; i++) {
             if (formatButtons[i] == null) continue;
             int bit = 1 << i, count = 0;
             for (int m : mask) if ((m & bit) != 0) count++;
             boolean on = mask.length == 0 ? (s().defaultBits & bit) != 0 : count == mask.length;
             int color = on ? 0x55FF55 : count > 0 ? 0xFFD24D : 0xAAAAAA;
+            // у «K» буква обычная: «бегущую» букву на кнопке не прочитать
             Style st = Style.EMPTY.withColor(color)
                     .withBold(i == 0).withItalic(i == 1).withUnderlined(i == 2).withStrikethrough(i == 3);
             formatButtons[i].setMessage(Component.literal(letters[i]).withStyle(st));
@@ -565,7 +586,7 @@ public class HexGenScreen extends Screen {
             return;
         }
         int a = sel[0], b = Math.min(sel[1], s().colors.length);
-        List<HexCore.StyledGlyph> gl = HexCore.styled(shownText(), s().stops, s().mask, s().colors, s().defaultBits);
+        List<HexCore.StyledGlyph> gl = HexCore.styled(shownText(), s().stops, s().effectiveMask(), s().colors, s().defaultBits);
         int from = gl.isEmpty() ? 0xFFFFFF : gl.get(Math.min(a, gl.size() - 1)).rgb();
         int to = gl.isEmpty() ? 0xFFFFFF : gl.get(Math.min(b - 1, gl.size() - 1)).rgb();
         open(new PartColorScreen(this, HexCore.hex(from), HexCore.hex(to), (start, end) -> {
@@ -625,8 +646,9 @@ public class HexGenScreen extends Screen {
         this.addRenderableWidget(b);
     }
 
+    /** Видимый текст (без кодов &k/&r) в выбранном шрифте. */
     private String shownText() {
-        return HexCore.applyFont(s().text, s().font);
+        return HexCore.applyFont(s().visibleText(), s().font);
     }
 
     /** Готовая команда или пустая строка, если цвета некорректны. */
@@ -637,18 +659,24 @@ public class HexGenScreen extends Screen {
             if (!HexCore.valid(st.nickHex)) return "";
             return HexCore.sponsorCommand(st.stops, st.nickHex);
         }
+        int[] mask = st.effectiveMask();
         if (sponsorEdit()) {
             if (!HexCore.valid(st.nickHex)) return "";
-            return HexCore.editPrefixCommand(shownText(), st.stops, HexCore.commonBits(st.mask, st.defaultBits), st.nickHex);
+            return HexCore.editPrefixCommand(shownText(), st.stops, HexCore.commonBits(mask, st.defaultBits), st.nickHex);
         }
         if (classic()) {
-            return HexCore.COMMANDS[st.command] + HexCore.classicBody(shownText(), st.stops, HexCore.commonBits(st.mask, st.defaultBits));
+            return HexCore.COMMANDS[st.command] + HexCore.classicBody(shownText(), st.stops, HexCore.commonBits(mask, st.defaultBits));
         }
         if (!HexCore.isAgeMagic(st.command)) {
-            return HexConfig.formatPrefix + HexCore.formatText(st.command, shownText(), st.stops, st.mask, st.colors,
+            return HexConfig.formatPrefix + HexCore.formatText(st.command, shownText(), st.stops, mask, st.colors,
                     st.defaultBits, HexConfig.birdflopTemplate);
         }
-        return HexCore.gradientCommand(HexCore.COMMANDS[st.command], shownText(), st.stops, st.mask, st.colors, st.defaultBits);
+        return HexCore.gradientCommand(HexCore.COMMANDS[st.command], shownText(), st.stops, mask, st.colors, st.defaultBits);
+    }
+
+    private boolean hasObfuscated() {
+        for (int m : s().effectiveMask()) if ((m & HexCore.OBFUSCATED) != 0) return true;
+        return false;
     }
 
     /** Предпросмотр, отрисованный настоящим шрифтом Minecraft. */
@@ -668,8 +696,9 @@ public class HexGenScreen extends Screen {
             root.append(Component.literal(st.nickName.isEmpty() ? "nickname" : st.nickName).withStyle(Style.EMPTY.withColor(nc)));
             return root;
         }
-        if (classic()) return HexUi.styled(HexCore.classicGlyphs(shownText(), st.stops, st.mask, st.defaultBits));
-        List<HexCore.StyledGlyph> glyphs = HexCore.styled(shownText(), st.stops, st.mask, st.colors, st.defaultBits);
+        // &k в предпросмотре — штатный obfuscated Minecraft: символы меняются каждый кадр, сам текст не трогается
+        if (classic()) return HexUi.styled(HexCore.classicGlyphs(shownText(), st.stops, st.effectiveMask(), st.defaultBits));
+        List<HexCore.StyledGlyph> glyphs = HexCore.styled(shownText(), st.stops, st.effectiveMask(), st.colors, st.defaultBits);
         if (HexConfig.animatePreview) glyphs = HexCore.animate(glyphs, st.stops, st.colors, HexCore.animationPhase());
         if (sponsorEdit()) {
             int nc = HexCore.valid(st.nickHex) ? HexCore.rgb(st.nickHex) : 0xFFFFFF;
@@ -751,6 +780,11 @@ public class HexGenScreen extends Screen {
         int ry = top + Y_RESULT;
         String out = output();
         g.drawString(this.font, Component.literal(HexUi.tr("result")), left, ry, 0xFFA0A0A0, false);
+        if (!out.isEmpty() && !HexCore.supportsObfuscated(st.command) && !sponsor() && hasObfuscated()) {
+            // В BBCode нет тега для &k: текст в результате остаётся, эффекта не будет — говорим об этом прямо.
+            g.drawString(this.font, Component.literal(HexUi.tr("format.obfuscated.unsupported")),
+                    left + this.font.width(HexUi.tr("result")) + 6, ry, 0xFFFFD24D, false);
+        }
         if (!out.isEmpty()) {
             int limit = HexCore.LIMITS[st.command], len = HexCore.measuredLength(out, st.command);
             int cc = len > limit ? 0xFFFF5555 : len > limit * 0.85 ? 0xFFFFD24D : 0xFF55FF55;

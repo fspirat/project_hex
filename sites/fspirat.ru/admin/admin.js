@@ -451,10 +451,44 @@
       cards.append(card('Сейчас в игре', num(c.online), 'активность за 15 минут', 'live'), card('Всего игроков', num(c.total), null),
         card('За сутки', num(c.day), null), card('За 7 дней', num(c.week), 'новых: ' + num(c.fresh)),
         card('Последняя версия', r.latest || '—', old ? old + ' на старой версии' : 'все обновлены'));
+      renderPush(r);
       renderMod();
       renderUsage(r.usage || []);
       loadDownloads();
     });
+  }
+
+  // Ручная рассылка уведомления об обновлении. Обычный режим не меняется: мод сам пишет о новой версии
+  // один раз за запуск игры. Кнопка просит все моды со старой версией написать ещё раз (умеют с FSTWEAK 1.2.4).
+  var PUSH_FROM = '1.2.4';
+  function renderPush(r) {
+    var box = $('updPush'); box.textContent = '';
+    var p = r.push || { id: 0, ts: 0, version: '' };
+    $('pushInfo').textContent = p.ts ? 'последняя рассылка: ' + date(p.ts) + ' ' + time(p.ts).slice(0, 5) + (p.version ? ' · версия ' + p.version : '')
+      : 'вручную ещё не рассылали';
+    var now = Date.now() / 1000;
+    var old = r.list.filter(function (x) { return r.latest && cmpVer(x.mod, r.latest) < 0; });
+    var can = old.filter(function (x) { return cmpVer(x.mod, PUSH_FROM) >= 0; });
+    var online = can.filter(function (x) { return now - x.last_seen < 900; }).length;
+    var legacy = old.length - can.length;
+    var btn = h('button', { type: 'button', class: 'small accent', text: 'Разослать уведомление', onclick: function () {
+      if (!confirm('Разослать уведомление о версии ' + r.latest + '?\n\nЕго ещё раз увидят в чате игроки со старой версией FSTWEAK (' + PUSH_FROM +
+          ' и новее): кто сейчас в игре — в течение 10 минут, остальные — при следующем входе в мир.')) return;
+      btn.disabled = true; btn.textContent = 'Отправляю…';
+      api({ q: 'update_push' }, {}).then(function () { loadMod(); }, function (e) {
+        var d = e.data || {};
+        btn.disabled = false;
+        btn.textContent = d.error === 'wait' ? 'Подождите ' + d.wait + ' с и нажмите ещё раз' : 'Не получилось — ещё раз';
+        if (d.error === 'wait') setTimeout(function () { btn.textContent = 'Разослать уведомление'; }, d.wait * 1000);
+      });
+    } });
+    btn.disabled = !r.latest;
+    box.appendChild(h('div', { class: 'field' }, btn, h('span', { class: 'muted', text: r.latest
+      ? 'версия на сайте ' + r.latest + ' · на старой версии ' + old.length + ' (получат по кнопке: ' + can.length + ', из них сейчас в игре: ' + online + ')'
+      : 'версия на сайте не указана (api/fstweak-version.json)' })));
+    box.appendChild(h('p', { class: 'muted', text: 'Автоматически мод сам проверяет версию при входе в мир и раз в 10 минут и пишет о новой один раз за запуск игры — так и остаётся. ' +
+      'Кнопка — ручная рассылка: уведомление придёт ещё раз. Версии до ' + PUSH_FROM + ' кнопку не понимают и получают только автоматическое' +
+      (legacy ? ' (таких игроков: ' + legacy + ').' : '.') }));
   }
 
   // что делают в моде — счётчики приходят вместе с проверкой обновлений (с версии 1.2.2)

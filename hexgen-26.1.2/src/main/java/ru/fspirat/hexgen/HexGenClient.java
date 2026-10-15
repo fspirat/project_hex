@@ -26,7 +26,8 @@ public class HexGenClient implements ClientModInitializer {
         HexConfig.load();
         PresetShare.register();
         UpdateCheck.register();
-        // Логгер чата /log. Если отдельно стоит мод FSLOG — работает он, встроенный не включаем.
+        // Логгер чата /log. Старый отдельный мод FSLOG больше не выпускается; если он всё же стоит,
+        // второй логгер не запускаем, чтобы команды /log не конфликтовали.
         if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("fslog")) ru.fspirat.hexgen.fslog.FsLog.init();
 
         OPEN_KEY = KeyMappingHelper.registerKeyMapping(
