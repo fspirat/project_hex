@@ -5,7 +5,7 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.input.MouseButtonInfo;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 /** Поле ввода, в котором текст можно выделять, протягивая мышью (в ванильном — только Shift + стрелки). */
 public class SelectableEditBox extends EditBox {
@@ -18,6 +18,6 @@ public class SelectableEditBox extends EditBox {
         // Клик с Shift в ванильном поле расширяет выделение до места клика — делаем так на каждом шаге протягивания.
         MouseButtonInfo info = event.buttonInfo();
         this.onClick(new MouseButtonEvent(event.x(), event.y(),
-                new MouseButtonInfo(info.button(), info.modifiers() | GLFW.GLFW_MOD_SHIFT)), false);
+                new MouseButtonInfo(info.button(), info.modifiers() | InputConstants.MOD_SHIFT)), false);
     }
 }

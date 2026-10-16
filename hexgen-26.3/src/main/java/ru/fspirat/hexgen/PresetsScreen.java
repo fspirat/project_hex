@@ -1,0 +1,193 @@
+package ru.fspirat.hexgen;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+
+/** Готовые и свои пресеты градиентов. */
+public class PresetsScreen extends Screen {
+    private static final int W = 340;
+    private static final int H = 218;
+    private static final int COLS = 4;
+    private static final int CW = 82;
+    private static final int STEP = 86;
+
+    private final Screen parent;
+    private final Consumer<String[]> apply;
+    private final List<Button> buttons = new ArrayList<>();
+    private final List<HexCore.Preset> presets = new ArrayList<>();
+    private static final String[] MODES = {"presets.mode.apply", "presets.mode.rename", "presets.mode.move", "presets.mode.delete", "presets.mode.share"};
+    private static final String[] MODE_HINTS = {
+        "presets.own", "presets.own.rename", "presets.own.move", "presets.own.delete", "presets.share.hint"
+    };
+    private static final int SHARE = 4;
+    /** Что делает нажатие: 0 применить, 1 переименовать, 2 переместить, 3 удалить (свои), 4 поделиться (любой). */
+    private int mode = 0;
+    /** Пресет, выбранный для перемещения (индекс в своих), или -1. */
+    private int moving = -1;
+    /** Код, только что скопированный в режиме «Поделиться». */
+    private String copied = null;
+    private int left;
+    private int top;
+    /** Категория палитр (SiteData.CATS) и страница — запоминаются, пока игра запущена. */
+    private static int cat = 0;
+    private static int page = 0;
+    private static final int PER_PAGE = 16;
+    private String pageLabel = "";
+
+    public PresetsScreen(Screen parent, Consumer<String[]> apply) {
+        super(Component.literal(HexUi.tr("presets")));
+        this.parent = parent;
+        this.apply = apply;
+    }
+
+    @Override
+    protected void init() {
+        left = (this.width - W) / 2;
+        top = Math.max(8, (this.height - H) / 2);
+        buttons.clear();
+        presets.clear();
+
+        // Категории, как на сайте: Все · Minecraft · Тёплые · …
+        int cw = (W - (SiteData.CATS.length - 1) * 2) / SiteData.CATS.length;
+        for (int c = 0; c < SiteData.CATS.length; c++) {
+            final int ci = c;
+            String label = HexUi.tr("cat." + SiteData.CATS[c]);
+            Button cb = Button.builder(c == cat ? Component.literal(label).withStyle(net.minecraft.network.chat.Style.EMPTY.withColor(0x55FF55)) : Component.literal(label), b -> { cat = ci; page = 0; rebuild(); })
+                    .bounds(left + c * (cw + 2), top + 11, cw, 14).build();
+            if (c == cat) HexUi.accent(cb);
+            this.addRenderableWidget(cb);
+        }
+        List<HexCore.Preset> shown = new ArrayList<>();
+        for (int i = 0; i < SiteData.PALETTES.size(); i++) {
+            if (cat == 0 || SiteData.PALETTES.get(i).cat().equals(SiteData.CATS[cat])) shown.add(HexCore.PRESETS.get(i));
+        }
+        int pages = Math.max(1, (shown.size() + PER_PAGE - 1) / PER_PAGE);
+        page = Math.max(0, Math.min(page, pages - 1));
+        for (int i = page * PER_PAGE, k = 0; i < Math.min(shown.size(), (page + 1) * PER_PAGE); i++, k++) {
+            add(shown.get(i), left + (k % COLS) * STEP, top + 28 + (k / COLS) * 22, false);
+        }
+        if (pages > 1) {
+            Button prev = Button.builder(Component.literal("◀"), b -> { page--; rebuild(); }).bounds(left + W - 62, top + 115, 16, 12).build();
+            Button next = Button.builder(Component.literal("▶"), b -> { page++; rebuild(); }).bounds(left + W - 16, top + 115, 16, 12).build();
+            prev.active = page > 0;
+            next.active = page < pages - 1;
+            this.addRenderableWidget(prev);
+            this.addRenderableWidget(next);
+        }
+        pageLabel = pages > 1 ? (page + 1) + "/" + pages : "";
+        List<HexCore.Preset> own = HexConfig.USER_PRESETS;
+        for (int i = 0; i < own.size(); i++) {
+            add(own.get(i), left + (i % COLS) * STEP, top + 128 + (i / COLS) * 22, true);
+        }
+
+        if (own.isEmpty() && mode >= 1 && mode <= 3) mode = 0;
+        Button modeButton = Button.builder(Component.literal(HexUi.tr("presets.mode_button", HexUi.tr(MODES[mode]))), b -> {
+            mode = (mode + 1) % MODES.length;
+            if (HexConfig.USER_PRESETS.isEmpty() && mode >= 1 && mode <= 3) mode = SHARE;
+            copied = null;
+            moving = -1;
+            rebuild();
+        }).bounds(left, top + H - 20, 150, 20)
+                .tooltip(HexUi.tip(HexUi.tr("presets.mode.hint"))).build();
+        this.addRenderableWidget(modeButton);
+
+        this.addRenderableWidget(Button.builder(Component.literal(HexUi.tr("back")), b -> this.onClose())
+                .bounds(left + W - 150, top + H - 20, 150, 20).build());
+    }
+
+    private void add(HexCore.Preset p, int x, int y, boolean own) {
+        Button b = Button.builder(Component.literal(HexUi.presetName(p)), btn -> {
+            if (mode == SHARE) {
+                copied = HexCore.presetCode(HexUi.presetName(p), p.colors());
+                Usage.inc("preset_share");
+                this.minecraft.keyboardHandler.setClipboard(copied);
+                return;
+            }
+            if (own) {
+                int idx = HexConfig.USER_PRESETS.indexOf(p);
+                switch (mode) {
+                    case 1 -> {
+                        this.minecraft.gui.setScreen(new NamePresetScreen(this, p.colors(), p.name(), p.name(), name -> {}));
+                        return;
+                    }
+                    case 2 -> {
+                        if (moving < 0) moving = idx;
+                        else {
+                            HexConfig.movePreset(moving, idx);
+                            moving = -1;
+                        }
+                        rebuild();
+                        return;
+                    }
+                    case 3 -> {
+                        HexConfig.USER_PRESETS.remove(p);
+                        HexConfig.save();
+                        rebuild();
+                        return;
+                    }
+                    default -> { }
+                }
+            }
+            apply.accept(p.colors());
+            this.onClose();
+        }).bounds(x, y, CW, 20).tooltip(HexUi.tip(String.join(" → ", p.colors()))).build();
+        buttons.add(b);
+        presets.add(p);
+        this.addRenderableWidget(b);
+    }
+
+    private void rebuild() {
+        this.clearWidgets();
+        this.init();
+    }
+
+    @Override
+    public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
+        HexUi.drawPanel(g, left, top, W, H);
+        super.extractRenderState(g, mouseX, mouseY, delta);
+        HexUi.skin(this, g, mouseX, mouseY);
+
+        Component t = HexUi.gradientTitle(HexUi.tr("presets"));
+        g.text(this.font, t, (this.width - this.font.width(t)) / 2, top + 1, 0xFFFFFFFF, true);
+        if (!pageLabel.isEmpty()) {
+            g.text(this.font, Component.literal(pageLabel), left + W - 31 - this.font.width(pageLabel) / 2, top + 117, 0xFFA0A0A0, false);
+        }
+        String hint = mode == 2 && moving >= 0 ? HexUi.tr("presets.own.move_target")
+                : mode == SHARE && copied != null ? HexUi.tr("presets.share.copied")
+                : HexUi.tr(MODE_HINTS[mode]);
+        int hintColor = mode == 3 ? 0xFFFF5555 : mode == 0 ? 0xFFA0A0A0 : mode == SHARE && copied != null ? 0xFF55FF55 : 0xFFFFD24D;
+        g.text(this.font, Component.literal(hint), left, top + 118, hintColor, false);
+        if (HexConfig.USER_PRESETS.isEmpty()) {
+            g.text(this.font, Component.literal(HexUi.tr("presets.empty")),
+                    left, top + 134, 0xFF707070, false);
+        }
+
+        // Полоска градиента внизу каждой кнопки; выбранный для перемещения — в жёлтой рамке.
+        for (int i = 0; i < buttons.size(); i++) {
+            Button b = buttons.get(i);
+            if (moving >= 0 && moving < HexConfig.USER_PRESETS.size() && presets.get(i) == HexConfig.USER_PRESETS.get(moving)) {
+                g.fill(b.getX() - 1, b.getY() - 1, b.getX() + b.getWidth() + 1, b.getY(), 0xFFFFD24D);
+                g.fill(b.getX() - 1, b.getY() + b.getHeight(), b.getX() + b.getWidth() + 1, b.getY() + b.getHeight() + 1, 0xFFFFD24D);
+                g.fill(b.getX() - 1, b.getY(), b.getX(), b.getY() + b.getHeight(), 0xFFFFD24D);
+                g.fill(b.getX() + b.getWidth(), b.getY(), b.getX() + b.getWidth() + 1, b.getY() + b.getHeight(), 0xFFFFD24D);
+            }
+            HexUi.drawGradient(g, b.getX() + 3, b.getY() + b.getHeight() - 4, b.getWidth() - 6, 2, List.of(presets.get(i).colors()));
+        }
+    }
+
+    @Override
+    public void onClose() {
+        this.minecraft.gui.setScreen(this.parent);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+}

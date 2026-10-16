@@ -1,5 +1,6 @@
 package ru.fspirat.hexgen;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -11,7 +12,6 @@ import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import ru.fspirat.hexgen.mixin.AbstractContainerScreenAccessor;
-import org.lwjgl.glfw.GLFW;
 import ru.fspirat.hexgen.mixin.ScreenInvoker;
 
 public class HexGenClient implements ClientModInitializer {
@@ -31,7 +31,7 @@ public class HexGenClient implements ClientModInitializer {
         if (!net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("fslog")) ru.fspirat.hexgen.fslog.FsLog.init();
 
         OPEN_KEY = KeyBindingHelper.registerKeyBinding(
-                new KeyMapping("key.fstweak.open_hexgen", GLFW.GLFW_KEY_H, KeyMapping.Category.MISC));
+                new KeyMapping("key.fstweak.open_hexgen", InputConstants.KEY_H, KeyMapping.Category.MISC));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (OPEN_KEY.consumeClick()) {
                 if (client.player != null) client.setScreen(new HexGenScreen(null));
