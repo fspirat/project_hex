@@ -48,6 +48,8 @@ jobs:
         working-directory: ${{ matrix.project }}
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
+          # Программная отрисовка забирает не больше двух ядер — остальное серверу мира (иначе «Timeout loading world»).
+          LP_NUM_THREADS: "2"
         # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток.
         run: |
           for i in 1 2 3; do

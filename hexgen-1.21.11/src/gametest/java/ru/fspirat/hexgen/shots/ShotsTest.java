@@ -40,6 +40,8 @@ public class ShotsTest implements FabricClientGameTest {
             mc.options.simulationDistance().set(5);
             mc.options.framerateLimit().set(10);   // меньше кадров — больше процессора серверу мира
         });
+        // Экран загрузки мира рисуется на 60 кадрах при любом лимите — крошечное окно почти не стоит процессора.
+        ctx.getInput().resizeWindow(320, 240);
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
             sp.getClientWorld().waitForChunksRender();
             ctx.runOnClient(mc -> {
