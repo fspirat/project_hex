@@ -47,7 +47,7 @@ for TARGET in hexgen-26.3 hexgen-26.2 hexgen-26.1.2; do
 done
 
 # Проверки в живой игре (src/gametest) гоняются ещё и на самой новой версии — 26.3.
-# В 26.x текущее окно, оверлей и всплывашки — у minecraft.gui, чат — у gui.hud; в тестовом API Fabric world → level.
+# В 26.x текущее окно, оверлей и всплывашки — у minecraft.gui, чат — у gui.hud; в тестовом API Fabric клиентский мир — у getConnection().
 GT=hexgen-1.21.11/src/gametest
 for TARGET in hexgen-26.3; do
   DST=$TARGET/src/gametest
@@ -58,7 +58,7 @@ for TARGET in hexgen-26.3; do
         -e 's/\bmc\.getToastManager()/mc.gui.toastManager()/g' \
         -e 's/\bmc\.getOverlay()/mc.gui.overlay()/g' \
         -e 's/\bmc\.gui\.getChat()/mc.gui.hud.getChat()/g' \
-        -e 's/\.getClientWorld()/.getClientLevel()/g' \
+        -e 's/\.getClientWorld()/.getConnection()/g' \
         "$f" > "$DST/java/ru/fspirat/hexgen/shots/${f##*/}"
   done
   cp "$GT"/resources/fabric.mod.json "$DST/resources/"

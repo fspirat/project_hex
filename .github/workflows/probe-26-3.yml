@@ -76,7 +76,7 @@ jobs:
           done
           echo "=================== fabric gametest contexts"
           for j in $(tr ':' '\n' < /tmp/cp.txt | grep -i gametest); do [ -f "$j" ] && unzip -Z1 "$j" | grep -E 'gametest/v1/.*\.class$' | grep -v '\$' | sed "s#^#${j##*/}: #"; done | head -n 60
-          for c in net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext; do
+          for c in net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext net.fabricmc.fabric.api.client.gametest.v1.context.TestServerConnection; do
             echo "=================== $c"; javap -cp "$CP" -public "$c" 2>&1 | head -n 40
           done
           echo "=================== bytecode: KeyEvent / InputWithModifiers / ConfirmLinkScreen / SDLMouse"
