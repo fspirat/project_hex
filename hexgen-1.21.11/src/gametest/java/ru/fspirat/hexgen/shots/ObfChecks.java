@@ -8,7 +8,7 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.input.KeyEvent;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import ru.fspirat.hexgen.HexCore;
 import ru.fspirat.hexgen.HexGenScreen;
@@ -54,10 +54,10 @@ final class ObfChecks {
         ctx.takeScreenshot("obf-preview-2");
 
         // Отмена и повтор (Ctrl+Z / Ctrl+Y).
-        ctrl(ctx, GLFW.GLFW_KEY_Z);
+        ctrl(ctx, InputConstants.KEY_Z, 'z');
         String undone = ctx.computeOnClient(mc -> HexState.S.text);
         LogViewChecks.check(!TYPED.equals(undone), "Ctrl+Z отменил ввод («" + undone + "»)");
-        ctrl(ctx, GLFW.GLFW_KEY_Y);
+        ctrl(ctx, InputConstants.KEY_Y, 'y');
         LogViewChecks.check(TYPED.equals(ctx.computeOnClient(mc -> HexState.S.text)), "Ctrl+Y вернул ввод");
 
         // Вставка куска текста (то же, что делает Ctrl+V, но без системного буфера обмена — тесты его не трогают).
@@ -69,16 +69,16 @@ final class ObfChecks {
         String pasted = ctx.computeOnClient(mc -> HexState.S.text);
         LogViewChecks.check(pasted.endsWith("монет &KAB") && ctx.computeOnClient(mc -> HexState.S.visibleText()).endsWith("монет AB"),
                 "вставка «&KAB» в поле («" + pasted + "»)");
-        ctrl(ctx, GLFW.GLFW_KEY_Z);
+        ctrl(ctx, InputConstants.KEY_Z, 'z');
         LogViewChecks.check(TYPED.equals(ctx.computeOnClient(mc -> HexState.S.text)), "Ctrl+Z отменил вставку");
 
         // Кнопка K на всём тексте: включить, затем выключить (коды переходят в формат, текст без &k/&r).
         focusTextBox(ctx);
-        ctrl(ctx, GLFW.GLFW_KEY_A);
+        ctrl(ctx, InputConstants.KEY_A, 'a');
         clickK(ctx);
         LogViewChecks.check(ctx.computeOnClient(mc -> obfRange(HexState.S.effectiveMask())).equals("0-16"), "K на всём тексте — обфускация везде");
         focusTextBox(ctx);
-        ctrl(ctx, GLFW.GLFW_KEY_A);
+        ctrl(ctx, InputConstants.KEY_A, 'a');
         clickK(ctx);
         String after = ctx.computeOnClient(mc -> HexState.S.text);
         LogViewChecks.check("Цена: 12345 монет".equals(after) && ctx.computeOnClient(mc -> obfRange(HexState.S.effectiveMask())).isEmpty(),
@@ -106,9 +106,11 @@ final class ObfChecks {
     /**
      * Ctrl+клавиша прямо в окно (его настоящий обработчик keyPressed). Через ctx.getInput() зажатый Ctrl
      * в событие не попадает: в CI Ctrl+Z и Ctrl+V приходили как простые Z и V.
+     * Второе поле события — буква: в 26.3 это код клавиши по раскладке (по нему ванильные Ctrl+A/C/V),
+     * в старых версиях — скан-код, который здесь ни на что не влияет.
      */
-    private static void ctrl(ClientGameTestContext ctx, int key) {
-        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, 0, GLFW.GLFW_MOD_CONTROL)));
+    private static void ctrl(ClientGameTestContext ctx, int key, char letter) {
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, letter, InputConstants.MOD_CONTROL)));
         ctx.waitTicks(3);
     }
 
@@ -128,7 +130,7 @@ final class ObfChecks {
         }
         ctx.getInput().setCursorPos(p[0], p[1]);
         ctx.waitTicks(1);
-        ctx.getInput().pressMouse(GLFW.GLFW_MOUSE_BUTTON_LEFT);
+        ctx.getInput().pressMouse(InputConstants.MOUSE_BUTTON_LEFT);
         ctx.waitTicks(3);
     }
 

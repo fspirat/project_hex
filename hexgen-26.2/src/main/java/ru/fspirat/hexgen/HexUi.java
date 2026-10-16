@@ -58,11 +58,9 @@ public final class HexUi {
         return I18n.get("fstweak." + key, args);
     }
 
-    /** Зажат ли Shift (читаем напрямую — так одинаково во всех версиях игры). */
+    /** Зажат ли Shift. */
     public static boolean shiftDown() {
-        long w = org.lwjgl.glfw.GLFW.glfwGetCurrentContext();
-        return w != 0 && (org.lwjgl.glfw.GLFW.glfwGetKey(w, org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_SHIFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS
-                || org.lwjgl.glfw.GLFW.glfwGetKey(w, org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS);
+        return Minecraft.getInstance().hasShiftDown();
     }
 
     public static String onOff(boolean on) {
