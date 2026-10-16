@@ -1,6 +1,6 @@
 # <img src="hexgen-26.2/src/main/resources/assets/hexgen/icon.png" alt="" width="32"> FSTWEAK — HEX-градиенты и логгер чата для Minecraft
 
-![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11%20%C2%B7%2026.1.2%20%C2%B7%2026.2-62B47A)
+![Minecraft](https://img.shields.io/badge/Minecraft-1.21.11%20%C2%B7%2026.1.2%20%C2%B7%2026.2%20%C2%B7%2026.3-62B47A)
 ![Fabric](https://img.shields.io/badge/Fabric-%D0%BA%D0%BB%D0%B8%D0%B5%D0%BD%D1%82%D1%81%D0%BA%D0%B8%D0%B9%20%D0%BC%D0%BE%D0%B4-DBD0B4)
 ![Version](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-1.2.4-9BE052)
 ![Languages](https://img.shields.io/badge/%D1%8F%D0%B7%D1%8B%D0%BA%D0%B8-RU%20%C2%B7%20EN%20%C2%B7%20UK-555)
@@ -19,6 +19,7 @@
 
 | Minecraft | Файл | Java |
 |---|---|---|
+| 26.3 | [fstweak-26.3.jar](https://fspirat.xyz/api/dl.php?f=fstweak-26.3.jar) | 25+ |
 | 26.2 | [fstweak-26.2.jar](https://fspirat.xyz/api/dl.php?f=fstweak-26.2.jar) | 25+ |
 | 26.1.2 | [fstweak-26.1.2.jar](https://fspirat.xyz/api/dl.php?f=fstweak-26.1.2.jar) | 25+ |
 | 1.21.11 | [fstweak-1.21.11.jar](https://fspirat.xyz/api/dl.php?f=fstweak-1.21.11.jar) | 21+ |
@@ -135,10 +136,10 @@ sudo -u www-data php /var/www/fspirat.online/api/lib/setup.php
 
 ## Сборка из исходников
 
-Нужны **JDK 25** и **Gradle** (в CI — 9.2.1 для 1.21.11 и 9.5.1 для 26.x; Gradle Wrapper в репозитории нет).
+Нужны **JDK 25** и **Gradle** (в CI — 9.2.1 для 1.21.11, 9.5.1 для 26.1.2 и 26.2, 9.6.0 для 26.3; Gradle Wrapper в репозитории нет).
 
 ```bash
-cd hexgen-26.2        # или hexgen-26.1.2, hexgen-1.21.11
+cd hexgen-26.3        # или hexgen-26.2, hexgen-26.1.2, hexgen-1.21.11
 gradle build
 ```
 
@@ -149,7 +150,7 @@ gradle build
 | Папка | Назначение |
 |---|---|
 | `hexgen-1.21.11` | основной исходный код FSTWEAK — правки вносятся только здесь (логгер чата `/log` — пакет `ru.fspirat.hexgen.fslog`) |
-| `hexgen-26.1.2`, `hexgen-26.2` | копии под Minecraft 26.x, генерируются скриптом `./sync-versions.sh` |
+| `hexgen-26.1.2`, `hexgen-26.2`, `hexgen-26.3` | копии под Minecraft 26.x, генерируются скриптом `./sync-versions.sh` |
 | `sites/fspirat.ru` | сайт и API |
 | `.github/workflows` | сборка, релизы, выкладка сайта и файлов, скриншоты |
 
@@ -158,11 +159,11 @@ gradle build
 
 | Workflow | Что делает |
 |---|---|
-| **Build mod** | собирает FSTWEAK под 3 версии Minecraft при каждом пуше; с тегом `v*` создаёт релиз и выкладывает файлы на сайт |
+| **Build mod** | собирает FSTWEAK под 4 версии Minecraft при каждом пуше; с тегом `v*` (или ручным запуском с `release_tag`) создаёт релиз и выкладывает файлы на сайт; `release_files` — выложить только выбранные файлы, например добавить новую версию игры в уже вышедший релиз |
 | **Logic tests** | проверки логики без Minecraft (`tests/logic/run.sh`): генератор и выгрузка лога |
 | **Publish downloads** | загружает jar-файлы из релиза на сервер для скачивания с fspirat.xyz |
 | **Deploy site** | выкладывает `sites/fspirat.ru` на сервер |
-| **Mod screenshots** | запускает Minecraft с модом в виртуальном экране (Fabric client gametest) и снимает окна мода |
+| **Mod screenshots** | запускает Minecraft с модом в виртуальном экране (Fabric client gametest) на 1.21.11 и 26.3, снимает окна мода и проверяет их в живой игре |
 | **Deploy fspirat.online (GitHub Pages)** | публикует копию сайта на GitHub Pages |
 
 </details>
