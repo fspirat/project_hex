@@ -3,7 +3,6 @@ package ru.fspirat.hexgen;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.network.chat.Component;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * Кнопка, которую можно двигать с Ctrl:
@@ -65,8 +64,7 @@ public class MovableButton extends Button.Plain {
         if (Math.abs(getX() - startX) + Math.abs(getY() - startY) > 2) moved = true;
 
         // Состояние ЛКМ читаем напрямую: MouseHandler.isLeftPressed() внутри экранов не обновляется.
-        long window = GLFW.glfwGetCurrentContext();
-        boolean down = window != 0 && GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean down = RawInput.leftMouseDown();
         boolean released = wasDown && !down;
         wasDown = down;
         if (released && moved) stop();

@@ -11,7 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import org.lwjgl.glfw.GLFW;
+import com.mojang.blaze3d.platform.InputConstants;
 
 import ru.fspirat.hexgen.ColorPickerScreen;
 import ru.fspirat.hexgen.FormatScreen;
@@ -40,17 +40,21 @@ public class ShotsTest implements FabricClientGameTest {
             mc.options.simulationDistance().set(5);
             mc.options.framerateLimit().set(10);   // меньше кадров — больше процессора серверу мира
         });
+        // Экран загрузки мира рисуется на 60 кадрах при любом лимите — крошечное окно почти не стоит процессора.
+        ctx.getInput().resizeWindow(320, 240);
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
             sp.getClientWorld().waitForChunksRender();
             ctx.runOnClient(mc -> {
                 mc.options.languageCode = "ru_ru";
                 mc.getLanguageManager().setSelected("ru_ru");
-                mc.options.guiScale().set(SCALE);
             });
             ctx.runOnClient(Minecraft::reloadResourcePacks);
             ctx.waitFor(mc -> mc.getOverlay() == null, 20 * 300);
             ctx.runOnClient(mc -> mc.options.framerateLimit().set(60));
             ctx.getInput().resizeWindow(1920, 1200);
+            ctx.waitTicks(5);
+            // Масштаб — только в большом окне: в крошечном окне загрузки он упирается в ×1.
+            ctx.runOnClient(mc -> mc.options.guiScale().set(SCALE));
             ctx.waitTicks(20);
             sp.getServer().runCommand("gamemode survival @a");
             sp.getServer().runCommand("time set noon");
@@ -107,17 +111,24 @@ public class ShotsTest implements FabricClientGameTest {
             // Чат: код пресета превращается в строку с кнопкой [+], ниже набирается /log.
             String code = HexCore.presetCode("Закат", new String[]{"FAE8F3", "FF8F5A", "B04DFF"});
             sp.getServer().runCommand("tellraw @a {\"text\":\"[Сервер] Пресет дня: " + code + "\",\"color\":\"gray\"}");
-            ctx.getInput().pressKey(GLFW.GLFW_KEY_T);
+            ctx.getInput().pressKey(InputConstants.KEY_T);
             ctx.waitTicks(3);
             ctx.getInput().typeChars("Лови пресет " + HexCore.presetCode("Изумруд", new String[]{"7FBF3A", "D4FF9A"}));
-            ctx.getInput().pressKey(GLFW.GLFW_KEY_ENTER);
+            ctx.getInput().pressKey(InputConstants.KEY_RETURN);
             ctx.waitTicks(10);
-            ctx.getInput().pressKey(GLFW.GLFW_KEY_T);
+            ctx.getInput().pressKey(InputConstants.KEY_T);
             ctx.waitTicks(3);
             ctx.getInput().typeChars("/log 200");
             ctx.waitTicks(10);
             ctx.takeScreenshot("chat");
-            ctx.getInput().pressKey(GLFW.GLFW_KEY_ESCAPE);
+            ctx.getInput().pressKey(InputConstants.KEY_ESCAPE);
+            ctx.waitTicks(3);
+
+            // Клавиша H из игры открывает генератор (в 26.3 коды клавиш другие — проверяем нажатием).
+            ctx.getInput().pressKey(InputConstants.KEY_H);
+            for (int i = 0; i < 40 && !ctx.computeOnClient(mc -> mc.screen instanceof HexGenScreen); i++) ctx.waitTick();
+            LogViewChecks.check(ctx.computeOnClient(mc -> mc.screen instanceof HexGenScreen), "клавиша H открывает генератор");
+            ctx.setScreen(() -> null);
             ctx.waitTicks(3);
 
             // Проверки в живой игре: &k в генераторе и окно /log (сайт — локальная заглушка).

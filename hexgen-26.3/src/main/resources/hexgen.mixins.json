@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "ru.fspirat.hexgen.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "AbstractContainerScreenAccessor",
+    "ScreenInvoker"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

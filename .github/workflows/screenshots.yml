@@ -1,12 +1,15 @@
 name: Mod screenshots
 
-# Запускает Minecraft с FSTWEAK в виртуальном экране и снимает окна мода для страницы сайта.
-# Результат — артефакт fstweak-screenshots (PNG 1920×1200, интерфейс ×3, русский язык).
+# Запускает Minecraft с FSTWEAK в виртуальном экране, снимает окна мода для страницы сайта и прогоняет
+# проверки в живой игре — на 1.21.11 и на самой новой версии 26.3.
+# Результат — артефакты fstweak-screenshots (1.21.11, идут на сайт) и fstweak-screenshots-26.3
+# (PNG 1920×1200, интерфейс ×3, русский язык).
 on:
   workflow_dispatch:
   push:
     paths:
       - "hexgen-1.21.11/src/gametest/**"
+      - "hexgen-26.3/src/gametest/**"
       - ".github/workflows/screenshots.yml"
 
 permissions:
@@ -16,6 +19,16 @@ jobs:
   shots:
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - project: hexgen-1.21.11
+            gradle: "9.2.1"
+            artifact: fstweak-screenshots
+          - project: hexgen-26.3
+            gradle: "9.6.0"
+            artifact: fstweak-screenshots-26.3
     steps:
       - uses: actions/checkout@v4
 
@@ -26,19 +39,26 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "9.2.1"
+          gradle-version: ${{ matrix.gradle }}
 
+      # mesa-vulkan-drivers — запасной программный Vulkan для 26.3, если OpenGL не поднимется.
       - name: Install virtual display
-        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils libegl-mesa0 mesa-vulkan-drivers
 
       - name: Take screenshots
-        working-directory: hexgen-1.21.11
+        working-directory: ${{ matrix.project }}
         env:
           LIBGL_ALWAYS_SOFTWARE: "1"
-        # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток.
+          # Программная отрисовка забирает не больше двух ядер — остальное серверу мира (иначе «Timeout loading world»).
+          LP_NUM_THREADS: "2"
+          # 26.3 (окно на SDL) просит sRGB-кадр, которого нет у GLX в Xvfb, и виснет на окне ошибки;
+          # через EGL OpenGL на программной отрисовке работает. На 1.21.11 (GLFW) не влияет.
+          SDL_VIDEO_FORCE_EGL: "1"
+        # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток,
+        # каждая не дольше 12 минут (обычно прогон идёт 3 минуты), чтобы зависшая игра не съедала всё время.
         run: |
           for i in 1 2 3; do
-            xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace && exit 0
+            timeout -k 30s 12m xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace && exit 0
             echo "Attempt $i failed"
           done
           exit 1
@@ -46,21 +66,23 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: fstweak-screenshots
+          name: ${{ matrix.artifact }}
           path: |
-            hexgen-1.21.11/build/run/clientGameTest/screenshots/
-            hexgen-1.21.11/build/run/clientGameTest/logs/latest.log
+            ${{ matrix.project }}/build/run/clientGameTest/screenshots/
+            ${{ matrix.project }}/build/run/clientGameTest/logs/latest.log
 
-      # Снимки кладутся в эту же ветку в папку .screenshots/ (вне sites/ — на деплой не влияют),
-      # чтобы их можно было забрать через git и подготовить для сайта.
+      # Снимки кладутся в эту же ветку в папку .screenshots/ (26.3 — в .screenshots-26.3/; вне sites/ — на деплой
+      # не влияют), чтобы их можно было забрать через git и подготовить для сайта.
       - name: Commit screenshots to the branch
         if: github.event_name == 'workflow_dispatch' || github.ref != 'refs/heads/main'
+        env:
+          DIR: ${{ matrix.project == 'hexgen-1.21.11' && '.screenshots' || '.screenshots-26.3' }}
         run: |
-          rm -rf .screenshots && mkdir -p .screenshots
-          cp hexgen-1.21.11/build/run/clientGameTest/screenshots/*.png .screenshots/
+          rm -rf "$DIR" && mkdir -p "$DIR"
+          cp ${{ matrix.project }}/build/run/clientGameTest/screenshots/*.png "$DIR/"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .screenshots
-          git commit -m "Mod screenshots from CI run ${{ github.run_id }}" || exit 0
+          git add "$DIR"
+          git commit -m "Mod screenshots (${{ matrix.project }}) from CI run ${{ github.run_id }}" || exit 0
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
