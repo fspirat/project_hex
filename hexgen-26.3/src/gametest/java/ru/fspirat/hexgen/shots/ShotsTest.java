@@ -41,7 +41,7 @@ public class ShotsTest implements FabricClientGameTest {
             mc.options.framerateLimit().set(10);   // меньше кадров — больше процессора серверу мира
         });
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
-            sp.getClientWorld().waitForChunksRender();
+            sp.getClientLevel().waitForChunksRender();
             ctx.runOnClient(mc -> {
                 mc.options.languageCode = "ru_ru";
                 mc.getLanguageManager().setSelected("ru_ru");

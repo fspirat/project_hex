@@ -74,6 +74,11 @@ jobs:
             echo "=================== $c"
             javap -cp "$CP" -public -constants "$c" 2>&1 | head -n 400
           done
+          echo "=================== fabric gametest contexts"
+          for j in $(tr ':' '\n' < /tmp/cp.txt | grep -i gametest); do [ -f "$j" ] && unzip -Z1 "$j" | grep -E 'gametest/v1/.*\.class$' | grep -v '\$' | sed "s#^#${j##*/}: #"; done | head -n 60
+          for c in net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext net.fabricmc.fabric.api.client.gametest.v1.context.TestClientLevelContext net.fabricmc.fabric.api.client.gametest.v1.context.TestClientWorldContext net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext; do
+            echo "=================== $c"; javap -cp "$CP" -public "$c" 2>&1 | head -n 40
+          done
           echo "=================== bytecode: KeyEvent / InputWithModifiers / ConfirmLinkScreen / SDLMouse"
           javap -cp "$CP" -c net.minecraft.client.input.KeyEvent 2>&1 | sed -n '/shortcutKey()/,/^$/p' | head -n 60
           javap -cp "$CP" -c net.minecraft.client.input.InputWithModifiers 2>&1 | sed -n '/isSelectAll()/,/^$/p;/hasControlDown()/,/^$/p' | head -n 60

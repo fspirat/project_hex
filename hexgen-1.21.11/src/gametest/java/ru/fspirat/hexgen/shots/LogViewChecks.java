@@ -166,7 +166,7 @@ final class LogViewChecks {
         ctx.waitTicks(2);
 
         // Поиск: Ctrl+F, регистр не важен; пустой запрос — снова все сообщения; в сеть ничего не уходит.
-        ctrl(ctx, InputConstants.KEY_F);
+        ctrl(ctx, InputConstants.KEY_F, 'f');
         ctx.getInput().typeChars("НОМЕР 1");
         ctx.waitTicks(3);
         check(s1.shownCount() == 11, "поиск «НОМЕР 1» нашёл 11 сообщ. (" + s1.shownCount() + ")");
@@ -177,8 +177,8 @@ final class LogViewChecks {
         ctx.waitTicks(3);
         check(s1.shownCount() == 0, "поиск без совпадений — пустой список");
         ctx.takeScreenshot("log-search-none");
-        ctrl(ctx, InputConstants.KEY_A);
-        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(InputConstants.KEY_BACKSPACE, 0, 0)));
+        ctrl(ctx, InputConstants.KEY_A, 'a');
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(InputConstants.KEY_BACKSPACE, '\b', 0)));
         ctx.waitTicks(3);
         check(s1.shownCount() == snap, "поиск очищен — снова все " + snap + " сообщ. (" + s1.shownCount() + ")");
         check(stub.requests.get() == 0, "поиск ничего не отправил");
@@ -202,7 +202,7 @@ final class LogViewChecks {
         waitUntil(ctx, mc -> bufferContainsNow("NEWWHILEREADING"), 100);
 
         // Поиск во время выгрузки: показана часть, а на сайт уходит весь снимок.
-        ctrl(ctx, InputConstants.KEY_F);
+        ctrl(ctx, InputConstants.KEY_F, 'f');
         ctx.getInput().typeChars("номер 2");
         ctx.waitTicks(3);
         int found2 = s2.shownCount();
@@ -319,8 +319,8 @@ final class LogViewChecks {
     }
 
     /** Ctrl+клавиша прямо в окно: зажатый Ctrl из ctx.getInput() в событие не попадает (см. ObfChecks). */
-    private static void ctrl(ClientGameTestContext ctx, int key) {
-        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, 0, InputConstants.MOD_CONTROL)));
+    private static void ctrl(ClientGameTestContext ctx, int key, char letter) {
+        ctx.runOnClient(mc -> mc.screen.keyPressed(new KeyEvent(key, letter, InputConstants.MOD_CONTROL)));
         ctx.waitTicks(2);
     }
 
