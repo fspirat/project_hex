@@ -120,6 +120,13 @@ public class ShotsTest implements FabricClientGameTest {
             ctx.getInput().pressKey(InputConstants.KEY_ESCAPE);
             ctx.waitTicks(3);
 
+            // Клавиша H из игры открывает генератор (в 26.3 коды клавиш другие — проверяем нажатием).
+            ctx.getInput().pressKey(InputConstants.KEY_H);
+            for (int i = 0; i < 40 && !ctx.computeOnClient(mc -> mc.screen instanceof HexGenScreen); i++) ctx.waitTick();
+            LogViewChecks.check(ctx.computeOnClient(mc -> mc.screen instanceof HexGenScreen), "клавиша H открывает генератор");
+            ctx.setScreen(() -> null);
+            ctx.waitTicks(3);
+
             // Проверки в живой игре: &k в генераторе и окно /log (сайт — локальная заглушка).
             ObfChecks.run(ctx);
             LogViewChecks.run(ctx, sp);
