@@ -18,7 +18,7 @@ header('X-Content-Type-Options: nosniff');
 header('Cache-Control: no-store');
 
 $latest = json_decode((string)@file_get_contents(__DIR__ . '/fstweak-version.json'), true) ?: [];
-$lang = substr((string)($_GET['lang'] ?? ''), 0, 2);
+$lang = substr((is_string($_GET['lang'] ?? null) ? $_GET['lang'] : ''), 0, 2);
 
 /** Ответ моду: последняя версия, ссылка, «что нового» и номер ручной рассылки. */
 function reply(array $latest, string $lang): array
