@@ -40,17 +40,21 @@ public class ShotsTest implements FabricClientGameTest {
             mc.options.simulationDistance().set(5);
             mc.options.framerateLimit().set(10);   // меньше кадров — больше процессора серверу мира
         });
+        // Экран загрузки мира рисуется на 60 кадрах при любом лимите — крошечное окно почти не стоит процессора.
+        ctx.getInput().resizeWindow(320, 240);
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
             sp.getClientWorld().waitForChunksRender();
             ctx.runOnClient(mc -> {
                 mc.options.languageCode = "ru_ru";
                 mc.getLanguageManager().setSelected("ru_ru");
-                mc.options.guiScale().set(SCALE);
             });
             ctx.runOnClient(Minecraft::reloadResourcePacks);
             ctx.waitFor(mc -> mc.getOverlay() == null, 20 * 300);
             ctx.runOnClient(mc -> mc.options.framerateLimit().set(60));
             ctx.getInput().resizeWindow(1920, 1200);
+            ctx.waitTicks(5);
+            // Масштаб — только в большом окне: в крошечном окне загрузки он упирается в ×1.
+            ctx.runOnClient(mc -> mc.options.guiScale().set(SCALE));
             ctx.waitTicks(20);
             sp.getServer().runCommand("gamemode survival @a");
             sp.getServer().runCommand("time set noon");
