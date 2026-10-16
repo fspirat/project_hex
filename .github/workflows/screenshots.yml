@@ -41,8 +41,9 @@ jobs:
         with:
           gradle-version: ${{ matrix.gradle }}
 
+      # mesa-vulkan-drivers — запасной программный Vulkan для 26.3, если OpenGL не поднимется.
       - name: Install virtual display
-        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri mesa-utils libegl-mesa0 mesa-vulkan-drivers
 
       - name: Take screenshots
         working-directory: ${{ matrix.project }}
@@ -50,10 +51,14 @@ jobs:
           LIBGL_ALWAYS_SOFTWARE: "1"
           # Программная отрисовка забирает не больше двух ядер — остальное серверу мира (иначе «Timeout loading world»).
           LP_NUM_THREADS: "2"
-        # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток.
+          # 26.3 (окно на SDL) просит sRGB-кадр, которого нет у GLX в Xvfb, и виснет на окне ошибки;
+          # через EGL OpenGL на программной отрисовке работает. На 1.21.11 (GLFW) не влияет.
+          SDL_VIDEO_FORCE_EGL: "1"
+        # Загрузка мира на программной отрисовке иногда не укладывается в лимит — до трёх попыток,
+        # каждая не дольше 12 минут (обычно прогон идёт 3 минуты), чтобы зависшая игра не съедала всё время.
         run: |
           for i in 1 2 3; do
-            xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace && exit 0
+            timeout -k 30s 12m xvfb-run -a -s "-screen 0 1920x1200x24" gradle runClientGameTest --stacktrace && exit 0
             echo "Attempt $i failed"
           done
           exit 1
